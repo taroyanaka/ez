@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文章題アプリ - Reading Quiz</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <h1>Reading Comprehension Quiz</h1>
+      <nav class="tab-nav">
+        <button id="tab-create" class="tab-btn active">問題作成</button>
+        <button id="tab-execute" class="tab-btn">問題の実行</button>
+      </nav>
+    </header>
+
+    <div class="api-controls" style="padding: 10px; background: #f0f4f8; text-align: center; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+        <h3 style="margin-bottom: 10px; font-size: 14px; color: #333;">API Tests (resource: reading_quizzes)</h3>
+        <button id="btn-api-get-all" class="secondary-btn" style="margin-right: 5px;">GetAll</button>
+        <button id="btn-api-get-id" class="secondary-btn" style="margin-right: 5px;">GetById</button>
+        <button id="btn-api-create" class="secondary-btn" style="margin-right: 5px;">Create</button>
+        <button id="btn-api-update" class="secondary-btn" style="margin-right: 5px;">Update</button>
+        <button id="btn-api-delete" class="secondary-btn">Delete</button>
+    </div>
+
+    <main class="app-main">
+      <!-- Create Tab -->
+      <section id="pane-create" class="tab-pane active fade-in">
+        <div class="header-action">
+          <h2>問題セットの作成</h2>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <button id="btn-export-json" class="secondary-btn">エクスポート</button>
+            <button id="btn-import-json" class="secondary-btn">インポート</button>
+            <input type="file" id="json-file-input" accept=".json" class="hidden" />
+            <button id="btn-add-passage" class="primary-btn" style="margin-left: 0.5rem;">+ 新しい文章を追加</button>
+          </div>
+        </div>
+        <div id="passage-list" class="passage-list">
+          <!-- Dynamically populated passages -->
+        </div>
+      </section>
+
+      <!-- Execute Tab -->
+      <section id="pane-execute" class="tab-pane">
+        <div class="header-action">
+          <h2>問題に挑戦</h2>
+          <select id="select-passage" class="modern-select">
+            <option value="">文章を選択してください</option>
+          </select>
+        </div>
+        
+        <div id="execution-container" class="execution-container hidden">
+          <div class="reading-passage-card">
+            <h3>読む文章</h3>
+            <p id="execution-passage-text"></p>
+          </div>
+          
+          <div id="execution-questions" class="execution-questions">
+            <!-- Questions rendered here -->
+          </div>
+          
+          <div class="execution-footer">
+            <div id="execution-feedback" class="feedback-message hidden"></div>
+          </div>
+        </div>
+        
+        <div id="execution-empty-state" class="empty-state hidden">
+          <p>問題が作成されていません。作成タブから問題を追加してください。</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Templates for JS -->
+  <template id="tpl-passage-editor">
+    <div class="passage-editor card">
+      <div class="editor-header">
+        <input type="text" class="passage-title-input" placeholder="問題セットのタイトル (例: 動物の数)" />
+        <button class="icon-btn btn-delete-passage" title="削除">✖</button>
+      </div>
+      <div class="editor-body">
+        <textarea class="passage-text-input" placeholder="ここに文章を入力してください..."></textarea>
+        
+        <div class="questions-container">
+          <!-- Dynamically populated questions -->
+        </div>
+        
+        <button class="secondary-btn btn-add-question">+ 問題を追加</button>
+      </div>
+      <div class="editor-actions">
+        <button class="primary-btn btn-save-passage">保存</button>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-question-editor">
+    <div class="question-editor sub-card">
+      <div class="question-header">
+        <input type="text" class="question-text-input" placeholder="問題文 (例: 人間は何人いますか?)" />
+        <button class="icon-btn btn-delete-question" title="削除">✖</button>
+      </div>
+      <div class="choices-container">
+        <!-- Dynamically populated choices -->
+      </div>
+      <button class="text-btn btn-add-choice">+ 選択肢を追加</button>
+    </div>
+  </template>
+
+  <template id="tpl-choice-editor">
+    <div class="choice-editor">
+      <input type="radio" name="temp-name" class="choice-correct-radio" title="正解にする" />
+      <input type="text" class="choice-text-input" placeholder="選択肢 (例: 5)" />
+      <button class="icon-btn btn-delete-choice" title="削除">✖</button>
+    </div>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Flashcards</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <nav>
+        <div class="tab-container">
+            <button id="tab-play" class="tab-btn active" onclick="switchTab('play')">
+                <i class="fas fa-play"></i> 学習モード
+            </button>
+            <button id="tab-input" class="tab-btn" onclick="switchTab('input')">
+                <i class="fas fa-keyboard"></i> 入力回答
+            </button>
+            <button id="tab-edit" class="tab-btn" onclick="switchTab('edit')">
+                <i class="fas fa-pen-to-square"></i> 問題作成
+            </button>
+        </div>
+    </nav>
+
+    <!-- Chunk Selection Area -->
+    <div class="chunk-selector-container" style="max-width: 800px; margin: 1rem auto; padding: 0 1rem;">
+        <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <label for="chunk-select" style="font-size: 0.875rem; color: var(--text-secondary);">問題集を選択:</label>
+            <select id="chunk-select" onchange="handleChunkChange()" style="flex: 1; min-width: 200px;"></select>
+            <button class="btn btn-primary" onclick="handleCreateChunk()" style="padding: 0.5rem 1rem;">
+                <i class="fas fa-plus"></i> 新規作成
+            </button>
+        </div>
+    </div>
+
+    <main>
+        <!-- Player View -->
+        <div id="player-view" class="view active">
+            <div id="empty-state" style="display: none; text-align: center; margin-top: 5rem;">
+                <i class="fas fa-box-open"
+                    style="font-size: 4rem; color: var(--text-secondary); margin-bottom: 1rem;"></i>
+                <h2>カードがありません</h2>
+                <p style="color: var(--text-secondary);">「問題作成」タブからカードを追加してください</p>
+            </div>
+
+            <div id="game-container"
+                style="display: flex; flex-direction: column; align-items: center; gap: 2rem; width: 100%;">
+                <div id="progress-bar"
+                    style="width: 100%; max-width: 500px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
+                    <div id="progress-inner"
+                        style="width: 0%; height: 100%; background: var(--primary-gradient); transition: width 0.3s ease;">
+                    </div>
+                </div>
+
+                <div style="font-size: 0.875rem; color: var(--text-secondary);">
+                    <span id="current-index">1</span> / <span id="total-count">0</span>
+                </div>
+
+                <div class="card-container" onclick="flipCard()">
+                    <div id="flashcard" class="card">
+                        <div class="card-face card-front" data-label="Question">
+                            <p id="question-text">Question appear here</p>
+                        </div>
+                        <div class="card-face card-back" data-label="Answer">
+                            <p id="answer-text">Answer appear here</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <button class="btn" onclick="prevCard()">
+                        <i class="fas fa-chevron-left"></i> 前へ
+                    </button>
+                    <button class="btn btn-primary" onclick="shuffleCards()">
+                        <i class="fas fa-shuffle"></i> シャッフル
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input View -->
+        <div id="input-view" class="view">
+            <div id="input-empty-state" style="display: none; text-align: center; margin-top: 5rem;">
+                <i class="fas fa-box-open"
+                    style="font-size: 4rem; color: var(--text-secondary); margin-bottom: 1rem;"></i>
+                <h2>カードがありません</h2>
+                <p style="color: var(--text-secondary);">「問題作成」タブからカードを追加してください</p>
+            </div>
+
+            <div id="input-container"
+                style="display: flex; flex-direction: column; align-items: center; gap: 2rem; width: 100%;">
+                <div id="input-progress-bar"
+                    style="width: 100%; max-width: 500px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
+                    <div id="input-progress-inner"
+                        style="width: 0%; height: 100%; background: var(--primary-gradient); transition: width 0.3s ease;">
+                    </div>
+                </div>
+
+                <div style="font-size: 0.875rem; color: var(--text-secondary);">
+                    <span id="input-current-index">1</span> / <span id="input-total-count">0</span>
+                </div>
+
+                <div class="card-container" style="cursor: default;">
+                    <div class="card" style="transform: none;">
+                        <div class="card-face card-front" data-label="Question" style="box-shadow: none;">
+                            <p id="input-question-text">Question appear here</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-form"
+                    style="width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 1rem; align-items: center;">
+                    <input type="text" id="answer-input" placeholder="解答を入力..." oninput="checkInputAnswer()"
+                        autocomplete="off">
+                    <div id="input-feedback" style="font-size: 1.25rem; font-weight: bold; min-height: 2rem;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Editor View -->
+        <div id="editor-view" class="view">
+            <div class="editor-header">
+                <h2>問題の管理</h2>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <label
+                        style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--text-secondary); font-size: 0.875rem;">
+                        <input type="checkbox" id="swap-qa-toggle" onchange="toggleQASwap()"
+                            style="width: auto; cursor: pointer;">
+                        Q&Aを反転して出題
+                    </label>
+                </div>
+            </div>
+
+            <div class="card-form bulk-editor-container">
+                <h3>テキストで一括編集</h3>
+                <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                    1行に1組として「問題=解答」の形式で入力してください。
+                </p>
+                <div class="input-group">
+                    <textarea id="bulk-input" rows="15" placeholder="例: Apple=りんご&#10;Banana=バナナ"></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem;">
+                    <button class="btn" onclick="document.getElementById('bulk-input').value = '';">
+                        <i class="fas fa-eraser"></i> クリア
+                    </button>
+                    <button class="btn btn-primary" onclick="applyBulkUpdate()">
+                        <i class="fas fa-save"></i> 変更を保存する
+                    </button>
+                </div>
+            </div>
+
+            <div class="card-form api-management">
+                <h3>API管理 (reading_quizzes)</h3>
+                <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                    外部APIを介してデータを操作します。
+                </p>
+                <div class="api-buttons" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                    <button class="btn" onclick="handleGetAll()">
+                        <i class="fas fa-list"></i> Get All
+                    </button>
+                    <button class="btn" onclick="handleGetById()">
+                        <i class="fas fa-search"></i> Get By ID
+                    </button>
+                    <button class="btn btn-primary" onclick="handleCreate()">
+                        <i class="fas fa-plus"></i> 新規登録
+                    </button>
+                    <button class="btn btn-primary" onclick="handleUpdate()">
+                        <i class="fas fa-edit"></i> 更新
+                    </button>
+                    <button class="btn btn-primary" onclick="handleDelete()" style="background: var(--danger);">
+                        <i class="fas fa-trash"></i> 削除
+                    </button>
+                </div>
+                <div id="api-result" class="api-result-box" style="display: none;"></div>
+            </div>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

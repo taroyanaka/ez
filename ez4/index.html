@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dictation Master | 音声書き取りアプリ</title>
+    <meta name="description" content="音声を聴き、正確にタイピングして書き取るトレーニングアプリ。問題管理機能付き。">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@400;700&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <nav class="tab-nav">
+        <button id="tab-training" class="tab-btn active" data-tab="training">Training</button>
+        <button id="tab-management" class="tab-btn" data-tab="management">Management</button>
+    </nav>
+
+    <main class="app-container">
+        <!-- Training Mode -->
+        <div id="training-view" class="tab-content active">
+            <header>
+                <h1 id="app-title">Dictation Master</h1>
+                <div class="status-panel">
+                    <span id="current-list-name">No List Selected</span>
+                    <span id="score-display">Score: 0</span>
+                </div>
+            </header>
+
+            <div id="list-selector-area" class="list-selector-area">
+                <h2>学習するリストを選択してください</h2>
+                <div id="training-list-container" class="list-grid">
+                    <!-- リストカードがここに動的に生成される -->
+                </div>
+            </div>
+
+            <section id="exercise-area" class="exercise-area hidden">
+                <div class="progress-bar-container">
+                    <div id="progress-bar" style="width: 0%"></div>
+                </div>
+
+                <div class="audio-controls">
+                    <button id="play-button" aria-label="再生" title="Play (Space)">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z" />
+                        </svg>
+                    </button>
+                    <div class="control-hints">
+                        <kbd>Ctrl(⌘)</kbd> + <kbd>Space</kbd> to replay | <kbd>Esc</kbd> to exit
+                    </div>
+                </div>
+
+                <div class="input-section">
+                    <div id="display-text-wrapper" class="display-text-wrapper">
+                        <div id="feedback-chars"></div>
+                    </div>
+                    <input type="text" id="typer-input" spellcheck="false" autocomplete="off" autofocus
+                        placeholder="聴こえた内容を入力してください...">
+
+                    <div class="hint-controls">
+                        <button id="btn-fill-char" class="hint-btn">1文字埋める</button>
+                        <button id="btn-fill-all" class="hint-btn">全て埋める</button>
+                        <button id="btn-skip" class="hint-btn skip">回答表示して次へ</button>
+                    </div>
+                </div>
+
+                <div class="stats-footer">
+                    <div class="stat-item">
+                        <span class="label">Accuracy</span>
+                        <span id="stat-accuracy">0%</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="label">Progress</span>
+                        <span id="stat-progress">0 / 0</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Management Mode -->
+        <div id="management-view" class="tab-content">
+            <header>
+                <h2>Problem Management</h2>
+                <div class="io-controls">
+                    <button id="btn-export" class="secondary-btn">Export JSON</button>
+                    <button id="btn-import-trigger" class="secondary-btn">Import JSON</button>
+                    <input type="file" id="import-file" accept=".json" class="hidden">
+                </div>
+            </header>
+
+            <div class="management-layout">
+                <aside class="list-sidebar">
+                    <div class="sidebar-header">
+                        <h3>My Lists</h3>
+                        <button id="btn-create-list" class="mini-btn">+</button>
+                    </div>
+                    <ul id="management-list-ul">
+                        <!-- リスト名のリストがここに並ぶ -->
+                    </ul>
+                </aside>
+
+                <section id="list-editor" class="list-editor hidden">
+                    <div class="editor-header">
+                        <input type="text" id="edit-list-name" class="inline-input" placeholder="リスト名を入力..." maxlength="30">
+                        <select id="edit-list-lang">
+                            <option value="ja-JP" selected>Japanese (ja-JP)</option>
+                            <option value="en-US">English (en-US)</option>
+                        </select>
+                        <button id="btn-delete-list" class="danger-btn">Delete List</button>
+                    </div>
+
+                    <div class="editor-body">
+                        <div class="bulk-area">
+                            <label>一括登録 (改行区切り)</label>
+                            <textarea id="bulk-textarea" placeholder="こんにちは&#10;さようなら&#10;..."></textarea>
+                            <div id="bulk-error" class="error-msg hidden">30文字を超える行が含まれています</div>
+                            <button id="btn-bulk-add" class="primary-btn">Add Problems</button>
+                        </div>
+
+                        <div class="items-area">
+                            <label>アイテム一覧</label>
+                            <div id="items-list-container" class="items-list">
+                                <!-- 個別アイテムの編集行が並ぶ -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- Result Modal -->
+        <div id="result-overlay" class="overlay hidden">
+            <div class="modal">
+                <h2>Training Complete!</h2>
+                <div class="result-stats">
+                    <div class="big-stat">
+                        <span id="final-score">0</span>
+                        <label>Points</label>
+                    </div>
+                </div>
+                <button id="restart-button">Finish Training</button>
+            </div>
+        </div>
+    </main>
+
+    <script src="app.js" defer></script>
+</body>
+
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fill-in-the-Blank Learning App</title>
+  <meta name="description" content="A premium flashcard app for fill-in-the-blank questions.">
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <header>
+      <h1>Knowledge Builder</h1>
+      <nav class="tabs">
+        <button id="tab-create" class="tab-btn active" onclick="switchTab('create')">Problem Creation</button>
+        <button id="tab-learn" class="tab-btn" onclick="switchTab('learn')">Learning Mode</button>
+      </nav>
+    </header>
+
+    <main>
+      <!-- PROBLEM CREATION TAB -->
+      <section id="section-create" class="tab-content active">
+        <div class="card create-card">
+          <h2>Add New Problem</h2>
+          <div class="form-group">
+            <label for="question-input">Sentence (Full correct text)</label>
+            <textarea id="question-input" rows="3" placeholder="e.g. My favorite fruit is apple and banana."></textarea>
+          </div>
+          <div class="form-group">
+            <label for="answer-input">Words to hide (one per line)</label>
+            <textarea id="answer-input" rows="3" placeholder="apple&#10;banana"></textarea>
+            <small class="help-text">These words will be replaced by dropdown choices.</small>
+          </div>
+          <button id="add-problem-btn" class="primary-btn" onclick="addProblem()">Add Problem</button>
+        </div>
+
+        <div class="card data-actions">
+          <button class="secondary-btn" onclick="exportData()">Export JSON</button>
+          <label class="secondary-btn file-upload">
+            Import JSON <input type="file" id="import-json" accept=".json" onchange="importData(event)">
+          </label>
+        </div>
+
+        <div class="card api-actions" style="margin-top: 1rem;">
+          <h2>API Tests</h2>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button class="secondary-btn" onclick="apiGetAll()">GET All</button>
+            <button class="secondary-btn" onclick="apiGetById()">GET by ID</button>
+            <button class="secondary-btn" onclick="apiCreate()">POST</button>
+            <button class="secondary-btn" onclick="apiUpdate()">PUT</button>
+            <button class="secondary-btn" onclick="apiDelete()">DELETE</button>
+          </div>
+        </div>
+
+        <div class="card list-card">
+          <h2>Problem List</h2>
+          <div class="problems-grid" id="problems-list">
+            <!-- Problems will be injected here -->
+          </div>
+        </div>
+      </section>
+
+      <!-- LEARNING MODE TAB -->
+      <section id="section-learn" class="tab-content">
+        <div class="card learn-card">
+          <h2>Learning Mode</h2>
+          <div id="learning-container">
+            <!-- Learning interface injected here -->
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

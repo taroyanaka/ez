@@ -1,0 +1,36 @@
+[
+  {
+    "id": "wmo3t3w",
+    "title": "動物の数問題",
+    "passage": "犬が2匹と猫が3匹と男の人が5人と女の人が4人います",
+    "questions": [
+      {
+        "id": "4cars50",
+        "questionText": "人間は何人いますか?",
+        "choices": [
+          "9",
+          "3"
+        ],
+        "correctIndex": 0
+      },
+      {
+        "id": "98dwi3n",
+        "questionText": "動物は何匹いますか?",
+        "choices": [
+          "3",
+          "2"
+        ],
+        "correctIndex": 0
+      },
+      {
+        "id": "8do72g2",
+        "questionText": "女の人以外の合計の数は?",
+        "choices": [
+          "5",
+          "10"
+        ],
+        "correctIndex": 1
+      }
+    ]
+  }
+]
