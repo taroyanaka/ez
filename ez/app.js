@@ -6,7 +6,7 @@ let isFlipped = false;
 let isInputChecking = false;
 
 const resource = 'flashcards';
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = 'https://ez-server-d7h7.onrender.com';
 
 // --- API Client Functions ---
 const getAllItems = (resource) => {
@@ -92,7 +92,7 @@ async function loadData() {
         const response = await fetch(`${API_BASE_URL}/${resource}?chunk_id=${currentChunkId}`);
         const json = await response.json();
         const data = json.data || json;
-        
+
         if (data && Array.isArray(data)) {
             deck = data;
         } else {
@@ -373,11 +373,11 @@ function displayApiResult(data) {
                 row.className = 'list-item';
                 row.style.padding = '0.75rem 1rem';
                 row.style.marginBottom = '0';
-                
+
                 const info = document.createElement('div');
                 info.className = 'item-content';
                 info.innerHTML = `<span class="item-q">チャンク ID: ${cid}</span><span class="item-a">${groups[cid].length} 個のアイテム</span>`;
-                
+
                 const actions = document.createElement('div');
                 actions.style.display = 'flex';
                 actions.style.gap = '0.5rem';
@@ -434,7 +434,7 @@ function selectChunkFromApi(chunkId) {
         }
         selector.value = chunkId;
         handleChunkChange();
-        
+
         // Visual feedback
         alert(`チャンク ${chunkId} を読み込みました。`);
     }
@@ -455,7 +455,7 @@ async function deleteChunkFromApi(chunkId) {
         if (response.ok) {
             alert(`チャンク ${chunkId} を削除しました。`);
             handleGetAll(); // Refresh the list
-            
+
             // If the deleted chunk was the currently selected one, clear the deck
             if (currentChunkId == chunkId) {
                 deck = [];
@@ -516,10 +516,10 @@ async function handleCreate() {
             alert(`フォーマットが正しくありません: "${line}"\n「問題=解答」の形式で入力してください。`);
             return;
         }
-        newItems.push({ 
+        newItems.push({
             chunk_id: currentChunkId,
-            question: parts[0].trim(), 
-            answer: parts.slice(1).join('=').trim() 
+            question: parts[0].trim(),
+            answer: parts.slice(1).join('=').trim()
         });
     }
 
@@ -532,10 +532,10 @@ async function handleCreate() {
         }
 
         displayApiResult({ action: 'create', status: 'success', count: newItems.length, data: results });
-        
+
         // Clear textarea after successful creation
         bulkInput.value = '';
-        
+
         await loadData();
         updateUI();
         alert(`${newItems.length}件の問題を新規登録しました！`);
