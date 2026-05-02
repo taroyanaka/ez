@@ -1,15 +1,6 @@
-// State Management
-let problems = JSON.parse(localStorage.getItem('fill_in_the_blank'));
-if (!problems) {
-  problems = [
-    {
-      id: 'sample-1',
-      question: 'むかし、むかし、あるところに、おじいさんとおばあさんがありました。まいにち、おじいさんは山へしば刈かりに、おばあさんは川へ洗濯に行きました。\nある日、おばあさんが、川のそばで、せっせと洗濯をしていますと、川上から、大きな桃が一つ、\n「ドンブラコッコ、スッコッコ。\nドンブラコッコ、スッコッコ。」',
-      answer: 'おじい\nおばあ\n山\n川\n桃\nドンブラ\nコッコ'
-    }
-  ];
-  localStorage.setItem('fill_in_the_blank', JSON.stringify(problems));
-}
+let problems = [];
+const resource = 'fill_in_the_blank';
+const API_BASE_URL = 'https://ez-server-d7h7.onrender.com';
 
 let editingId = null;
 
@@ -21,11 +12,28 @@ const sectionLearn = document.getElementById('section-learn');
 const problemsList = document.getElementById('problems-list');
 const learningContainer = document.getElementById('learning-container');
 
+// API Client Functions
+const getAllItems = (resource) => fetch(`${API_BASE_URL}/${resource}`).then(res => res.json()).then(json => json.data || json);
+const getItemById = (resource, id) => fetch(`${API_BASE_URL}/${resource}/${id}`).then(res => res.json()).then(json => json.item || json.data || json);
+const createItem = (resource, data) => fetch(`${API_BASE_URL}/${resource}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(res => res.json()).then(json => json.item || json.data || json);
+const updateItem = (resource, id, data) => fetch(`${API_BASE_URL}/${resource}/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(res => res.json()).then(json => json.item || json.data || json);
+const deleteItem = (resource, id) => fetch(`${API_BASE_URL}/${resource}/${id}`, { method: 'DELETE' }).then(res => res.json()).then(json => json.item || json.data || json);
+
 // Initialization
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadProblems();
   renderProblemsList();
   renderLearningMode();
 });
+
+async function loadProblems() {
+  try {
+    problems = await getAllItems(resource);
+  } catch (error) {
+    console.error('Failed to load problems:', error);
+    problems = [];
+  }
+}
 
 // Tab Switching
 function switchTab(tabId) {
@@ -43,14 +51,10 @@ function switchTab(tabId) {
   }
 }
 
-// Save to LocalStorage
-function saveProblems() {
-  localStorage.setItem('fill_in_the_blank', JSON.stringify(problems));
-  renderProblemsList();
-}
+// (Save function removed - now using direct API calls)
 
 // Add Problem
-function addProblem() {
+async function addProblem() {
   const questionInput = document.getElementById('question-input');
   const answerInput = document.getElementById('answer-input');
 
@@ -62,53 +66,59 @@ function addProblem() {
     return;
   }
 
-  // Format the answers as a single string of words separated by newline
   const answers = answerRaw.split('\n').map(a => a.trim()).filter(a => a !== '');
-  
+
   if (answers.length === 0) {
     alert('Please enter at least one word to hide.');
     return;
   }
-  
+
   if (answers.length < 3) {
-    alert('ダミーの選択肢を生成するため、単語リストには3つ以上の単語を入力してください。');
+    alert('バリデーションエラー: ダミーの選択肢を生成するため、単語リストには3つ以上の単語（改行区切り）を入力してください。');
     return;
   }
 
   const finalAnswerStr = answers.join('\n');
 
-  // If editing an existing problem
-  if (editingId) {
-    const pIndex = problems.findIndex(p => p.id === editingId);
-    if (pIndex > -1) {
-      problems[pIndex].question = question;
-      problems[pIndex].answer = finalAnswerStr;
+  try {
+    if (editingId) {
+      // Find the problem to get its database primary key (id_key)
+      const p = problems.find(prob => prob.id_key === editingId || prob.id === editingId);
+      const pk = p.id_key || editingId;
+
+      await updateItem(resource, pk, {
+        question: question,
+        answer: finalAnswerStr
+      });
+      editingId = null;
+      document.getElementById('add-problem-btn').textContent = 'Add Problem';
+    } else {
+      const newProblem = {
+        id: Date.now().toString(),
+        question: question,
+        answer: finalAnswerStr
+      };
+      await createItem(resource, newProblem);
     }
-    editingId = null;
-    document.getElementById('add-problem-btn').textContent = 'Add Problem';
-  } else {
-    // Add new problem
-    const newProblem = {
-      id: Date.now().toString(),
-      question: question,
-      answer: finalAnswerStr
-    };
-    problems.push(newProblem);
+
+    await loadProblems();
+    renderProblemsList();
+
+    // Clear inputs
+    questionInput.value = '';
+    answerInput.value = '';
+  } catch (error) {
+    console.error('Failed to save problem:', error);
+    alert('Failed to save problem to the server.');
   }
-
-  saveProblems();
-
-  // Clear inputs
-  questionInput.value = '';
-  answerInput.value = '';
 }
 
 // Edit Problem
-function editProblem(id) {
-  const p = problems.find(prob => prob.id === id);
+function editProblem(id_key) {
+  const p = problems.find(prob => prob.id_key === id_key || prob.id === id_key);
   if (!p) return;
 
-  editingId = id;
+  editingId = id_key;
   document.getElementById('question-input').value = p.question;
   document.getElementById('answer-input').value = p.answer;
 
@@ -119,9 +129,21 @@ function editProblem(id) {
 }
 
 // Delete Problem
-function deleteProblem(id) {
-  problems = problems.filter(p => p.id !== id);
-  saveProblems();
+async function deleteProblem(id_key) {
+  try {
+    const result = await deleteItem(resource, id_key);
+    console.log('Delete successful:', result);
+    await loadProblems();
+    renderProblemsList();
+    //render後にaddproblemの表示にしてtextareaも空欄にして
+    editingId = null;
+    document.getElementById('add-problem-btn').textContent = 'Add Problem';
+    document.getElementById('question-input').value = '';
+    document.getElementById('answer-input').value = '';
+  } catch (error) {
+    console.error('Failed to delete problem:', error);
+    alert('Failed to delete problem from the server: ' + error.message);
+  }
 }
 
 // Render Problem List (Create Tab)
@@ -136,10 +158,11 @@ function renderProblemsList() {
       <div class="problem-text">
         <div class="problem-q">${p.question}</div>
         <div class="problem-a">Hidden: ${p.answer.replace(/\n/g, ', ')}</div>
+        <small style="color: var(--text-secondary); opacity: 0.7;">ID: ${p.id_key || p.id}</small>
       </div>
       <div class="problem-actions">
-        <button class="edit-btn" onclick="editProblem('${p.id}')">Edit</button>
-        <button class="delete-btn" onclick="deleteProblem('${p.id}')">Delete</button>
+        <button type="button" class="edit-btn" onclick="event.preventDefault(); event.stopPropagation(); editProblem(${p.id_key || `'${p.id}'`})">Edit</button>
+        <button type="button" class="delete-btn" onclick="event.preventDefault(); event.stopPropagation(); deleteProblem(${p.id_key || `'${p.id}'`})">Delete</button>
       </div>
     </div>
   `).join('');
@@ -176,8 +199,8 @@ function importData(event) {
           throw new Error("Invalid format");
         }
         problems = importedData;
-        saveProblems();
-        alert('Data imported successfully!');
+        renderProblemsList();
+        alert('Data imported successfully! (Note: Local only, not synced to API)');
       } else {
         alert('Invalid data format. Expected a JSON array.');
       }
@@ -289,36 +312,52 @@ window.checkAnswer = function (selectEl, correctAnswer) {
   }
 };
 
-// API Clients
-const currentResource = 'fill_in_the_blank';
-const BASE_URL = 'http://localhost:3000';
 
-const getAllItems = (resource) => fetch(`${BASE_URL}/${resource}`).then(res => res.json());
-const getItemById = (resource, id) => fetch(`${BASE_URL}/${resource}/${id}`).then(res => res.json());
-const createItem = (resource, data) => fetch(`${BASE_URL}/${resource}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(res => res.json());
-const updateItem = (resource, id, data) => fetch(`${BASE_URL}/${resource}/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(res => res.json());
-const deleteItem = (resource, id) => fetch(`${BASE_URL}/${resource}/${id}`, { method: 'DELETE' }).then(res => res.json());
-
-// API UI Handlers
-window.apiGetAll = function() {
-  getAllItems(currentResource).then(data => alert(JSON.stringify(data, null, 2))).catch(err => alert(err));
+// API UI Handlers for Tests
+window.apiGetAll = async function () {
+  try {
+    const data = await getAllItems(resource);
+    alert(JSON.stringify(data, null, 2));
+  } catch (err) { alert(err); }
 };
-window.apiGetById = function() {
-  const id = prompt('Enter ID:');
-  if(id) getItemById(currentResource, id).then(data => alert(JSON.stringify(data, null, 2))).catch(err => alert(err));
-};
-window.apiCreate = function() {
-  const newProblem = { id: Date.now().toString(), question: "API Test Question", answer: "API Test Answer" };
-  createItem(currentResource, newProblem).then(data => alert("Created:\n" + JSON.stringify(data, null, 2))).catch(err => alert(err));
-};
-window.apiUpdate = function() {
-  const id = prompt('Enter ID to update:');
-  if(id) {
-    const updated = { question: "Updated via API", answer: "Updated via API" };
-    updateItem(currentResource, id, updated).then(data => alert("Updated:\n" + JSON.stringify(data, null, 2))).catch(err => alert(err));
+window.apiGetById = async function () {
+  const id = prompt('Enter ID (id_key):');
+  if (id) {
+    try {
+      const data = await getItemById(resource, id);
+      alert(JSON.stringify(data, null, 2));
+    } catch (err) { alert(err); }
   }
 };
-window.apiDelete = function() {
-  const id = prompt('Enter ID to delete:');
-  if(id) deleteItem(currentResource, id).then(data => alert("Deleted:\n" + JSON.stringify(data, null, 2))).catch(err => alert(err));
+window.apiCreate = async function () {
+  const newProblem = { id: Date.now().toString(), question: "API Test Question", answer: "Choice A\nChoice B\nChoice C" };
+  try {
+    const data = await createItem(resource, newProblem);
+    alert("Created:\n" + JSON.stringify(data, null, 2));
+    await loadProblems();
+    renderProblemsList();
+  } catch (err) { alert(err); }
+};
+window.apiUpdate = async function () {
+  const id = prompt('Enter ID (id_key) to update:');
+  if (id) {
+    const updated = { question: "Updated via API Test", answer: "A\nB\nC" };
+    try {
+      const data = await updateItem(resource, id, updated);
+      alert("Updated:\n" + JSON.stringify(data, null, 2));
+      await loadProblems();
+      renderProblemsList();
+    } catch (err) { alert(err); }
+  }
+};
+window.apiDelete = async function () {
+  const id = prompt('Enter ID (id_key) to delete:');
+  if (id) {
+    try {
+      const data = await deleteItem(resource, id);
+      alert("Deleted:\n" + JSON.stringify(data, null, 2));
+      await loadProblems();
+      renderProblemsList();
+    } catch (err) { alert(err); }
+  }
 };
