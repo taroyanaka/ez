@@ -23,46 +23,39 @@ class WebSpeechEngine extends BaseSpeechEngine {
 }
 
 /**
- * StorageManager: JSONデータの永続化担当
+ * API & State Management
  */
-class StorageManager {
-    static KEY = "dictation_master_data_v2";
+const API_BASE_URL = 'https://ez-server-d7h7.onrender.com';
+const resource = 'dictation';
 
-    static load() {
-        const data = localStorage.getItem(this.KEY);
-        if (!data) return this.initDefault();
-        try {
-            return JSON.parse(data);
-        } catch (e) {
-            return this.initDefault();
-        }
-    }
+const apiGetAll = () => fetch(`${API_BASE_URL}/${resource}`).then(res => res.json()).then(json => json.data || json);
+const apiCreate = (data) => fetch(`${API_BASE_URL}/${resource}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+}).then(res => res.json());
+const apiUpdate = (id, data) => fetch(`${API_BASE_URL}/${resource}/${id}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+}).then(res => res.json());
+const apiDelete = (id) => fetch(`${API_BASE_URL}/${resource}/${id}`, {
+    method: 'DELETE'
+}).then(res => res.json());
 
-    static save(data) {
-        localStorage.setItem(this.KEY, JSON.stringify(data));
-    }
+let globalData = [];
+let mgmtInstance = null;
 
-    static initDefault() {
-        const defaultData = [
-            {
-                id: crypto.randomUUID(),
-                name: "基本日本語",
-                lang: "ja-JP",
-                user: "foo",
-                items: ["こんにちは", "お元気ですか", "さようなら"]
-            },
-            {
-                id: crypto.randomUUID(),
-                name: "Basic English",
-                lang: "en-US",
-                user: "foo",
-                items: ["Hello", "Good morning", "Go home"]
-            }
-        ];
-        this.save(defaultData);
-        return defaultData;
+window.loadDataAndRender = async function() {
+    try {
+        globalData = await apiGetAll();
+    } catch (e) {
+        console.error("Failed to load data from API", e);
+        globalData = [];
     }
-}
+    if (window.renderTrainingList) {
+        window.renderTrainingList();
+    }
+    if (mgmtInstance) {
+        mgmtInstance.render();
+    }
+};
 
 /**
  * DictationApp: トレーニングモードのロジック
@@ -255,9 +248,7 @@ class ManagementManager {
     static NAME_LIMIT = 30;
     static ITEM_LIMIT = 30;
 
-    constructor(storage, onDataChange) {
-        this.storage = storage;
-        this.onDataChange = onDataChange;
+    constructor() {
         this.selectedListId = null;
 
         // Elements
@@ -301,7 +292,7 @@ class ManagementManager {
     }
 
     render() {
-        const data = this.storage.load();
+        const data = globalData;
         this.listUl.innerHTML = '';
         data.forEach(list => {
             const li = document.createElement('li');
@@ -330,35 +321,40 @@ class ManagementManager {
         this.render();
     }
 
-    deleteList() {
+    async deleteList() {
         if (this.selectedListId === 'new_draft') {
             this.selectedListId = null;
             this.render();
             return;
         }
         if (!confirm("本当にこのリストを削除しますか？")) return;
-        let data = this.storage.load();
-        data = data.filter(l => l.id !== this.selectedListId);
-        this.storage.save(data);
-        this.selectedListId = null;
-        this.render();
-        this.onDataChange();
+        
+        try {
+            await apiDelete(this.selectedListId);
+            this.selectedListId = null;
+            await window.loadDataAndRender();
+        } catch (error) {
+            console.error('Failed to delete:', error);
+            alert('削除に失敗しました。');
+        }
     }
 
-    updateListMeta() {
+    async updateListMeta() {
         if (this.selectedListId === 'new_draft') {
             this.draftMeta.name = this.nameInput.value;
             this.draftMeta.lang = this.langSelect.value;
             return;
         }
-        const data = this.storage.load();
-        const list = data.find(l => l.id === this.selectedListId);
+        const list = globalData.find(l => l.id === this.selectedListId);
         if (list) {
             list.name = this.nameInput.value;
             list.lang = this.langSelect.value;
-            this.storage.save(data);
-            this.render(); // Sidebar name update
-            this.onDataChange();
+            try {
+                await apiUpdate(list.id, list);
+                await window.loadDataAndRender();
+            } catch (error) {
+                console.error('Failed to update meta:', error);
+            }
         }
     }
 
@@ -372,7 +368,7 @@ class ManagementManager {
             return;
         }
 
-        const data = this.storage.load();
+        const data = globalData;
         const list = data.find(l => l.id === this.selectedListId);
         if (!list) return;
 
@@ -399,7 +395,7 @@ class ManagementManager {
         });
     }
 
-    bulkAdd() {
+    async bulkAdd() {
         const text = this.bulkArea.value.trim();
         if (!text) {
             alert("問題を入力してください。");
@@ -423,66 +419,71 @@ class ManagementManager {
             return;
         }
         
-        if (this.selectedListId === 'new_draft') {
-            // 新規作成
-            const data = this.storage.load();
-            const newList = {
-                id: crypto.randomUUID(),
-                name: listName || "無題のリスト",
-                lang: this.langSelect.value,
-                user: "foo",
-                items: lines
-            };
-            data.push(newList);
-            this.storage.save(data);
-            this.selectedListId = newList.id;
+        try {
+            if (this.selectedListId === 'new_draft') {
+                // 新規作成
+                const newList = {
+                    id: crypto.randomUUID(),
+                    name: listName || "無題のリスト",
+                    lang: this.langSelect.value,
+                    user: "foo",
+                    items: lines
+                };
+                const created = await apiCreate(newList);
+                this.selectedListId = created.id || newList.id;
+            } else {
+                // 既存リストへの追加
+                const list = globalData.find(l => l.id === this.selectedListId);
+                if (list) {
+                    list.items = [...list.items, ...lines];
+                    await apiUpdate(list.id, list);
+                }
+            }
             this.bulkArea.value = '';
             this.bulkArea.classList.remove('invalid');
             document.getElementById('bulk-error').classList.add('hidden');
-        } else {
-            // 既存リストへの追加
-            const data = this.storage.load();
-            const list = data.find(l => l.id === this.selectedListId);
-            if (list) {
-                list.items = [...list.items, ...lines];
-                this.storage.save(data);
-                this.bulkArea.value = '';
-                this.bulkArea.classList.remove('invalid');
-                document.getElementById('bulk-error').classList.add('hidden');
-            }
+            await window.loadDataAndRender();
+        } catch (error) {
+            console.error('Bulk add failed:', error);
+            alert('保存に失敗しました。');
         }
-        this.render();
-        this.onDataChange();
     }
 
-    updateItem(idx, val) {
+    async updateItem(idx, val) {
         if (!val.trim() || val.length > ManagementManager.ITEM_LIMIT) {
             alert(`1文字以上${ManagementManager.ITEM_LIMIT}文字以内で入力してください。`);
             this.render();
             return;
         }
-        const data = this.storage.load();
-        const list = data.find(l => l.id === this.selectedListId);
+        const list = globalData.find(l => l.id === this.selectedListId);
         if (list) {
             list.items[idx] = val;
-            this.storage.save(data);
-            this.onDataChange();
+            try {
+                await apiUpdate(list.id, list);
+                await window.loadDataAndRender();
+            } catch (error) {
+                console.error('Failed to update item:', error);
+                alert('更新に失敗しました。');
+            }
         }
     }
 
-    deleteItem(idx) {
-        const data = this.storage.load();
-        const list = data.find(l => l.id === this.selectedListId);
+    async deleteItem(idx) {
+        const list = globalData.find(l => l.id === this.selectedListId);
         if (list) {
             list.items.splice(idx, 1);
-            this.storage.save(data);
-            this.render();
-            this.onDataChange();
+            try {
+                await apiUpdate(list.id, list);
+                await window.loadDataAndRender();
+            } catch (error) {
+                console.error('Failed to delete item:', error);
+                alert('削除に失敗しました。');
+            }
         }
     }
 
     exportData() {
-        const data = this.storage.load();
+        const data = globalData;
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -491,21 +492,23 @@ class ManagementManager {
         a.click();
     }
 
-    importData(e) {
+    async importData(e) {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = (evt) => {
+        reader.onload = async (evt) => {
             try {
                 const data = JSON.parse(evt.target.result);
                 if (Array.isArray(data)) {
-                    this.storage.save(data);
-                    this.render();
-                    this.onDataChange();
+                    for (const list of data) {
+                        await apiCreate(list);
+                    }
                     alert("インポートが完了しました。");
+                    await window.loadDataAndRender();
                 }
             } catch (err) {
-                alert("不正なJSONファイルです。");
+                alert("不正なJSONファイルです。インポートに失敗しました。");
+                console.error(err);
             }
         };
         reader.readAsText(file);
@@ -515,7 +518,7 @@ class ManagementManager {
 /**
  * Main Controller
  */
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     const speechEngine = new WebSpeechEngine();
     
     // Tab Switching
@@ -528,26 +531,25 @@ document.addEventListener('DOMContentLoaded', () => {
             views.forEach(v => v.classList.toggle('active', v.id === `${target}-view`));
             if (target === 'training') {
                 app.stop();
-                renderTrainingList();
+                if (window.renderTrainingList) window.renderTrainingList();
             } else {
-                if (!mgmt.selectedListId) mgmt.createList();
-                mgmt.render();
+                if (!mgmtInstance.selectedListId) mgmtInstance.createList();
+                mgmtInstance.render();
             }
         };
     });
 
     const app = new DictationApp(speechEngine, () => {
         app.stop();
-        renderTrainingList();
+        if (window.renderTrainingList) window.renderTrainingList();
     });
 
-    const mgmt = new ManagementManager(StorageManager, () => {
-        renderTrainingList();
-    });
+    mgmtInstance = new ManagementManager();
 
-    function renderTrainingList() {
-        const data = StorageManager.load();
+    window.renderTrainingList = function() {
+        const data = globalData;
         const container = document.getElementById('training-list-container');
+        if (!container) return;
         container.innerHTML = '';
         data.forEach(list => {
             const card = document.createElement('div');
@@ -559,8 +561,8 @@ document.addEventListener('DOMContentLoaded', () => {
             card.onclick = () => app.start(list);
             container.appendChild(card);
         });
-    }
+    };
 
     // Initial render
-    renderTrainingList();
+    await window.loadDataAndRender();
 });
