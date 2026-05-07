@@ -27,18 +27,15 @@ class WebSpeechEngine extends BaseSpeechEngine {
  */
 const resource = 'dictation';
 
-const AUTH_USER_ID = 'user1';
-const AUTH_PASSWORD = 'user1';
-
 const apiGetAll = () => fetch(`${API_BASE_URL}/${resource}`).then(res => res.json()).then(json => json.data || json);
 const apiCreate = (data) => fetch(`${API_BASE_URL}/${resource}`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD }, body: JSON.stringify(data)
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
 }).then(res => res.json());
 const apiUpdate = (id, data) => fetch(`${API_BASE_URL}/${resource}/${id}`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD }, body: JSON.stringify(data)
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
 }).then(res => res.json());
 const apiDelete = (id) => fetch(`${API_BASE_URL}/${resource}/${id}`, {
-    method: 'DELETE', headers: { 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD }
+    method: 'DELETE'
 }).then(res => res.json());
 
 let globalData = [];

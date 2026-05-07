@@ -20,14 +20,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 const resource = 'reading_quizzes';
 const BASE_URL = API_BASE_URL;
 
-const AUTH_USER_ID = 'user1';
-const AUTH_PASSWORD = 'user1';
-
 const getAllItems = (resource) => fetch(`${BASE_URL}/${resource}`).then(res => res.json()).then(json => json.data || json);
 const getItemById = (resource, id) => fetch(`${BASE_URL}/${resource}/${id}`).then(res => res.json()).then(json => json.item || json.data || json);
-const createItem = (resource, data) => fetch(`${BASE_URL}/${resource}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD }, body: JSON.stringify(data) }).then(res => res.json()).then(json => json.item || json.data || json);
-const updateItem = (resource, id, data) => fetch(`${BASE_URL}/${resource}/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD }, body: JSON.stringify(data) }).then(res => res.json()).then(json => json.item || json.data || json);
-const deleteItem = (resource, id) => fetch(`${BASE_URL}/${resource}/${id}`, { method: 'DELETE', headers: { 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD } }).then(res => res.json()).then(json => json.item || json.data || json);
+const createItem = (resource, data) => fetch(`${BASE_URL}/${resource}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(res => res.json()).then(json => json.item || json.data || json);
+const updateItem = (resource, id, data) => fetch(`${BASE_URL}/${resource}/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(res => res.json()).then(json => json.item || json.data || json);
+const deleteItem = (resource, id) => fetch(`${BASE_URL}/${resource}/${id}`, { method: 'DELETE' }).then(res => res.json()).then(json => json.item || json.data || json);
 
 function setupApiButtons() {
   const logResponse = (res) => {

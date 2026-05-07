@@ -8,9 +8,6 @@ let isInputChecking = false;
 const resource = 'flashcards';
 
 // --- API Client Functions ---
-const AUTH_USER_ID = 'user1';
-const AUTH_PASSWORD = 'user1';
-
 const getAllItems = (resource) => {
     console.log(`Fetching all items for resource: ${resource} from ${API_BASE_URL}/${resource}`);
     return fetch(`${API_BASE_URL}/${resource}`)
@@ -20,13 +17,13 @@ const getAllItems = (resource) => {
 const getItemById = (resource, id) => fetch(`${API_BASE_URL}/${resource}/${id}`)
     .then(res => res.json())
     .then(json => json.data || json.item || json);
-const createItem = (resource, data) => fetch(`${API_BASE_URL}/${resource}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD }, body: JSON.stringify(data) })
+const createItem = (resource, data) => fetch(`${API_BASE_URL}/${resource}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
     .then(res => res.json())
     .then(json => json.item || json.data || json);
-const updateItem = (resource, id, data) => fetch(`${API_BASE_URL}/${resource}/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD }, body: JSON.stringify(data) })
+const updateItem = (resource, id, data) => fetch(`${API_BASE_URL}/${resource}/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
     .then(res => res.json())
     .then(json => json.item || json.data || json);
-const deleteItem = (resource, id) => fetch(`${API_BASE_URL}/${resource}/${id}`, { method: 'DELETE', headers: { 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD } })
+const deleteItem = (resource, id) => fetch(`${API_BASE_URL}/${resource}/${id}`, { method: 'DELETE' })
     .then(res => res.json())
     .then(json => json.item || json.data || json);
 
@@ -112,7 +109,7 @@ async function saveData() {
         // Use the bulk update endpoint with chunk_id query param
         await fetch(`${API_BASE_URL}/${resource}?chunk_id=${currentChunkId}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(deck)
         });
     } catch (error) {
@@ -450,7 +447,7 @@ async function deleteChunkFromApi(chunkId) {
         // Use bulk update with empty array to clear all cards for this chunk
         const response = await fetch(`${API_BASE_URL}/${resource}?chunk_id=${chunkId}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify([])
         });
 

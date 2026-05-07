@@ -12,9 +12,31 @@
         li { margin: 10px 0; }
         a { text-decoration: none; color: #0366d6; font-weight: bold; }
         a:hover { text-decoration: underline; }
+        /* 認証用UIのスタイル */
+        .auth-container { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd; }
+        .auth-container label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9em; }
+        .auth-container input { margin-bottom: 10px; display: block; width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .auth-container button { padding: 8px 15px; margin-right: 10px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; }
+        #btn-login { background-color: #0366d6; color: white; }
+        #btn-signup { background-color: #2ea44f; color: white; }
     </style>
 </head>
 <body>
+
+    <div class="auth-container">
+        <h2>アカウント</h2>
+        <label for="user_id">User ID</label>
+        <input type="text" id="user_id" placeholder="User ID">
+        
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Password">
+        
+        <div style="margin-top: 10px;">
+            <button id="btn-login">ログイン (ローカル保存)</button>
+            <button id="btn-signup">新規サインアップ</button>
+        </div>
+        <div id="auth-msg" style="color: green; margin-top: 10px; font-size: 0.9em;"></div>
+    </div>
 
     <h1>マイプロジェクト一覧</h1>
     
@@ -25,5 +47,67 @@
         <li><a href="./ez4/index.html">EZ Project 4</a></li>
     </ul>
 
+    <script src="env.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const userIdInput = document.getElementById('user_id');
+            const passwordInput = document.getElementById('password');
+            const btnLogin = document.getElementById('btn-login');
+            const btnSignup = document.getElementById('btn-signup');
+            const authMsg = document.getElementById('auth-msg');
+
+            // LocalStorageから読み込み
+            userIdInput.value = localStorage.getItem('user_id') || '';
+            passwordInput.value = localStorage.getItem('password') || '';
+
+            // メッセージ表示用関数
+            function showMessage(msg, isError = false) {
+                authMsg.style.color = isError ? 'red' : 'green';
+                authMsg.textContent = msg;
+                setTimeout(() => authMsg.textContent = '', 3000);
+            }
+
+            // ログイン（LocalStorageに保存）
+            btnLogin.addEventListener('click', () => {
+                const uid = userIdInput.value.trim();
+                const pwd = passwordInput.value.trim();
+                if (!uid || !pwd) {
+                    showMessage('User IDとPasswordを入力してください。', true);
+                    return;
+                }
+                localStorage.setItem('user_id', uid);
+                localStorage.setItem('password', pwd);
+                showMessage('認証情報をローカルに保存しました（ログイン完了）。');
+            });
+
+            // サインアップ（/add_user を叩いて保存）
+            btnSignup.addEventListener('click', async () => {
+                try {
+                    btnSignup.disabled = true;
+                    // /add_userエンドポイントにPOSTリクエスト
+                    const res = await fetch(`${API_BASE_URL}/add_user`, { method: 'POST' });
+                    const data = await res.json();
+                    
+                    // APIのレスポンス形式が { user_id, password } または { data: { user_id, password } } などの場合に対応
+                    const credentials = data.user_id ? data : data.data;
+
+                    if (credentials && credentials.user_id && credentials.password) {
+                        userIdInput.value = credentials.user_id;
+                        passwordInput.value = credentials.password;
+                        localStorage.setItem('user_id', credentials.user_id);
+                        localStorage.setItem('password', credentials.password);
+                        showMessage('新規ユーザーを作成し、保存しました！');
+                    } else {
+                        throw new Error('Invalid response format');
+                    }
+                } catch (e) {
+                    console.error('Signup error:', e);
+                    showMessage('サインアップに失敗しました。サーバーが起動しているか確認してください。', true);
+                } finally {
+                    btnSignup.disabled = false;
+                }
+            });
+        });
+    </script>
 </body>
 </html>
