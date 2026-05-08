@@ -8,6 +8,11 @@ const getElem = (id) => document.getElementById(id);
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', async () => {
+  if (!AUTH_USER_ID || !AUTH_PASSWORD) {
+    alert('ログインが必要です。トップページに戻ります。');
+    window.location.href = '../index.html';
+    return;
+  }
   await loadData();
   setupTabs();
   setupCreateTab();
@@ -20,8 +25,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 const resource = 'reading_quizzes';
 const BASE_URL = API_BASE_URL;
 
-const AUTH_USER_ID = 'user1';
-const AUTH_PASSWORD = 'user1';
+
 
 const getAllItems = (resource) => fetch(`${BASE_URL}/${resource}`).then(res => res.json()).then(json => json.data || json);
 const getItemById = (resource, id) => fetch(`${BASE_URL}/${resource}/${id}`).then(res => res.json()).then(json => json.item || json.data || json);

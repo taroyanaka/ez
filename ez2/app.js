@@ -12,8 +12,7 @@ const problemsList = document.getElementById('problems-list');
 const learningContainer = document.getElementById('learning-container');
 
 // API Client Functions
-const AUTH_USER_ID = 'user1';
-const AUTH_PASSWORD = 'user1';
+
 
 const getAllItems = (resource) => fetch(`${API_BASE_URL}/${resource}`).then(res => res.json()).then(json => json.data || json);
 const getItemById = (resource, id) => fetch(`${API_BASE_URL}/${resource}/${id}`).then(res => res.json()).then(json => json.item || json.data || json);
@@ -23,6 +22,11 @@ const deleteItem = (resource, id) => fetch(`${API_BASE_URL}/${resource}/${id}`, 
 
 // Initialization
 document.addEventListener('DOMContentLoaded', async () => {
+  if (!AUTH_USER_ID || !AUTH_PASSWORD) {
+    alert('ログインが必要です。トップページに戻ります。');
+    window.location.href = '../index.html';
+    return;
+  }
   await loadProblems();
   renderProblemsList();
   renderLearningMode();

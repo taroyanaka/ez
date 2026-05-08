@@ -27,8 +27,7 @@ class WebSpeechEngine extends BaseSpeechEngine {
  */
 const resource = 'dictation';
 
-const AUTH_USER_ID = 'user1';
-const AUTH_PASSWORD = 'user1';
+
 
 const apiGetAll = () => fetch(`${API_BASE_URL}/${resource}`).then(res => res.json()).then(json => json.data || json);
 const apiCreate = (data) => fetch(`${API_BASE_URL}/${resource}`, {
@@ -521,6 +520,11 @@ class ManagementManager {
  * Main Controller
  */
 document.addEventListener('DOMContentLoaded', async () => {
+    if (!AUTH_USER_ID || !AUTH_PASSWORD) {
+        alert('ログインが必要です。トップページに戻ります。');
+        window.location.href = '../index.html';
+        return;
+    }
     const speechEngine = new WebSpeechEngine();
     
     // Tab Switching
