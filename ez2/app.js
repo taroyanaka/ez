@@ -22,15 +22,22 @@ const deleteItem = (resource, id) => fetch(`${API_BASE_URL}/${resource}/${id}`, 
 
 // Initialization
 document.addEventListener('DOMContentLoaded', async () => {
-  if (!AUTH_USER_ID || !AUTH_PASSWORD) {
-    alert('ログインが必要です。トップページに戻ります。');
-    window.location.href = '../index.html';
-    return;
-  }
   await loadProblems();
   renderProblemsList();
   renderLearningMode();
 });
+
+function checkAuth() {
+  if (!AUTH_USER_ID || !AUTH_PASSWORD) {
+    const msg = document.getElementById('login-required-msg');
+    const link = document.getElementById('top-link');
+    if (msg) msg.style.display = 'block';
+    if (link) link.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return false;
+  }
+  return true;
+}
+
 
 async function loadProblems() {
   try {
@@ -61,6 +68,7 @@ function switchTab(tabId) {
 
 // Add Problem
 async function addProblem() {
+  if (!checkAuth()) return;
   const questionInput = document.getElementById('question-input');
   const answerInput = document.getElementById('answer-input');
 
@@ -136,6 +144,7 @@ function editProblem(id_key) {
 
 // Delete Problem
 async function deleteProblem(id_key) {
+  if (!checkAuth()) return;
   try {
     const result = await deleteItem(resource, id_key);
     console.log('Delete successful:', result);
@@ -336,6 +345,7 @@ window.apiGetById = async function () {
   }
 };
 window.apiCreate = async function () {
+  if (!checkAuth()) return;
   const newProblem = { id: Date.now().toString(), question: "API Test Question", answer: "Choice A\nChoice B\nChoice C" };
   try {
     const data = await createItem(resource, newProblem);
@@ -345,6 +355,7 @@ window.apiCreate = async function () {
   } catch (err) { alert(err); }
 };
 window.apiUpdate = async function () {
+  if (!checkAuth()) return;
   const id = prompt('Enter ID (id_key) to update:');
   if (id) {
     const updated = { question: "Updated via API Test", answer: "A\nB\nC" };
@@ -357,6 +368,7 @@ window.apiUpdate = async function () {
   }
 };
 window.apiDelete = async function () {
+  if (!checkAuth()) return;
   const id = prompt('Enter ID (id_key) to delete:');
   if (id) {
     try {

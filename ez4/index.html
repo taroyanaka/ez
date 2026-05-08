@@ -20,7 +20,11 @@
         <div class="blob blob-3"></div>
     </div>
 
-    <nav class="tab-nav">
+    <nav class="tab-nav" style="position: relative;">
+        <div style="position: absolute; left: 1.5rem; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: flex-start;">
+            <a href="../index.html" id="top-link" style="color: var(--text-secondary); text-decoration: none; font-size: 0.8rem; font-weight: 600;">← TOP PAGE</a>
+            <div id="login-required-msg" style="color: #ff4d4d; font-size: 0.7rem; font-weight: bold; display: none; margin-top: 2px;">ログイン必要</div>
+        </div>
         <button id="tab-training" class="tab-btn active" data-tab="training">Training</button>
         <button id="tab-management" class="tab-btn" data-tab="management">Management</button>
     </nav>

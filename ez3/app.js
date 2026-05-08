@@ -8,11 +8,6 @@ const getElem = (id) => document.getElementById(id);
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', async () => {
-  if (!AUTH_USER_ID || !AUTH_PASSWORD) {
-    alert('ログインが必要です。トップページに戻ります。');
-    window.location.href = '../index.html';
-    return;
-  }
   await loadData();
   setupTabs();
   setupCreateTab();
@@ -21,6 +16,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderPassageEditors();
   setupApiButtons();
 });
+
+function checkAuth() {
+  if (!AUTH_USER_ID || !AUTH_PASSWORD) {
+    const msg = document.getElementById('login-required-msg');
+    const link = document.getElementById('top-link');
+    if (msg) msg.style.display = 'block';
+    if (link) link.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return false;
+  }
+  return true;
+}
+
 
 const resource = 'reading_quizzes';
 const BASE_URL = API_BASE_URL;
@@ -47,10 +54,12 @@ function setupApiButtons() {
     if (id) getItemById(resource, id).then(logResponse).catch(e => alert('Error: ' + e));
   });
   getElem('btn-api-create')?.addEventListener('click', () => {
+    if (!checkAuth()) return;
     const data = { id: generateId(), title: "API Test Title", passage: "API Test Passage Data", questions: [] };
     createItem(resource, data).then(logResponse).catch(e => alert('Error: ' + e));
   });
   getElem('btn-api-update')?.addEventListener('click', () => {
+    if (!checkAuth()) return;
     const id = prompt("更新するIDを入力してください");
     if (id) {
       const data = { title: "API Update Test", passage: "Updated Passage Data", questions: [] };
@@ -58,6 +67,7 @@ function setupApiButtons() {
     }
   });
   getElem('btn-api-delete')?.addEventListener('click', () => {
+    if (!checkAuth()) return;
     const id = prompt("削除するIDを入力してください");
     if (id) deleteItem(resource, id).then(logResponse).catch(e => alert('Error: ' + e));
   });
@@ -219,6 +229,7 @@ function renderPassageEditors() {
     textInput.value = passageObj.passage || "";
 
     btnDeletePassage.addEventListener('click', async () => {
+      if (!checkAuth()) return;
       // if(confirm('この問題セットを削除しますか?')) {
       const pk = passageObj.id_key || passageObj.id;
       if (passageObj.id_key) {
@@ -326,6 +337,7 @@ function renderPassageEditors() {
 
     // Save button logic
     btnSave.addEventListener('click', async () => {
+      if (!checkAuth()) return;
       passageObj.title = titleInput.value;
       passageObj.passage = textInput.value;
 

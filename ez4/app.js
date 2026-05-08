@@ -323,6 +323,7 @@ class ManagementManager {
     }
 
     async deleteList() {
+        if (!checkAuth()) return;
         if (this.selectedListId === 'new_draft') {
             this.selectedListId = null;
             this.render();
@@ -397,6 +398,7 @@ class ManagementManager {
     }
 
     async bulkAdd() {
+        if (!checkAuth()) return;
         const text = this.bulkArea.value.trim();
         if (!text) {
             alert("問題を入力してください。");
@@ -451,6 +453,7 @@ class ManagementManager {
     }
 
     async updateItem(idx, val) {
+        if (!checkAuth()) return;
         if (!val.trim() || val.length > ManagementManager.ITEM_LIMIT) {
             alert(`1文字以上${ManagementManager.ITEM_LIMIT}文字以内で入力してください。`);
             this.render();
@@ -470,6 +473,7 @@ class ManagementManager {
     }
 
     async deleteItem(idx) {
+        if (!checkAuth()) return;
         const list = globalData.find(l => l.id === this.selectedListId);
         if (list) {
             list.items.splice(idx, 1);
@@ -494,6 +498,7 @@ class ManagementManager {
     }
 
     async importData(e) {
+        if (!checkAuth()) return;
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
@@ -516,15 +521,21 @@ class ManagementManager {
     }
 }
 
+function checkAuth() {
+    if (!AUTH_USER_ID || !AUTH_PASSWORD) {
+        const msg = document.getElementById('login-required-msg');
+        const link = document.getElementById('top-link');
+        if (msg) msg.style.display = 'block';
+        if (link) link.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+    }
+    return true;
+}
+
 /**
  * Main Controller
  */
 document.addEventListener('DOMContentLoaded', async () => {
-    if (!AUTH_USER_ID || !AUTH_PASSWORD) {
-        alert('ログインが必要です。トップページに戻ります。');
-        window.location.href = '../index.html';
-        return;
-    }
     const speechEngine = new WebSpeechEngine();
     
     // Tab Switching

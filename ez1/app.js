@@ -31,14 +31,21 @@ const deleteItem = (resource, id) => fetch(`${API_BASE_URL}/${resource}/${id}`, 
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', async () => {
-    if (!AUTH_USER_ID || !AUTH_PASSWORD) {
-        alert('ログインが必要です。トップページに戻ります。');
-        window.location.href = '../index.html';
-        return;
-    }
     await initChunks();
     updateUI();
 });
+
+function checkAuth() {
+    if (!AUTH_USER_ID || !AUTH_PASSWORD) {
+        const msg = document.getElementById('login-required-msg');
+        const link = document.getElementById('top-link');
+        if (msg) msg.style.display = 'block';
+        if (link) link.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+    }
+    return true;
+}
+
 
 async function initChunks() {
     try {
@@ -74,6 +81,7 @@ async function handleChunkChange() {
 }
 
 async function handleCreateChunk() {
+    if (!checkAuth()) return;
     const name = prompt('新しい問題集の名前を入力してください:');
     if (!name) return;
     try {
@@ -111,6 +119,7 @@ async function loadData() {
 }
 
 async function saveData() {
+    if (!checkAuth()) return;
     if (!currentChunkId) return;
     try {
         // Use the bulk update endpoint with chunk_id query param
@@ -447,6 +456,7 @@ function selectChunkFromApi(chunkId) {
 }
 
 async function deleteChunkFromApi(chunkId) {
+    if (!checkAuth()) return;
     const confirmMsg = `チャンク ID: ${chunkId} のすべてのアイテムを削除してもよろしいですか？\nこの操作は取り消せません。`;
     if (!confirm(confirmMsg)) return;
 
@@ -504,6 +514,7 @@ async function handleGetById() {
 }
 
 async function handleCreate() {
+    if (!checkAuth()) return;
     const bulkInput = document.getElementById('bulk-input');
     const text = bulkInput.value.trim();
 
@@ -553,6 +564,7 @@ async function handleCreate() {
 }
 
 async function handleUpdate() {
+    if (!checkAuth()) return;
     const id = prompt('更新するアイテムのIDを入力してください:');
     if (!id) return;
     const question = prompt('新しい問題を入力してください (省略可):');
@@ -571,6 +583,7 @@ async function handleUpdate() {
 }
 
 async function handleDelete() {
+    if (!checkAuth()) return;
     const id = prompt('削除するアイテムのIDを入力してください:');
     if (!id) return;
     if (!confirm(`ID: ${id} のアイテムを削除してもよろしいですか？`)) return;
