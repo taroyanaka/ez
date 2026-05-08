@@ -73,17 +73,47 @@
                 setTimeout(() => authMsg.textContent = '', 3000);
             }
 
-            // ログイン（LocalStorageに保存）
-            btnLogin.addEventListener('click', () => {
+            // ログイン（APIでチェック後、LocalStorageに保存）
+            btnLogin.addEventListener('click', async () => {
                 const uid = userIdInput.value.trim();
                 const pwd = passwordInput.value.trim();
                 if (!uid || !pwd) {
                     showMessage('User IDとPasswordを入力してください。', true);
                     return;
                 }
-                localStorage.setItem('user_id', uid);
-                localStorage.setItem('password', pwd);
-                showMessage('認証情報をローカルに保存しました（ログイン完了）。');
+                
+                btnLogin.disabled = true;
+                try {
+                    const response = await fetch(`${API_BASE_URL}/login`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ user_id: uid, password: pwd })
+                    });
+                    
+                    const result = await response.json();
+                    if (result.success) {
+                        localStorage.setItem('user_id', uid);
+                        localStorage.setItem('password', pwd);
+                        showMessage('ログイン成功！認証情報を保存しました。');
+                    } else {
+                        throw new Error(result.message || result.error || 'ログイン失敗');
+                    }
+                } catch (e) {
+                    console.error('Login error:', e);
+                    showMessage(e.message || 'ログインに失敗しました', true);
+                    authMsg.animate([
+                        { opacity: 1 },
+                        { opacity: 0, offset: 0.5 },
+                        { opacity: 1 }
+                    ], {
+                        duration: 500,
+                        iterations: 6
+                    });
+                } finally {
+                    btnLogin.disabled = false;
+                }
             });
 
             // サインアップ（/add_user を叩いて保存）

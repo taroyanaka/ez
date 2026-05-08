@@ -39,7 +39,19 @@ function checkAuth() {
     if (!AUTH_USER_ID || !AUTH_PASSWORD) {
         const msg = document.getElementById('login-required-msg');
         const link = document.getElementById('top-link');
-        if (msg) msg.style.display = 'block';
+        if (msg) {
+            msg.style.display = 'block';
+            // スクロール完了頃合い(約500ms後)から3秒間(500ms x 6回)点滅させる
+            msg.animate([
+                { opacity: 1 },
+                { opacity: 0, offset: 0.5 },
+                { opacity: 1 }
+            ], {
+                duration: 500,
+                iterations: 6,
+                delay: 500
+            });
+        }
         if (link) link.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return false;
     }
@@ -322,6 +334,7 @@ function populateBulkInput() {
 }
 
 async function applyBulkUpdate() {
+    if (!checkAuth()) return;
     const bulkInput = document.getElementById('bulk-input');
     const lines = bulkInput.value.trim().split('\n');
     const newDeck = [];
