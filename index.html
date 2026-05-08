@@ -19,6 +19,8 @@
         .auth-container button { padding: 8px 15px; margin-right: 10px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; }
         #btn-login { background-color: #0366d6; color: white; }
         #btn-signup { background-color: #2ea44f; color: white; }
+        #btn-logout { background-color: #d73a49; color: white; }
+        #btn-copy { background-color: #005cc5; color: white; }
     </style>
 </head>
 <body>
@@ -31,9 +33,11 @@
         <label for="password">Password</label>
         <input type="password" id="password" placeholder="Password">
         
-        <div style="margin-top: 10px;">
-            <button id="btn-login">ログイン (ローカル保存)</button>
-            <button id="btn-signup">新規サインアップ</button>
+        <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 10px;">
+            <button id="btn-login">ログイン (保存)</button>
+            <button id="btn-signup">新規登録</button>
+            <button id="btn-copy">情報をコピー</button>
+            <button id="btn-logout">ログアウト</button>
         </div>
         <div id="auth-msg" style="color: green; margin-top: 10px; font-size: 0.9em;"></div>
     </div>
@@ -54,6 +58,8 @@
             const passwordInput = document.getElementById('password');
             const btnLogin = document.getElementById('btn-login');
             const btnSignup = document.getElementById('btn-signup');
+            const btnLogout = document.getElementById('btn-logout');
+            const btnCopy = document.getElementById('btn-copy');
             const authMsg = document.getElementById('auth-msg');
 
             // LocalStorageから読み込み
@@ -106,6 +112,32 @@
                 } finally {
                     btnSignup.disabled = false;
                 }
+            });
+
+            // ログアウト
+            btnLogout.addEventListener('click', () => {
+                localStorage.removeItem('user_id');
+                localStorage.removeItem('password');
+                userIdInput.value = '';
+                passwordInput.value = '';
+                showMessage('ログアウトしました。');
+            });
+
+            // クリップボードにコピー
+            btnCopy.addEventListener('click', () => {
+                const uid = userIdInput.value.trim();
+                const pwd = passwordInput.value.trim();
+                if (!uid || !pwd) {
+                    showMessage('コピーする情報がありません。', true);
+                    return;
+                }
+                const textToCopy = `id: ${uid}\npassword: ${pwd}`;
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    showMessage('クリップボードに保存しました。', true); // 赤文字指定なのでisError=true
+                }).catch(err => {
+                    console.error('Copy failed:', err);
+                    showMessage('コピーに失敗しました。', true);
+                });
             });
         });
     </script>
