@@ -297,7 +297,7 @@ function renderLearningMode() {
         [options[i], options[j]] = [options[j], options[i]];
       }
 
-      ph.html = `<select class="blank-select" onchange="checkAnswer(this, '${targetWord.replace(/'/g, "\\'")}')"><option value="" selected disabled>___</option>${options.map(opt => `<option value="${opt.replace(/"/g, "&quot;")}">${opt}</option>`).join('')}</select>`;
+      ph.html = `<select class="blank-select" data-answer="${targetWord.replace(/"/g, "&quot;")}" onchange="checkAnswer(this, '${targetWord.replace(/'/g, "\\'")}')"><option value="" selected disabled>___</option>${options.map(opt => `<option value="${opt.replace(/"/g, "&quot;")}">${opt}</option>`).join('')}</select>`;
     });
 
     // Phase 3: Replace the tokens with the generated HTML
@@ -314,7 +314,7 @@ function renderLearningMode() {
 }
 
 // Global Validation Function
-window.checkAnswer = function (selectEl, correctAnswer) {
+window.checkAnswer = function (selectEl, correctAnswer, isAutoFill = false) {
   const selectedValue = selectEl.value;
 
   if (selectedValue === correctAnswer) {
@@ -326,6 +326,21 @@ window.checkAnswer = function (selectEl, correctAnswer) {
     span.textContent = selectedValue;
 
     selectEl.parentNode.replaceChild(span, selectEl);
+
+    // Once OKロジック: ユーザーが手動で正解した場合のみ、他の同じ答えの枠を自動で埋める
+    if (!isAutoFill) {
+      const onceOkCheckbox = document.getElementById('once-ok-checkbox');
+      if (onceOkCheckbox && onceOkCheckbox.checked) {
+        const otherSelects = Array.from(document.querySelectorAll('select.blank-select'));
+        otherSelects.forEach(sel => {
+          if (sel.getAttribute('data-answer') === correctAnswer) {
+            sel.value = correctAnswer;
+            // autoFillフラグをtrueにして再帰呼び出し（無限ループ防止）
+            window.checkAnswer(sel, correctAnswer, true);
+          }
+        });
+      }
+    }
   } else {
     // Incorrect! Show error animation
     selectEl.classList.add('error');
