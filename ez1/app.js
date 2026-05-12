@@ -123,6 +123,87 @@ async function handleCreateChunk() {
     }
 }
 
+async function handleMultiTxtImport(event) {
+    if (!checkAuth()) return;
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    let successCount = 0;
+    let failCount = 0;
+    let messages = [];
+
+    for (const file of files) {
+        // Validation: .txt extension
+        if (!file.name.toLowerCase().endsWith('.txt')) {
+            failCount++;
+            messages.push(`${file.name}: .txtファイルではありません。`);
+            continue;
+        }
+
+        try {
+            const content = await file.text();
+            const lines = content.split(/\r?\n/).filter(l => l.trim() !== '');
+
+            // Validation: at least 1 line
+            if (lines.length === 0) {
+                failCount++;
+                messages.push(`${file.name}: データが空です。`);
+                continue;
+            }
+
+            const items = [];
+            let formatError = false;
+            for (const line of lines) {
+                const parts = line.split('=');
+                if (parts.length < 2 || !parts[0].trim() || !parts[1].trim()) {
+                    formatError = true;
+                    break;
+                }
+                items.push({
+                    question: parts[0].trim(),
+                    answer: parts.slice(1).join('=').trim()
+                });
+            }
+
+            // Validation: format
+            if (formatError) {
+                failCount++;
+                messages.push(`${file.name}: フォーマットが正しくありません (a=A形式)。`);
+                continue;
+            }
+
+            // Success: Create chunk and save items
+            const chunkName = file.name.replace(/\.[^/.]+$/, ""); // Remove .txt
+            const chunkResult = await createItem('chunks', { name: chunkName });
+            const chunkId = chunkResult.id;
+
+            // Use bulk update (PUT with chunk_id) to save items
+            await fetch(`${API_BASE_URL}/${resource}?chunk_id=${chunkId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'user_id': AUTH_USER_ID,
+                    'password': AUTH_PASSWORD
+                },
+                body: JSON.stringify(items)
+            });
+
+            successCount++;
+        } catch (error) {
+            console.error(`Error processing file ${file.name}:`, error);
+            failCount++;
+            messages.push(`${file.name}: 読み込みエラー - ${error.message}`);
+        }
+    }
+
+    alert(`インポート結果:\n成功: ${successCount}\n失敗: ${failCount}${messages.length > 0 ? '\n\n' + messages.join('\n') : ''}`);
+    
+    // Refresh chunks list
+    await initChunks();
+    // Clear input
+    event.target.value = '';
+}
+
 // --- Core Data Logic ---
 
 async function loadData() {

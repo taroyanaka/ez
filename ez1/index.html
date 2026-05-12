@@ -43,6 +43,10 @@
             <button class="btn btn-primary" onclick="handleCreateChunk()" style="padding: 0.5rem 1rem;">
                 <i class="fas fa-plus"></i> 新規作成
             </button>
+            <button class="btn btn-primary" onclick="document.getElementById('multi-txt-input').click()" style="padding: 0.5rem 1rem; background: var(--accent-color);">
+                <i class="fas fa-file-import"></i> Multi TXT Import
+            </button>
+            <input type="file" id="multi-txt-input" multiple accept=".txt" style="display: none;" onchange="handleMultiTxtImport(event)">
         </div>
     </div>
 
