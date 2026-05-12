@@ -4,6 +4,7 @@ let currentChunkId = null;
 let currentIndex = 0;
 let isFlipped = false;
 let isInputChecking = false;
+let stack = [];
 
 const resource = 'flashcards';
 
@@ -269,6 +270,11 @@ function switchTab(tab) {
 
     if (actionButtons) {
         actionButtons.style.display = (tab === 'edit') ? 'flex' : 'none';
+    }
+
+    // 学習モードまたは入力回答を開始するたびにスタックをクリア
+    if (tab === 'play' || tab === 'input') {
+        clearStack();
     }
 
     if (tab === 'play') {
@@ -721,5 +727,62 @@ async function handleDelete() {
         updateUI();
     } catch (error) {
         displayApiResult({ action: 'delete', id, status: 'error', message: error.message });
+    }
+}
+
+// --- Stack Logic ---
+
+function addToStack() {
+    if (deck.length === 0) return;
+    const card = deck[currentIndex];
+    
+    // 現在表示中のペアをスタックに追加
+    stack.push({ ...card });
+    updateStackUI();
+    
+    // フィードバック（一瞬ボタンを光らせるなどの代わりに、簡易的な通知やバッジ更新）
+}
+
+function updateStackUI() {
+    const listEl = document.getElementById('stack-list');
+    const badgeEl = document.getElementById('stack-badge');
+    if (!listEl || !badgeEl) return;
+
+    listEl.innerHTML = stack.map((item) => `
+        <div class="stack-item">
+            <div class="item-q">${item.question}</div>
+            <div class="item-a">${item.answer}</div>
+        </div>
+    `).join('');
+
+    badgeEl.textContent = stack.length;
+    badgeEl.style.display = stack.length > 0 ? 'block' : 'none';
+}
+
+function toggleStack() {
+    const panel = document.getElementById('stack-panel');
+    if (panel) {
+        panel.classList.toggle('open');
+    }
+}
+
+function clearStack() {
+    stack = [];
+    updateStackUI();
+}
+
+async function copyStackToClipboard() {
+    if (stack.length === 0) {
+        alert('スタックが空です。');
+        return;
+    }
+    const text = stack.map(item => `${item.question}=${item.answer}`).join('\n');
+    try {
+        await navigator.clipboard.writeText(text);
+        alert('クリップボードにコピーしました！');
+    } catch (err) {
+        // Fallback for non-secure contexts if needed, but navigator.clipboard is standard
+        console.error('Clipboard copy failed:', err);
+        alert('コピーに失敗しました。');
     }
 }

@@ -93,6 +93,9 @@
                     <button class="btn btn-primary" onclick="shuffleCards()">
                         <i class="fas fa-shuffle"></i> シャッフル
                     </button>
+                    <button class="btn" onclick="addToStack()" title="スタックに追加">
+                        <i class="fas fa-layer-group"></i> スタック
+                    </button>
                 </div>
             </div>
         </div>
@@ -131,6 +134,11 @@
                     style="width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 1rem; align-items: center;">
                     <input type="text" id="answer-input" placeholder="解答を入力..." oninput="checkInputAnswer()"
                         autocomplete="off">
+                    <div style="display: flex; gap: 1rem; width: 100%;">
+                        <button class="btn" onclick="addToStack()" style="flex: 1; justify-content: center;">
+                            <i class="fas fa-layer-group"></i> スタックに追加
+                        </button>
+                    </div>
                     <div id="input-feedback" style="font-size: 1.25rem; font-weight: bold; min-height: 2rem;"></div>
                 </div>
             </div>
@@ -194,6 +202,32 @@
             </div>
         </div>
     </main>
+    <!-- Stack UI -->
+    <button id="stack-toggle-btn" onclick="toggleStack()">
+        <i class="fas fa-list-ul"></i>
+        <span id="stack-badge" style="display: none;">0</span>
+    </button>
+
+    <div id="stack-panel">
+        <div class="stack-header">
+            <h3>スタック</h3>
+            <button class="btn-icon" onclick="toggleStack()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="stack-list" class="stack-list">
+            <!-- Stacked items will appear here -->
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <button class="btn btn-primary" onclick="copyStackToClipboard()" style="justify-content: center;">
+                <i class="fas fa-copy"></i> クリップボードに保存
+            </button>
+            <button class="btn" onclick="clearStack()" style="justify-content: center; background: rgba(255,255,255,0.05);">
+                <i class="fas fa-trash"></i> スタックをクリア
+            </button>
+        </div>
+    </div>
+
     <script src="../env.js"></script>
     <script src="app.js"></script>
 </body>
