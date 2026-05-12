@@ -251,12 +251,35 @@ button {
 .problem-q {
   font-weight: 600;
   margin-bottom: 0.25rem;
-  white-space: pre-wrap;
 }
 
 .problem-a {
   font-size: 0.85rem;
   color: var(--success);
+}
+
+.expandable-text {
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+}
+
+.expandable-text:hover {
+  opacity: 0.8;
+}
+
+.expandable-text.truncated {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+}
+
+.expandable-text.expanded {
+  display: block;
+  white-space: pre-wrap;
 }
 
 .problem-actions {

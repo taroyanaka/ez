@@ -196,20 +196,29 @@ function renderProblemsList() {
     return;
   }
 
-  problemsList.innerHTML = problems.map(p => `
-    <div class="problem-item">
-      <div class="problem-text">
-        <div class="problem-q">${p.question}</div>
-        <div class="problem-a">Hidden: ${p.answer.replace(/\n/g, ', ')}</div>
-        <small style="color: var(--text-secondary); opacity: 0.7;">ID: ${p.id_key || p.id}</small>
+  problemsList.innerHTML = problems.map(p => {
+    const hiddenText = `Hidden: ${p.answer.replace(/\n/g, ', ')}`;
+    const id = p.id_key || p.id;
+    return `
+      <div class="problem-item">
+        <div class="problem-text">
+          <div class="problem-q expandable-text truncated" onclick="toggleExpand(this)">${p.question}</div>
+          <div class="problem-a expandable-text truncated" onclick="toggleExpand(this)">${hiddenText}</div>
+          <small style="color: var(--text-secondary); opacity: 0.7;">ID: ${id}</small>
+        </div>
+        <div class="problem-actions">
+          <button type="button" class="edit-btn" onclick="event.preventDefault(); event.stopPropagation(); editProblem(${p.id_key || `'${p.id}'` || `'${id}'`})">Edit</button>
+          <button type="button" class="delete-btn" onclick="event.preventDefault(); event.stopPropagation(); deleteProblem(${p.id_key || `'${p.id}'` || `'${id}'`})">Delete</button>
+        </div>
       </div>
-      <div class="problem-actions">
-        <button type="button" class="edit-btn" onclick="event.preventDefault(); event.stopPropagation(); editProblem(${p.id_key || `'${p.id}'`})">Edit</button>
-        <button type="button" class="delete-btn" onclick="event.preventDefault(); event.stopPropagation(); deleteProblem(${p.id_key || `'${p.id}'`})">Delete</button>
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
+
+window.toggleExpand = function(el) {
+  el.classList.toggle('truncated');
+  el.classList.toggle('expanded');
+};
 
 // Export JSON
 function exportData() {
