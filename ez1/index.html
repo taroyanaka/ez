@@ -17,6 +17,10 @@
                 <i class="fas fa-arrow-left"></i> TOP
             </a>
             <div id="login-required-msg" style="color: var(--danger); font-size: 0.7rem; font-weight: bold; display: none; margin-top: 2px;">ログイン必要</div>
+            <div id="my-data-only-container" style="display: flex; align-items: center; gap: 0.3rem; margin-top: 6px;">
+                <input type="checkbox" id="my-data-only-toggle" checked onchange="handleToggleMyData()" style="cursor: pointer; accent-color: var(--primary);">
+                <label for="my-data-only-toggle" style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; cursor: pointer;">マイデータのみ表示</label>
+            </div>
         </div>
         <div class="tab-container">
             <button id="tab-play" class="tab-btn active" onclick="switchTab('play')">

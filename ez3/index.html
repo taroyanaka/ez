@@ -12,6 +12,10 @@
     <header class="app-header">
       <a href="../index.html" id="top-link" style="text-decoration: none; color: #667eea; font-size: 0.8rem; margin-bottom: 0.5rem; display: inline-block; font-weight: bold;">← TOP PAGE</a>
       <div id="login-required-msg" style="color: #ef4444; font-size: 0.8rem; font-weight: bold; display: none; margin-bottom: 0.5rem;">ログイン必要</div>
+      <div id="my-data-only-container" style="display: flex; align-items: center; gap: 0.3rem; margin-bottom: 1rem; justify-content: center;">
+          <input type="checkbox" id="my-data-only-toggle" checked onchange="handleToggleMyData()" style="cursor: pointer; accent-color: #667eea;">
+          <label for="my-data-only-toggle" style="font-size: 0.75rem; color: #94a3b8; font-weight: 600; cursor: pointer;">マイデータのみ表示</label>
+      </div>
       <h1>Reading Comprehension Quiz</h1>
       <nav class="tab-nav">
         <button id="tab-create" class="tab-btn active">問題作成</button>

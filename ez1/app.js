@@ -11,8 +11,13 @@ const resource = 'flashcards';
 
 
 const getAllItems = (resource) => {
-    console.log(`Fetching all items for resource: ${resource} from ${API_BASE_URL}/${resource}`);
-    return fetch(`${API_BASE_URL}/${resource}`)
+    let url = `${API_BASE_URL}/${resource}`;
+    const myDataOnlyToggle = document.getElementById('my-data-only-toggle');
+    if (myDataOnlyToggle && myDataOnlyToggle.checked && AUTH_USER_ID) {
+        url = `${API_BASE_URL}/${resource}/user/${AUTH_USER_ID}`;
+    }
+    console.log(`Fetching all items for resource: ${resource} from ${url}`);
+    return fetch(url)
         .then(res => res.json())
         .then(json => json.data || json);
 };
@@ -31,9 +36,18 @@ const deleteItem = (resource, id) => fetch(`${API_BASE_URL}/${resource}/${id}`, 
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', async () => {
+    const myDataContainer = document.getElementById('my-data-only-container');
+    if (myDataContainer && (!AUTH_USER_ID || !AUTH_PASSWORD)) {
+        myDataContainer.style.display = 'none';
+    }
     await initChunks();
     updateUI();
 });
+
+async function handleToggleMyData() {
+    await initChunks();
+    updateUI();
+}
 
 function checkAuth() {
     if (!AUTH_USER_ID || !AUTH_PASSWORD) {
@@ -114,8 +128,13 @@ async function handleCreateChunk() {
 async function loadData() {
     if (!currentChunkId) return;
     try {
+        let url = `${API_BASE_URL}/${resource}?chunk_id=${currentChunkId}`;
+        const myDataOnlyToggle = document.getElementById('my-data-only-toggle');
+        if (myDataOnlyToggle && myDataOnlyToggle.checked && AUTH_USER_ID) {
+            url = `${API_BASE_URL}/${resource}/user/${AUTH_USER_ID}?chunk_id=${currentChunkId}`;
+        }
         // Fetch items filtered by chunk_id
-        const response = await fetch(`${API_BASE_URL}/${resource}?chunk_id=${currentChunkId}`);
+        const response = await fetch(url);
         const json = await response.json();
         const data = json.data || json;
 

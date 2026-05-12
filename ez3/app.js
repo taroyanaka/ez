@@ -8,6 +8,10 @@ const getElem = (id) => document.getElementById(id);
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', async () => {
+  const myDataContainer = document.getElementById('my-data-only-container');
+  if (myDataContainer && (!AUTH_USER_ID || !AUTH_PASSWORD)) {
+      myDataContainer.style.display = 'none';
+  }
   await loadData();
   setupTabs();
   setupCreateTab();
@@ -45,7 +49,14 @@ const BASE_URL = API_BASE_URL;
 
 
 
-const getAllItems = (resource) => fetch(`${BASE_URL}/${resource}`).then(res => res.json()).then(json => json.data || json);
+const getAllItems = (resource) => {
+    let url = `${BASE_URL}/${resource}`;
+    const myDataOnlyToggle = document.getElementById('my-data-only-toggle');
+    if (myDataOnlyToggle && myDataOnlyToggle.checked && AUTH_USER_ID) {
+        url = `${BASE_URL}/${resource}/user/${AUTH_USER_ID}`;
+    }
+    return fetch(url).then(res => res.json()).then(json => json.data || json);
+};
 const getItemById = (resource, id) => fetch(`${BASE_URL}/${resource}/${id}`).then(res => res.json()).then(json => json.item || json.data || json);
 const createItem = (resource, data) => fetch(`${BASE_URL}/${resource}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD }, body: JSON.stringify(data) }).then(res => res.json()).then(json => json.item || json.data || json);
 const updateItem = (resource, id, data) => fetch(`${BASE_URL}/${resource}/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD }, body: JSON.stringify(data) }).then(res => res.json()).then(json => json.item || json.data || json);
@@ -121,6 +132,11 @@ async function loadData() {
 
 function saveData() {
   updateExecutionSelect();
+}
+
+async function handleToggleMyData() {
+    await loadData();
+    renderPassageEditors();
 }
 
 // --- Tabs Logic ---
