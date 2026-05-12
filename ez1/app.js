@@ -41,7 +41,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         myDataContainer.style.display = 'none';
     }
     await initChunks();
-    updateUI();
+    // 初期表示として学習モードを明示的にセット
+    switchTab('play');
 });
 
 async function handleToggleMyData() {
@@ -267,7 +268,7 @@ function switchTab(tab) {
     editTab.classList.remove('active');
 
     if (actionButtons) {
-        actionButtons.style.display = tab === 'edit' ? 'flex' : 'none';
+        actionButtons.style.display = (tab === 'edit') ? 'flex' : 'none';
     }
 
     if (tab === 'play') {
@@ -290,6 +291,14 @@ function switchTab(tab) {
 function updateUI() {
     updatePlayer();
     updateInputPlayer();
+
+    // 念のため現在のアクティブなタブに合わせてボタンの表示状態を同期
+    const editTab = document.getElementById('tab-edit');
+    const actionButtons = document.getElementById('chunk-action-buttons');
+    if (editTab && actionButtons) {
+        const isEditActive = editTab.classList.contains('active');
+        actionButtons.style.display = isEditActive ? 'flex' : 'none';
+    }
 }
 
 function updatePlayer() {
