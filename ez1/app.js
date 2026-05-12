@@ -254,6 +254,7 @@ function switchTab(tab) {
     const playTab = document.getElementById('tab-play');
     const inputTab = document.getElementById('tab-input');
     const editTab = document.getElementById('tab-edit');
+    const actionButtons = document.getElementById('chunk-action-buttons');
 
     if (!playView || !inputView || !editView) return;
 
@@ -264,6 +265,10 @@ function switchTab(tab) {
     playTab.classList.remove('active');
     inputTab.classList.remove('active');
     editTab.classList.remove('active');
+
+    if (actionButtons) {
+        actionButtons.style.display = tab === 'edit' ? 'flex' : 'none';
+    }
 
     if (tab === 'play') {
         playView.classList.add('active');
