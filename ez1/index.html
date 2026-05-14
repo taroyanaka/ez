@@ -161,7 +161,22 @@
             </div>
 
             <div class="card-form bulk-editor-container">
-                <h3>テキストで一括編集</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <h3 style="margin: 0;">テキストで一括編集</h3>
+                    <div class="dropdown">
+                        <button class="btn-icon" id="menu-toggle" onclick="toggleMenu()" title="メニュー">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                        <div id="menu-dropdown" class="dropdown-content">
+                            <button onclick="copyLeftSide()">
+                                <i class="fas fa-copy"></i> 左側コピー
+                            </button>
+                            <button onclick="copyRightSide()">
+                                <i class="fas fa-copy"></i> 右側コピー
+                            </button>
+                        </div>
+                    </div>
+                </div>
                 <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
                     1行に1組として「問題=解答」の形式で入力してください。
                 </p>

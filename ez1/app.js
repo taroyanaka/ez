@@ -796,3 +796,77 @@ async function copyStackToClipboard() {
         alert('コピーに失敗しました。');
     }
 }
+
+// --- Hamburger Menu Logic ---
+function toggleMenu() {
+    const dropdown = document.getElementById('menu-dropdown');
+    if (dropdown) {
+        dropdown.classList.toggle('show');
+    }
+}
+
+// Close dropdown when clicking outside
+window.addEventListener('click', function(event) {
+    const menuToggle = document.getElementById('menu-toggle');
+    const menuDropdown = document.getElementById('menu-dropdown');
+    if (menuToggle && !menuToggle.contains(event.target)) {
+        if (menuDropdown && menuDropdown.classList.contains('show')) {
+            menuDropdown.classList.remove('show');
+        }
+    }
+});
+
+async function copyLeftSide() {
+    const bulkInput = document.getElementById('bulk-input');
+    if (!bulkInput) return;
+    const lines = bulkInput.value.split('\n');
+    const leftSides = lines
+        .map(line => {
+            const parts = line.split('=');
+            return parts[0].trim();
+        })
+        .filter(text => text !== '');
+    
+    if (leftSides.length === 0) {
+        alert('コピーする内容がありません。');
+        return;
+    }
+
+    try {
+        await navigator.clipboard.writeText(leftSides.join('\n'));
+        alert('左側の内容をクリップボードにコピーしました！');
+    } catch (err) {
+        console.error('Failed to copy: ', err);
+    }
+    const dropdown = document.getElementById('menu-dropdown');
+    if (dropdown) dropdown.classList.remove('show');
+}
+
+async function copyRightSide() {
+    const bulkInput = document.getElementById('bulk-input');
+    if (!bulkInput) return;
+    const lines = bulkInput.value.split('\n');
+    const rightSides = lines
+        .map(line => {
+            const parts = line.split('=');
+            if (parts.length >= 2) {
+                return parts.slice(1).join('=').trim();
+            }
+            return '';
+        })
+        .filter(text => text !== '');
+    
+    if (rightSides.length === 0) {
+        alert('コピーする内容がありません。');
+        return;
+    }
+
+    try {
+        await navigator.clipboard.writeText(rightSides.join('\n'));
+        alert('右側の内容をクリップボードにコピーしました！');
+    } catch (err) {
+        console.error('Failed to copy: ', err);
+    }
+    const dropdown = document.getElementById('menu-dropdown');
+    if (dropdown) dropdown.classList.remove('show');
+}
