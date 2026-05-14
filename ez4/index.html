@@ -20,14 +20,16 @@
         <div class="blob blob-3"></div>
     </div>
 
+    <div class="top-link-container">
+        <a href="../index.html" id="top-link">← TOP PAGE</a>
+        <div id="login-required-msg">ログイン必要</div>
+    </div>
+
     <nav class="tab-nav">
-        <div class="top-link-container">
-            <a href="../index.html" id="top-link">← TOP PAGE</a>
-            <div id="login-required-msg">ログイン必要</div>
-        </div>
         <button id="tab-training" class="tab-btn active" data-tab="training">Training</button>
         <button id="tab-management" class="tab-btn" data-tab="management">Management</button>
     </nav>
+
 
     <main class="app-container">
         <!-- Training Mode -->
@@ -42,8 +44,11 @@
 
             <div id="list-selector-area" class="list-selector-area">
                 <h2>学習するリストを選択してください</h2>
-                <div id="training-list-container" class="list-grid">
-                    <!-- リストカードがここに動的に生成される -->
+                <div class="selector-wrapper">
+                    <select id="training-list-select">
+                        <option value="" disabled selected>リストを選択してください...</option>
+                    </select>
+                    <button id="btn-start-training" class="primary-btn" style="width: 100%;">Start Training</button>
                 </div>
             </div>
 

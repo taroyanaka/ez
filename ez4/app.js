@@ -576,20 +576,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.renderTrainingList = function() {
         const data = globalData;
-        const container = document.getElementById('training-list-container');
-        if (!container) return;
-        container.innerHTML = '';
+        const select = document.getElementById('training-list-select');
+        if (!select) return;
+
+        // Keep the first default option
+        const firstOption = select.options[0];
+        select.innerHTML = '';
+        select.appendChild(firstOption);
+
         data.forEach(list => {
-            const card = document.createElement('div');
-            card.className = 'list-card';
-            card.innerHTML = `
-                <h3>${list.name}</h3>
-                <span class="count">${list.items.length} problems (${list.lang})</span>
-            `;
-            card.onclick = () => app.start(list);
-            container.appendChild(card);
+            const option = document.createElement('option');
+            option.value = list.id;
+            option.textContent = `${list.name} (${list.items.length} items)`;
+            select.appendChild(option);
         });
     };
+
+    const startBtn = document.getElementById('btn-start-training');
+    if (startBtn) {
+        startBtn.onclick = () => {
+            const select = document.getElementById('training-list-select');
+            const listId = select.value;
+            if (!listId) {
+                alert('リストを選択してください。');
+                return;
+            }
+            const list = globalData.find(l => l.id === listId);
+            if (list) {
+                app.start(list);
+            }
+        };
+    }
 
     // Initial render
     await window.loadDataAndRender();
