@@ -267,9 +267,6 @@ class ManagementManager {
         document.getElementById('btn-create-list').onclick = () => this.createList();
         document.getElementById('btn-delete-list').onclick = () => this.deleteList();
         document.getElementById('btn-bulk-add').onclick = () => this.bulkAdd();
-        document.getElementById('btn-export').onclick = () => this.exportData();
-        document.getElementById('btn-import-trigger').onclick = () => document.getElementById('import-file').click();
-        document.getElementById('import-file').onchange = (e) => this.importData(e);
         
         this.bulkArea.oninput = () => {
             const lines = this.bulkArea.value.split('\n');
@@ -487,38 +484,6 @@ class ManagementManager {
         }
     }
 
-    exportData() {
-        const data = globalData;
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `dictation_export_${new Date().toISOString().slice(0,10)}.json`;
-        a.click();
-    }
-
-    async importData(e) {
-        if (!checkAuth()) return;
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = async (evt) => {
-            try {
-                const data = JSON.parse(evt.target.result);
-                if (Array.isArray(data)) {
-                    for (const list of data) {
-                        await apiCreate(list);
-                    }
-                    alert("インポートが完了しました。");
-                    await window.loadDataAndRender();
-                }
-            } catch (err) {
-                alert("不正なJSONファイルです。インポートに失敗しました。");
-                console.error(err);
-            }
-        };
-        reader.readAsText(file);
-    }
 }
 
 function checkAuth() {

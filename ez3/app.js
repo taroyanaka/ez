@@ -16,7 +16,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupTabs();
   setupCreateTab();
   setupExecuteTab();
-  setupImportExport();
   renderPassageEditors();
   setupApiButtons();
 });
@@ -184,58 +183,6 @@ function setupCreateTab() {
   });
 }
 
-function setupImportExport() {
-  const btnExport = getElem('btn-export-json');
-  const btnImport = getElem('btn-import-json');
-  const fileInput = getElem('json-file-input');
-
-  btnExport.addEventListener('click', () => {
-    const dataStr = JSON.stringify(currentData, null, 2);
-    const blob = new Blob([dataStr], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = "reading_quizzes.json";
-    a.click();
-
-    URL.revokeObjectURL(url);
-  });
-
-  btnImport.addEventListener('click', () => {
-    fileInput.click();
-  });
-
-  fileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const importedData = JSON.parse(event.target.result);
-        if (Array.isArray(importedData)) {
-          if (confirm('現在のデータを上書きしますか？ (キャンセルで追加します)')) {
-            currentData = importedData;
-          } else {
-            currentData = currentData.concat(importedData);
-          }
-          saveData();
-          renderPassageEditors();
-          alert('インポートに成功しました。');
-        } else {
-          throw new Error('Invalid format');
-        }
-      } catch (err) {
-        console.error('Import error:', err);
-        alert('ファイルの読み込みに失敗しました。正しいJSONファイルを選択してください。');
-      }
-    };
-    reader.readAsText(file);
-    // Reset file input so the same file can be selected again
-    fileInput.value = '';
-  });
-}
 
 function renderPassageEditors() {
   const list = getElem('passage-list');
