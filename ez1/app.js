@@ -816,7 +816,7 @@ window.addEventListener('click', function(event) {
     }
 });
 
-async function copyLeftSide() {
+async function copyLeftSide(silent = false, redirectUrl = null) {
     const bulkInput = document.getElementById('bulk-input');
     if (!bulkInput) return;
     const lines = bulkInput.value.split('\n');
@@ -828,21 +828,25 @@ async function copyLeftSide() {
         .filter(text => text !== '');
     
     if (leftSides.length === 0) {
-        alert('コピーする内容がありません。');
+        if (!silent) alert('コピーする内容がありません。');
         return;
     }
 
     try {
         await navigator.clipboard.writeText(leftSides.join('\n'));
-        alert('左側の内容をクリップボードにコピーしました！');
+        if (!silent) alert('左側の内容をクリップボードにコピーしました！');
     } catch (err) {
         console.error('Failed to copy: ', err);
     }
     const dropdown = document.getElementById('menu-dropdown');
     if (dropdown) dropdown.classList.remove('show');
+
+    if (redirectUrl) {
+        window.location.href = redirectUrl;
+    }
 }
 
-async function copyRightSide() {
+async function copyRightSide(silent = false, redirectUrl = null) {
     const bulkInput = document.getElementById('bulk-input');
     if (!bulkInput) return;
     const lines = bulkInput.value.split('\n');
@@ -857,16 +861,20 @@ async function copyRightSide() {
         .filter(text => text !== '');
     
     if (rightSides.length === 0) {
-        alert('コピーする内容がありません。');
+        if (!silent) alert('コピーする内容がありません。');
         return;
     }
 
     try {
         await navigator.clipboard.writeText(rightSides.join('\n'));
-        alert('右側の内容をクリップボードにコピーしました！');
+        if (!silent) alert('右側の内容をクリップボードにコピーしました！');
     } catch (err) {
         console.error('Failed to copy: ', err);
     }
     const dropdown = document.getElementById('menu-dropdown');
     if (dropdown) dropdown.classList.remove('show');
+
+    if (redirectUrl) {
+        window.location.href = redirectUrl;
+    }
 }

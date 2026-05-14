@@ -638,3 +638,9 @@ input:focus, textarea:focus {
     width: 16px;
     color: var(--accent-color);
 }
+
+.dropdown-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 4px 0;
+}
