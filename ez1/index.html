@@ -197,6 +197,9 @@
                     <textarea id="bulk-input" rows="15" placeholder="例: Apple=りんご&#10;Banana=バナナ"></textarea>
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem;">
+                    <button class="btn" onclick="addBulkToStack()" style="background: rgba(129, 140, 248, 0.1); border-color: var(--accent-color);">
+                        <i class="fas fa-layer-group"></i> スタックに追加
+                    </button>
                     <button class="btn" onclick="document.getElementById('bulk-input').value = '';">
                         <i class="fas fa-eraser"></i> クリア
                     </button>

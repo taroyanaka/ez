@@ -878,3 +878,37 @@ async function copyRightSide(silent = false, redirectUrl = null) {
         window.location.href = redirectUrl;
     }
 }
+
+function addBulkToStack() {
+    const bulkInput = document.getElementById('bulk-input');
+    if (!bulkInput) return;
+    const text = bulkInput.value.trim();
+    if (!text) {
+        alert('追加するテキストを入力してください。');
+        return;
+    }
+
+    const lines = text.split('\n');
+    const newItems = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        const parts = line.split('=');
+        if (parts.length < 2 || !parts[0].trim() || !parts[1].trim()) {
+            alert(`フォーマットが正しくありません (行 ${i + 1}): "${line}"\n「問題=解答」の形式で入力してください。`);
+            return;
+        }
+        newItems.push({
+            question: parts[0].trim(),
+            answer: parts.slice(1).join('=').trim()
+        });
+    }
+
+    if (newItems.length > 0) {
+        stack.push(...newItems);
+        updateStackUI();
+        alert(`${newItems.length}件のアイテムをスタックに追加しました。`);
+    }
+}
+
