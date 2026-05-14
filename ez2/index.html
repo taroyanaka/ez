@@ -70,18 +70,21 @@
       <!-- LEARNING MODE TAB -->
       <section id="section-learn" class="tab-content">
         <div class="card learn-card">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
             <h2 style="margin: 0;">Learning Mode</h2>
             <label style="font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--text-secondary);">
               <input type="checkbox" id="once-ok-checkbox" checked>
               Once OK (一度正解で自動入力)
             </label>
+          </div>
+          
           <div id="problem-selector-container" style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem; background: rgba(255,255,255,0.05); padding: 0.75rem; border-radius: 12px; border: 1px solid var(--glass-border);">
             <label for="learning-problem-select" style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">問題を選択:</label>
-            <select id="learning-problem-select" onchange="renderLearningMode()" style="flex: 1; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3); color: var(--text-primary); cursor: pointer; outline: none;">
+            <select id="learning-problem-select" onchange="renderLearningMode()" style="flex: 1; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--card-border); background: rgba(0,0,0,0.3); color: var(--text-color); cursor: pointer; outline: none;">
               <!-- Options injected by JS -->
             </select>
           </div>
+
           <div id="learning-container">
 
             <!-- Learning interface injected here -->
