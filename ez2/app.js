@@ -275,69 +275,90 @@ function escapeRegExp(string) {
 
 // Render Learning Mode
 function renderLearningMode() {
+  const selector = document.getElementById('learning-problem-select');
+  if (!selector) return;
+
+  // Populate selector if it's empty or the number of problems changed
+  if (selector.options.length !== problems.length) {
+    const currentSelection = selector.value;
+    selector.innerHTML = problems.map((p, index) => {
+      const title = p.question.trim().substring(0, 10).replace(/\n/g, ' ') + (p.question.length > 10 ? '...' : '');
+      return `<option value="${index}">${index + 1}. ${title}</option>`;
+    }).join('');
+    
+    // Try to restore selection or default to 0
+    if (currentSelection !== "" && parseInt(currentSelection) < problems.length) {
+      selector.value = currentSelection;
+    } else if (problems.length > 0) {
+      selector.value = "0";
+    }
+  }
+
   if (problems.length === 0) {
     learningContainer.innerHTML = '<div class="empty-state">No problems available. Go to Problem Creation tab to add some.</div>';
     return;
   }
 
-  // No longer using global words; we use problem-specific words.
+  const selectedIndex = parseInt(selector.value) || 0;
+  const p = problems[selectedIndex];
+  if (!p) return;
 
   learningContainer.innerHTML = '';
 
-  problems.forEach((p, pIndex) => {
-    let questionHtml = p.question;
-    const targets = p.answer.split('\n').map(w => w.trim()).filter(w => w);
+  let questionHtml = p.question;
+  const targets = p.answer.split('\n').map(w => w.trim()).filter(w => w);
 
-    targets.sort((a, b) => b.length - a.length);
+  targets.sort((a, b) => b.length - a.length);
 
-    let activeTargets = [];
-    let placeholders = [];
+  let activeTargets = [];
+  let placeholders = [];
 
-    // Phase 1: Determine which targets are actually present in the text and tokenize them
-    targets.forEach((targetWord, idx) => {
-      const parts = questionHtml.split(targetWord);
-      if (parts.length > 1) { // Word was successfully found in the text
-        const token = `__PH_${idx}__`;
-        questionHtml = parts.join(token);
-        activeTargets.push(targetWord);
-        placeholders.push({ word: targetWord, token: token });
-      }
-    });
-
-    // Phase 2: Generate dropdowns ONLY for words that were actually found
-    placeholders.forEach(ph => {
-      const targetWord = ph.word;
-
-      // Filter distractors to be only other ACTIVE words found in the problem
-      const validDistractors = activeTargets.filter(w => w !== targetWord);
-      for (let i = validDistractors.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [validDistractors[i], validDistractors[j]] = [validDistractors[j], validDistractors[i]];
-      }
-
-      const chosenDistractors = validDistractors.slice(0, 2);
-
-      const options = [targetWord, ...chosenDistractors];
-      for (let i = options.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [options[i], options[j]] = [options[j], options[i]];
-      }
-
-      ph.html = `<select class="blank-select" data-answer="${targetWord.replace(/"/g, "&quot;")}" onchange="checkAnswer(this, '${targetWord.replace(/'/g, "\\'")}')"><option value="" selected disabled>___</option>${options.map(opt => `<option value="${opt.replace(/"/g, "&quot;")}">${opt}</option>`).join('')}</select>`;
-    });
-
-    // Phase 3: Replace the tokens with the generated HTML
-    placeholders.forEach(ph => {
-      questionHtml = questionHtml.split(ph.token).join(ph.html);
-    });
-
-    const problemDiv = document.createElement('div');
-    problemDiv.className = 'learning-item';
-    problemDiv.innerHTML = questionHtml;
-
-    learningContainer.appendChild(problemDiv);
+  // Phase 1: Determine which targets are actually present in the text and tokenize them
+  targets.forEach((targetWord, idx) => {
+    const parts = questionHtml.split(targetWord);
+    if (parts.length > 1) { // Word was successfully found in the text
+      const token = `__PH_${idx}__`;
+      questionHtml = parts.join(token);
+      activeTargets.push(targetWord);
+      placeholders.push({ word: targetWord, token: token });
+    }
   });
+
+  // Phase 2: Generate dropdowns ONLY for words that were actually found
+  placeholders.forEach(ph => {
+    const targetWord = ph.word;
+
+    // Filter distractors to be only other ACTIVE words found in the problem
+    const validDistractors = activeTargets.filter(w => w !== targetWord);
+    for (let i = validDistractors.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [validDistractors[i], validDistractors[j]] = [validDistractors[j], validDistractors[i]];
+    }
+
+    const chosenDistractors = validDistractors.slice(0, 2);
+
+    const options = [targetWord, ...chosenDistractors];
+    for (let i = options.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [options[i], options[j]] = [options[j], options[i]];
+    }
+
+    ph.html = `<select class="blank-select" data-answer="${targetWord.replace(/"/g, "&quot;")}" onchange="checkAnswer(this, '${targetWord.replace(/'/g, "\\'")}')"><option value="" selected disabled>___</option>${options.map(opt => `<option value="${opt.replace(/"/g, "&quot;")}">${opt}</option>`).join('')}</select>`;
+  });
+
+  // Phase 3: Replace the tokens with the generated HTML
+  placeholders.forEach(ph => {
+    questionHtml = questionHtml.split(ph.token).join(ph.html);
+  });
+
+  const problemDiv = document.createElement('div');
+  problemDiv.className = 'learning-item';
+  problemDiv.style.marginBottom = '0'; // Only one item displayed
+  problemDiv.innerHTML = questionHtml;
+
+  learningContainer.appendChild(problemDiv);
 }
+
 
 // Global Validation Function
 window.checkAnswer = function (selectEl, correctAnswer, isAutoFill = false) {

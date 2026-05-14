@@ -328,6 +328,7 @@ function updatePlayer() {
     emptyState.style.display = 'none';
     gameContainer.style.display = 'flex';
 
+    const wasFlipped = flashcard.classList.contains('flipped');
     isFlipped = false;
     flashcard.classList.remove('flipped');
 
@@ -335,7 +336,15 @@ function updatePlayer() {
     const isSwapped = document.getElementById('swap-qa-toggle') ? document.getElementById('swap-qa-toggle').checked : false;
 
     qText.textContent = isSwapped ? card.answer : card.question;
-    aText.textContent = isSwapped ? card.question : card.answer;
+    
+    if (wasFlipped) {
+        // カードが回転して裏面が見えなくなるタイミング（約300ms後）まで回答の更新を遅らせる
+        setTimeout(() => {
+            aText.textContent = isSwapped ? card.question : card.answer;
+        }, 300);
+    } else {
+        aText.textContent = isSwapped ? card.question : card.answer;
+    }
 
     currIdxEl.textContent = currentIndex + 1;
     totalCntEl.textContent = deck.length;
@@ -343,6 +352,7 @@ function updatePlayer() {
     const progress = ((currentIndex + 1) / deck.length) * 100;
     progressInner.style.width = `${progress}%`;
 }
+
 
 function flipCard() {
     if (deck.length === 0) return;

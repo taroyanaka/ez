@@ -11,15 +11,17 @@
 </head>
 
 <body>
-    <nav style="position: relative;">
-        <div id="top-link-container" style="position: absolute; left: 2rem; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: flex-start;">
-            <a href="../index.html" id="top-link" style="color: var(--text-secondary); text-decoration: none; font-weight: 600; font-size: 0.9rem;">
-                <i class="fas fa-arrow-left"></i> TOP
-            </a>
-            <div id="login-required-msg" style="color: var(--danger); font-size: 0.7rem; font-weight: bold; display: none; margin-top: 2px;">ログイン必要</div>
-            <div id="my-data-only-container" style="display: flex; align-items: center; gap: 0.3rem; margin-top: 6px;">
-                <input type="checkbox" id="my-data-only-toggle" checked onchange="handleToggleMyData()" style="cursor: pointer; accent-color: var(--primary);">
-                <label for="my-data-only-toggle" style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; cursor: pointer;">マイデータのみ表示</label>
+    <nav>
+        <div id="top-link-container" class="top-link-container">
+            <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                <a href="../index.html" id="top-link">
+                    <i class="fas fa-arrow-left"></i> TOP
+                </a>
+                <div id="login-required-msg">ログイン必要</div>
+            </div>
+            <div id="my-data-only-container">
+                <input type="checkbox" id="my-data-only-toggle" checked onchange="handleToggleMyData()">
+                <label for="my-data-only-toggle">マイデータのみ表示</label>
             </div>
         </div>
         <div class="tab-container">
