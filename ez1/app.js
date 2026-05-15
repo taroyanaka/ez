@@ -630,18 +630,7 @@ function displayApiResult(data) {
                 loadBtn.textContent = '読み込む';
                 loadBtn.onclick = () => selectChunkFromApi(cid);
 
-                const deleteBtn = document.createElement('button');
-                deleteBtn.className = 'btn';
-                deleteBtn.style.padding = '0.4rem 0.8rem';
-                deleteBtn.style.fontSize = '0.8rem';
-                deleteBtn.style.background = 'var(--danger)';
-                deleteBtn.style.border = 'none';
-                deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
-                deleteBtn.title = 'チャンクを削除';
-                deleteBtn.onclick = () => deleteChunkFromApi(cid);
-
                 actions.appendChild(loadBtn);
-                actions.appendChild(deleteBtn);
 
                 row.appendChild(info);
                 row.appendChild(actions);
@@ -681,38 +670,7 @@ function selectChunkFromApi(chunkId) {
     }
 }
 
-async function deleteChunkFromApi(chunkId) {
-    if (!checkAuth()) return;
-    const confirmMsg = `チャンク ID: ${chunkId} のすべてのアイテムを削除してもよろしいですか？\nこの操作は取り消せません。`;
-    if (!confirm(confirmMsg)) return;
 
-    try {
-        // Use bulk update with empty array to clear all cards for this chunk
-        const response = await fetch(`${API_BASE_URL}/${resource}?chunk_id=${chunkId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD },
-            body: JSON.stringify([])
-        });
-
-        if (response.ok) {
-            alert(`チャンク ${chunkId} を削除しました。`);
-            handleGetAll(); // Refresh the list
-
-            // If the deleted chunk was the currently selected one, clear the deck
-            if (currentChunkId == chunkId) {
-                deck = [];
-                updateUI();
-                populateBulkInput();
-            }
-        } else {
-            const err = await response.json();
-            alert(`削除に失敗しました: ${err.error || '不明なエラー'}`);
-        }
-    } catch (error) {
-        console.error('Error deleting chunk:', error);
-        alert('削除中にエラーが発生しました。');
-    }
-}
 
 async function handleGetAll() {
     console.log('handleGetAll: Start');
@@ -729,55 +687,7 @@ async function handleGetAll() {
 }
 
 
-async function handleCreate() {
-    if (!checkAuth()) return;
-    const bulkInput = document.getElementById('bulk-input');
-    const text = bulkInput.value.trim();
 
-    if (!text) {
-        alert('作成する問題を入力してください。');
-        return;
-    }
-
-    const lines = text.split('\n').filter(line => line.trim() !== '');
-    const newItems = [];
-
-    // Validation
-    for (const line of lines) {
-        const parts = line.split('=');
-        if (parts.length < 2 || !parts[0].trim() || !parts[1].trim()) {
-            alert(`フォーマットが正しくありません: "${line}"\n「問題=解答」の形式で入力してください。`);
-            return;
-        }
-        newItems.push({
-            chunk_id: currentChunkId,
-            question: parts[0].trim(),
-            answer: parts.slice(1).join('=').trim()
-        });
-    }
-
-    try {
-        console.log(`Creating ${newItems.length} items...`);
-        const results = [];
-        for (const item of newItems) {
-            const result = await createItem(resource, item);
-            results.push(result);
-        }
-
-        displayApiResult({ action: 'create', status: 'success', count: newItems.length, data: results });
-
-        // Clear textarea after successful creation
-        bulkInput.value = '';
-
-        await loadData();
-        updateUI();
-        alert(`${newItems.length}件の問題を新規登録しました！`);
-    } catch (error) {
-        console.error('handleCreate: Error', error);
-        displayApiResult({ action: 'create', status: 'error', message: error.message });
-        alert('登録中にエラーが発生しました。');
-    }
-}
 
 
 
