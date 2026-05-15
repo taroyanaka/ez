@@ -651,3 +651,8 @@ input:focus, textarea:focus {
     margin: 4px 0;
 }
 
+.active-auto {
+    background: var(--danger) !important;
+    border: none;
+}
+

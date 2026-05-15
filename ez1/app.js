@@ -5,6 +5,11 @@ let currentIndex = 0;
 let isFlipped = false;
 let isInputChecking = false;
 let stack = [];
+let autoTimer = null;
+let autoInterval = 1000;
+let isAutoPlaying = false;
+let autoPhase = 'question';
+
 
 const resource = 'flashcards';
 
@@ -120,6 +125,9 @@ async function handleCreateChunk() {
         document.getElementById('chunk-select').value = currentChunkId;
         await loadData();
         updateUI();
+        if (document.getElementById('editor-view').classList.contains('active')) {
+            populateBulkInput();
+        }
     } catch (error) {
         alert('問題集の作成に失敗しました。');
     }
@@ -388,6 +396,71 @@ async function shuffleCards() {
     await saveData();
 }
 
+async function toggleAutoMode() {
+    if (isAutoPlaying) {
+        stopAutoMode();
+    } else {
+        const intervalStr = prompt('何秒間隔でカードをめくるか入力してください (0.5, 1, 3, 5):', '1');
+        if (!intervalStr) return;
+        const interval = parseFloat(intervalStr);
+        if (![0.5, 1, 3, 5].includes(interval)) {
+            alert('0.5, 1, 3, 5 のいずれかを入力してください。');
+            return;
+        }
+        autoInterval = interval * 1000;
+        startAutoMode();
+    }
+}
+
+function startAutoMode() {
+    if (deck.length === 0) return;
+    isAutoPlaying = true;
+    autoPhase = 'question';
+    
+    const btn = document.getElementById('auto-btn');
+    const icon = document.getElementById('auto-icon');
+    const text = document.getElementById('auto-text');
+    if (btn) btn.classList.add('active-auto');
+    if (icon) {
+        icon.classList.remove('fa-play');
+        icon.classList.add('fa-stop');
+    }
+    if (text) text.textContent = 'オート停止';
+
+    runAutoStep();
+}
+
+function stopAutoMode() {
+    isAutoPlaying = false;
+    clearTimeout(autoTimer);
+    
+    const btn = document.getElementById('auto-btn');
+    const icon = document.getElementById('auto-icon');
+    const text = document.getElementById('auto-text');
+    if (btn) btn.classList.remove('active-auto');
+    if (icon) {
+        icon.classList.remove('fa-stop');
+        icon.classList.add('fa-play');
+    }
+    if (text) text.textContent = 'オート開始';
+}
+
+function runAutoStep() {
+    if (!isAutoPlaying) return;
+    
+    if (autoPhase === 'question') {
+        if (!isFlipped) {
+            flipCard();
+        }
+        autoPhase = 'answer';
+        autoTimer = setTimeout(runAutoStep, autoInterval);
+    } else {
+        nextCard();
+        autoPhase = 'question';
+        autoTimer = setTimeout(runAutoStep, autoInterval);
+    }
+}
+
 function toggleQASwap() {
     updateUI();
 }
@@ -509,6 +582,16 @@ function displayApiResult(data) {
             acc[cid].push(item);
             return acc;
         }, {});
+
+        // アイテム数が0のチャンクもリストに表示するために追加
+        if (chunks && Array.isArray(chunks)) {
+            chunks.forEach(chunk => {
+                const cid = String(chunk.id);
+                if (!groups[cid]) {
+                    groups[cid] = [];
+                }
+            });
+        }
 
         const groupIds = Object.keys(groups).sort();
 
@@ -645,16 +728,6 @@ async function handleGetAll() {
     }
 }
 
-async function handleGetById() {
-    const id = prompt('取得するアイテムのIDを入力してください:');
-    if (!id) return;
-    try {
-        const data = await getItemById(resource, id);
-        displayApiResult({ action: 'getById', id, status: 'success', data });
-    } catch (error) {
-        displayApiResult({ action: 'getById', id, status: 'error', message: error.message });
-    }
-}
 
 async function handleCreate() {
     if (!checkAuth()) return;
@@ -706,37 +779,44 @@ async function handleCreate() {
     }
 }
 
-async function handleUpdate() {
-    if (!checkAuth()) return;
-    const id = prompt('更新するアイテムのIDを入力してください:');
-    if (!id) return;
-    const question = prompt('新しい問題を入力してください (省略可):');
-    const answer = prompt('新しい解答を入力してください (省略可):');
-    const updateData = {};
-    if (question) updateData.question = question;
-    if (answer) updateData.answer = answer;
-    try {
-        const data = await updateItem(resource, id, updateData);
-        displayApiResult({ action: 'update', id, status: 'success', data });
-        await loadData();
-        updateUI();
-    } catch (error) {
-        displayApiResult({ action: 'update', id, status: 'error', message: error.message });
-    }
-}
+
 
 async function handleDelete() {
     if (!checkAuth()) return;
-    const id = prompt('削除するアイテムのIDを入力してください:');
-    if (!id) return;
-    if (!confirm(`ID: ${id} のアイテムを削除してもよろしいですか？`)) return;
+    if (!currentChunkId) {
+        alert('削除する問題集が選択されていません。');
+        return;
+    }
+
+    const currentChunk = chunks.find(c => String(c.id) === String(currentChunkId));
+    const chunkName = currentChunk ? currentChunk.name : `ID: ${currentChunkId}`;
+
+    if (!confirm(`読み込み中の問題集「${chunkName}」を削除してもよろしいですか？\nこの操作は取り消せません。`)) return;
+
     try {
-        const data = await deleteItem(resource, id);
-        displayApiResult({ action: 'delete', id, status: 'success', data });
-        await loadData();
+        // 先にチャンク内のフラッシュカードをすべて削除する
+        await fetch(`${API_BASE_URL}/${resource}?chunk_id=${currentChunkId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD },
+            body: JSON.stringify([])
+        });
+
+        // チャンク自体を削除する
+        const chunkData = await deleteItem('chunks', currentChunkId);
+
+        displayApiResult({ action: 'deleteChunk', id: currentChunkId, status: 'success', data: chunkData });
+        
+        await initChunks();
+        if (chunks.length === 0) {
+            currentChunkId = null;
+            deck = [];
+            populateBulkInput();
+        }
         updateUI();
+        alert(`「${chunkName}」を削除しました。`);
     } catch (error) {
-        displayApiResult({ action: 'delete', id, status: 'error', message: error.message });
+        displayApiResult({ action: 'deleteChunk', id: currentChunkId, status: 'error', message: error.message });
+        alert('削除に失敗しました。');
     }
 }
 

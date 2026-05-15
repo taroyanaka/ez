@@ -95,6 +95,9 @@
                     <button class="btn btn-primary" onclick="shuffleCards()">
                         <i class="fas fa-shuffle"></i> シャッフル
                     </button>
+                    <button class="btn btn-primary" id="auto-btn" onclick="toggleAutoMode()">
+                        <i class="fas fa-play" id="auto-icon"></i> <span id="auto-text">オート開始</span>
+                    </button>
                     <button class="btn" onclick="addToStack()" title="スタックに追加">
                         <i class="fas fa-layer-group"></i> スタック
                     </button>
@@ -218,14 +221,8 @@
                     <button class="btn" onclick="handleGetAll()">
                         <i class="fas fa-list"></i> Get All
                     </button>
-                    <button class="btn" onclick="handleGetById()">
-                        <i class="fas fa-search"></i> Get By ID
-                    </button>
                     <button class="btn btn-primary" onclick="handleCreate()">
                         <i class="fas fa-plus"></i> 新規登録
-                    </button>
-                    <button class="btn btn-primary" onclick="handleUpdate()">
-                        <i class="fas fa-edit"></i> 更新
                     </button>
                     <button class="btn btn-primary" onclick="handleDelete()" style="background: var(--danger);">
                         <i class="fas fa-trash"></i> 削除
