@@ -1,4 +1,5 @@
 let deck = [];
+let playDeck = [];
 let chunks = [];
 let currentChunkId = null;
 let currentIndex = 0;
@@ -231,8 +232,10 @@ async function loadData() {
 
         if (data && Array.isArray(data)) {
             deck = data;
+            playDeck = [...deck];
         } else {
             deck = [];
+            playDeck = [];
         }
     } catch (error) {
         console.error('Failed to load data from API:', error);
@@ -327,7 +330,7 @@ function updatePlayer() {
 
     if (!emptyState || !gameContainer) return;
 
-    if (deck.length === 0) {
+    if (playDeck.length === 0) {
         emptyState.style.display = 'block';
         gameContainer.style.display = 'none';
         return;
@@ -340,7 +343,7 @@ function updatePlayer() {
     isFlipped = false;
     flashcard.classList.remove('flipped');
 
-    const card = deck[currentIndex];
+    const card = playDeck[currentIndex];
     const isSwapped = document.getElementById('swap-qa-toggle') ? document.getElementById('swap-qa-toggle').checked : false;
 
     qText.textContent = isSwapped ? card.answer : card.question;
@@ -355,15 +358,15 @@ function updatePlayer() {
     }
 
     currIdxEl.textContent = currentIndex + 1;
-    totalCntEl.textContent = deck.length;
+    totalCntEl.textContent = playDeck.length;
 
-    const progress = ((currentIndex + 1) / deck.length) * 100;
+    const progress = ((currentIndex + 1) / playDeck.length) * 100;
     progressInner.style.width = `${progress}%`;
 }
 
 
 function flipCard() {
-    if (deck.length === 0) return;
+    if (playDeck.length === 0) return;
     if (isFlipped) {
         nextCard();
     } else {
@@ -373,27 +376,26 @@ function flipCard() {
 }
 
 function nextCard() {
-    if (deck.length === 0) return;
-    currentIndex = (currentIndex + 1) % deck.length;
+    if (playDeck.length === 0) return;
+    currentIndex = (currentIndex + 1) % playDeck.length;
     updatePlayer();
 }
 
 function prevCard() {
-    if (deck.length === 0) return;
-    currentIndex = (currentIndex - 1 + deck.length) % deck.length;
+    if (playDeck.length === 0) return;
+    currentIndex = (currentIndex - 1 + playDeck.length) % playDeck.length;
     updatePlayer();
 }
 
-async function shuffleCards() {
-    if (deck.length <= 1) return;
-    for (let i = deck.length - 1; i > 0; i--) {
+function shuffleCards() {
+    if (playDeck.length <= 1) return;
+    for (let i = playDeck.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [deck[i], deck[j]] = [deck[j], deck[i]];
+        [playDeck[i], playDeck[j]] = [playDeck[j], playDeck[i]];
     }
     currentIndex = 0;
     updatePlayer();
     updateInputPlayer();
-    await saveData();
 }
 
 async function toggleAutoMode() {
@@ -479,7 +481,7 @@ function updateInputPlayer() {
 
     if (!emptyState) return;
 
-    if (deck.length === 0) {
+    if (playDeck.length === 0) {
         emptyState.style.display = 'block';
         inputContainer.style.display = 'none';
         return;
@@ -488,14 +490,14 @@ function updateInputPlayer() {
     emptyState.style.display = 'none';
     inputContainer.style.display = 'flex';
 
-    const card = deck[currentIndex];
+    const card = playDeck[currentIndex];
     const isSwapped = document.getElementById('swap-qa-toggle') ? document.getElementById('swap-qa-toggle').checked : false;
     qText.textContent = isSwapped ? card.answer : card.question;
 
     currIdxEl.textContent = currentIndex + 1;
-    totalCntEl.textContent = deck.length;
+    totalCntEl.textContent = playDeck.length;
 
-    const progress = ((currentIndex + 1) / deck.length) * 100;
+    const progress = ((currentIndex + 1) / playDeck.length) * 100;
     progressInner.style.width = `${progress}%`;
 
     answerInput.value = '';
@@ -508,10 +510,10 @@ function updateInputPlayer() {
 }
 
 function checkInputAnswer() {
-    if (isInputChecking || deck.length === 0) return;
+    if (isInputChecking || playDeck.length === 0) return;
     const answerInput = document.getElementById('answer-input');
     const feedback = document.getElementById('input-feedback');
-    const currentCard = deck[currentIndex];
+    const currentCard = playDeck[currentIndex];
     const isSwapped = document.getElementById('swap-qa-toggle') ? document.getElementById('swap-qa-toggle').checked : false;
     const targetAnswer = isSwapped ? currentCard.question : currentCard.answer;
 
@@ -521,7 +523,7 @@ function checkInputAnswer() {
         feedback.textContent = '正解！';
         feedback.style.color = 'var(--success)';
         setTimeout(() => {
-            currentIndex = (currentIndex + 1) % deck.length;
+            currentIndex = (currentIndex + 1) % playDeck.length;
             updateInputPlayer();
             updatePlayer();
         }, 1000);
@@ -559,6 +561,7 @@ async function applyBulkUpdate() {
     }
 
     deck = newDeck;
+    playDeck = [...deck];
     if (currentIndex >= deck.length) currentIndex = Math.max(0, deck.length - 1);
     await saveData();
     alert('保存しました！');
@@ -720,6 +723,7 @@ async function handleDelete() {
         if (chunks.length === 0) {
             currentChunkId = null;
             deck = [];
+            playDeck = [];
             populateBulkInput();
         }
         updateUI();
@@ -733,8 +737,8 @@ async function handleDelete() {
 // --- Stack Logic ---
 
 function addToStack() {
-    if (deck.length === 0) return;
-    const card = deck[currentIndex];
+    if (playDeck.length === 0) return;
+    const card = playDeck[currentIndex];
     
     // 現在表示中のペアをスタックに追加
     stack.push({ ...card });
