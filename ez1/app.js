@@ -10,6 +10,7 @@ let autoTimer = null;
 let autoInterval = 1000;
 let isAutoPlaying = false;
 let autoPhase = 'question';
+let selectedMergeChunks = []; 
 
 
 const resource = 'flashcards';
@@ -600,6 +601,25 @@ function displayApiResult(data) {
 
         // If we have multiple chunks or at least one assigned chunk, show the list UI
         if (groupIds.length > 0) {
+            // Add Merge Button at the top
+            const mergeActionContainer = document.createElement('div');
+            mergeActionContainer.id = 'merge-action-container';
+            mergeActionContainer.style.display = 'none';
+            mergeActionContainer.style.marginBottom = '1rem';
+            mergeActionContainer.style.padding = '1rem';
+            mergeActionContainer.style.background = 'rgba(129, 140, 248, 0.1)';
+            mergeActionContainer.style.borderRadius = '12px';
+            mergeActionContainer.style.border = '1px solid var(--accent-color)';
+            mergeActionContainer.style.animation = 'fadeIn 0.3s ease';
+            
+            const mergeBtn = document.createElement('button');
+            mergeBtn.className = 'btn btn-primary';
+            mergeBtn.style.width = '100%';
+            mergeBtn.innerHTML = '<i class="fas fa-object-group"></i> 選択した問題集を合成して新規作成';
+            mergeBtn.onclick = handleMergeChunks;
+            mergeActionContainer.appendChild(mergeBtn);
+            resultEl.appendChild(mergeActionContainer);
+
             const listContainer = document.createElement('div');
             listContainer.style.display = 'flex';
             listContainer.style.flexDirection = 'column';
@@ -621,8 +641,40 @@ function displayApiResult(data) {
                 row.style.padding = '0.75rem 1rem';
                 row.style.marginBottom = '0';
 
+                // Merge Selection UI
+                const selectionContainer = document.createElement('div');
+                selectionContainer.style.display = 'flex';
+                selectionContainer.style.alignItems = 'center';
+                selectionContainer.style.marginRight = '1rem';
+                selectionContainer.style.paddingRight = '0.5rem';
+                selectionContainer.style.borderRight = '1px solid rgba(255,255,255,0.1)';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'merge-checkbox';
+                checkbox.dataset.id = cid;
+                checkbox.style.width = '18px';
+                checkbox.style.height = '18px';
+                checkbox.style.cursor = 'pointer';
+                checkbox.onchange = (e) => toggleMergeSelection(cid, e.target.checked);
+
+                const orderLabel = document.createElement('span');
+                orderLabel.id = `merge-order-${cid}`;
+                orderLabel.style.minWidth = '20px';
+                orderLabel.style.textAlign = 'center';
+                orderLabel.style.fontWeight = 'bold';
+                orderLabel.style.color = 'var(--accent-color)';
+                orderLabel.style.marginLeft = '0.5rem';
+                orderLabel.style.fontSize = '0.9rem';
+                orderLabel.textContent = '';
+
+                selectionContainer.appendChild(checkbox);
+                selectionContainer.appendChild(orderLabel);
+                row.appendChild(selectionContainer);
+
                 const info = document.createElement('div');
                 info.className = 'item-content';
+                info.style.flex = '1';
                 info.innerHTML = `<span class="item-q">${displayName}</span><span class="item-a">${groups[cid].length} 個のアイテム</span>`;
 
                 const actions = document.createElement('div');
@@ -683,6 +735,7 @@ function selectChunkFromApi(chunkId) {
 
 async function handleGetAll() {
     console.log('handleGetAll: Start');
+    selectedMergeChunks = []; // Reset selection when fetching new list
     try {
         console.log('handleGetAll: Fetching items...');
         const data = await getAllItems(resource);
@@ -909,6 +962,95 @@ function addBulkToStack() {
         stack.push(...newItems);
         updateStackUI();
         alert(`${newItems.length}件のアイテムをスタックに追加しました。`);
+    }
+}
+
+// --- Chunk Merging Logic ---
+
+function toggleMergeSelection(chunkId, isChecked) {
+    if (isChecked) {
+        if (!selectedMergeChunks.includes(chunkId)) {
+            selectedMergeChunks.push(chunkId);
+        }
+    } else {
+        selectedMergeChunks = selectedMergeChunks.filter(id => id !== chunkId);
+    }
+    updateMergeUI();
+}
+
+function updateMergeUI() {
+    const container = document.getElementById('merge-action-container');
+    if (container) {
+        container.style.display = selectedMergeChunks.length >= 2 ? 'block' : 'none';
+    }
+
+    // Update numbers
+    const checkboxes = document.querySelectorAll('.merge-checkbox');
+    checkboxes.forEach(cb => {
+        const cid = cb.dataset.id;
+        const orderLabel = document.getElementById(`merge-order-${cid}`);
+        if (orderLabel) {
+            const index = selectedMergeChunks.indexOf(cid);
+            orderLabel.textContent = index !== -1 ? (index + 1) : '';
+        }
+    });
+}
+
+async function handleMergeChunks() {
+    if (!checkAuth()) return;
+    if (selectedMergeChunks.length < 2) {
+        alert('合成するには2つ以上の問題集を選択してください。');
+        return;
+    }
+
+    const newName = prompt('合成後の新しい問題集の名前を入力してください:');
+    if (!newName) return;
+
+    try {
+        // 1. Create new chunk
+        const chunkResult = await createItem('chunks', { name: newName });
+        const newChunkId = chunkResult.id;
+
+        // 2. Fetch all items for selected chunks in order and combine them
+        let allMergedItems = [];
+        for (const cid of selectedMergeChunks) {
+            const response = await fetch(`${API_BASE_URL}/${resource}?chunk_id=${cid}`);
+            const json = await response.json();
+            const items = json.data || json;
+            if (Array.isArray(items)) {
+                // Remove individual IDs and other metadata so they are created as new items
+                const cleanedItems = items.map(({ id, created_at, user_id, ...rest }) => ({
+                    ...rest,
+                    chunk_id: newChunkId
+                }));
+                allMergedItems.push(...cleanedItems);
+            }
+        }
+
+        // 3. Save merged items to new chunk using bulk update (PUT)
+        const saveResponse = await fetch(`${API_BASE_URL}/${resource}?chunk_id=${newChunkId}`, {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json', 
+                'user_id': AUTH_USER_ID, 
+                'password': AUTH_PASSWORD 
+            },
+            body: JSON.stringify(allMergedItems)
+        });
+
+        if (saveResponse.ok) {
+            alert(`「${newName}」を作成し、${allMergedItems.length}件のアイテムを合成しました！`);
+            // Reset and Refresh
+            selectedMergeChunks = [];
+            await initChunks();
+            await handleGetAll(); // Refresh the list
+        } else {
+            const err = await saveResponse.json();
+            alert(`保存に失敗しました: ${err.error || '不明なエラー'}`);
+        }
+    } catch (error) {
+        console.error('Merge error:', error);
+        alert('合成中にエラーが発生しました。');
     }
 }
 
