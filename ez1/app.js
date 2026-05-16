@@ -613,6 +613,9 @@ function displayApiResult(data) {
             listContainer.appendChild(title);
 
             groupIds.forEach(cid => {
+                const chunk = chunks.find(c => String(c.id) === String(cid));
+                const displayName = chunk ? chunk.name : `未定義の問題集 (ID: ${cid})`;
+
                 const row = document.createElement('div');
                 row.className = 'list-item';
                 row.style.padding = '0.75rem 1rem';
@@ -620,7 +623,7 @@ function displayApiResult(data) {
 
                 const info = document.createElement('div');
                 info.className = 'item-content';
-                info.innerHTML = `<span class="item-q">チャンク ID: ${cid}</span><span class="item-a">${groups[cid].length} 個のアイテム</span>`;
+                info.innerHTML = `<span class="item-q">${displayName}</span><span class="item-a">${groups[cid].length} 個のアイテム</span>`;
 
                 const actions = document.createElement('div');
                 actions.style.display = 'flex';
@@ -657,19 +660,22 @@ function displayApiResult(data) {
 function selectChunkFromApi(chunkId) {
     const selector = document.getElementById('chunk-select');
     if (selector) {
+        const chunk = chunks.find(c => String(c.id) === String(chunkId));
+        const chunkName = chunk ? chunk.name : `問題集 (ID: ${chunkId})`;
+
         // Find or create option if it doesn't exist (though it should)
         let optionExists = Array.from(selector.options).some(opt => opt.value == chunkId);
         if (!optionExists) {
             const newOpt = document.createElement('option');
             newOpt.value = chunkId;
-            newOpt.textContent = `チャンク ${chunkId} (新しく検出)`;
+            newOpt.textContent = `${chunkName} (新しく検出)`;
             selector.appendChild(newOpt);
         }
         selector.value = chunkId;
         handleChunkChange();
 
         // Visual feedback
-        alert(`チャンク ${chunkId} を読み込みました。`);
+        alert(`「${chunkName}」を読み込みました。`);
     }
 }
 
