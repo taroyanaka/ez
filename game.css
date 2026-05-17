@@ -1,0 +1,44 @@
+/* Game Mode Configuration */
+
+body {
+    /* ゲーミング風のダーク背景とネオンアクセント */
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364) !important;
+    animation: gaming-bg 10s ease infinite !important;
+}
+
+@keyframes gaming-bg {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* CRT スキャンライン効果 */
+body::after {
+    content: " ";
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    z-index: 9999;
+    background-size: 100% 4px, 3px 100%;
+    pointer-events: none;
+    opacity: 0.3;
+}
+
+/* 共通のアニメーション要素 */
+button:active {
+    transform: scale(0.9) !important;
+}
+
+/* カードなどのメイン要素にゲーミングネオン風のシャドウを追加 */
+.card-face, .flashcard-content, .quiz-card, .dictation-card {
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.5), 0 0 30px rgba(0, 255, 255, 0.3) !important;
+    border-color: rgba(0, 255, 255, 0.5) !important;
+}
+
+h1, h2, h3 {
+    text-shadow: 0 0 10px rgba(255, 0, 255, 0.7), 0 0 20px rgba(255, 0, 255, 0.5) !important;
+}
