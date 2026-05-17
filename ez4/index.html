@@ -7,7 +7,11 @@
     <title>Dictation Master | 音声書き取りアプリ</title>
     <meta name="description" content="音声を聴き、正確にタイピングして書き取るトレーニングアプリ。問題管理機能付き。">
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="../game.css">
+    <script>
+        if (localStorage.getItem('game_mode') !== 'off') {
+            document.write('<link rel="stylesheet" href="../game.css">');
+        }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@400;700&display=swap"

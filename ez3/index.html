@@ -5,7 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>文章題アプリ - Reading Quiz</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="../game.css">
+  <script>
+      if (localStorage.getItem('game_mode') !== 'off') {
+          document.write('<link rel="stylesheet" href="../game.css">');
+      }
+  </script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>

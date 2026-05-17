@@ -42,6 +42,14 @@
         <div id="auth-msg" style="color: green; margin-top: 10px; font-size: 0.9em;"></div>
     </div>
 
+    <div class="auth-container" style="margin-top: 20px;">
+        <h2>全般設定</h2>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <input type="checkbox" id="game-mode-toggle" checked style="width: 20px; height: 20px; cursor: pointer;">
+            <label for="game-mode-toggle" style="font-weight: bold; cursor: pointer;">ゲームモードを有効にする (各アプリのネオン風UI)</label>
+        </div>
+    </div>
+
     <h1>マイプロジェクト一覧</h1>
     
     <ul>
@@ -61,6 +69,20 @@
             const btnLogout = document.getElementById('btn-logout');
             const btnCopy = document.getElementById('btn-copy');
             const authMsg = document.getElementById('auth-msg');
+            const gameModeToggle = document.getElementById('game-mode-toggle');
+
+            // Game Mode Initialization
+            if (localStorage.getItem('game_mode') === 'off') {
+                gameModeToggle.checked = false;
+            }
+
+            gameModeToggle.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    localStorage.setItem('game_mode', 'on');
+                } else {
+                    localStorage.setItem('game_mode', 'off');
+                }
+            });
 
             // LocalStorageから読み込み
             userIdInput.value = localStorage.getItem('user_id') || '';

@@ -6,7 +6,11 @@
   <title>Fill-in-the-Blank Learning App</title>
   <meta name="description" content="A premium flashcard app for fill-in-the-blank questions.">
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="../game.css">
+  <script>
+      if (localStorage.getItem('game_mode') !== 'off') {
+          document.write('<link rel="stylesheet" href="../game.css">');
+      }
+  </script>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
