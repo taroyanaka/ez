@@ -38,7 +38,7 @@
         <!-- Create Mode View -->
         <div id="create-view" class="view active">
             <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">
-                元画像を読み込み、隠したい部分をタップやドラッグで黒く塗りつぶします。「Download Pair」で元画像とマスク画像（透過PNG）を個別に保存します。
+                元画像を読み込み、隠したい部分をタップやドラッグで黒く塗りつぶします。「Save to List」でリストに一時保存します。
             </p>
             <div class="file-inputs">
                 <div>
@@ -65,9 +65,6 @@
 
                 <div class="toolbar-separator"></div>
 
-                <button class="btn btn-primary" onclick="exportFiles()" title="Download Pair (ダウンロード)">
-                    <i class="fas fa-download"></i>
-                </button>
                 <button class="btn btn-primary" onclick="saveRecord()" style="background: #10b981; border-color: #10b981;" title="Save to List (保存)">
                     <i class="fas fa-save"></i>
                 </button>
@@ -88,6 +85,7 @@
         </div>
     </main>
 
+    <script src="../env.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

@@ -1,5 +1,6 @@
 // Global State
 let createOriginalImg = null;
+let createOriginalFile = null;
 let createCanvas = null;
 let createCtx = null;
 let isDrawing = false;
@@ -57,6 +58,7 @@ function switchTab(tab) {
 function loadImage(event) {
     const file = event.target.files[0];
     if (!file) return;
+    createOriginalFile = file;
     
     const reader = new FileReader();
     reader.onload = e => {
@@ -201,30 +203,7 @@ function updateUndoRedoButtons() {
     if (btnRedo) btnRedo.disabled = historyStep >= drawHistory.length - 1;
 }
 
-function exportFiles() {
-    if (!createOriginalImg) {
-        alert('元画像がありません。');
-        return;
-    }
-    
-    // 1. Download Original Image
-    const a1 = document.createElement('a');
-    a1.href = createOriginalImg.src; 
-    a1.download = 'ez5_original_image.png';
-    document.body.appendChild(a1);
-    a1.click();
-    document.body.removeChild(a1);
-    
-    // 2. Download Mask Image
-    setTimeout(() => {
-        const a2 = document.createElement('a');
-        a2.href = createCanvas.toDataURL('image/png');
-        a2.download = 'ez5_mask_image.png';
-        document.body.appendChild(a2);
-        a2.click();
-        document.body.removeChild(a2);
-    }, 500);
-}
+
 
 // --- Play Mode Logic ---
 
@@ -268,27 +247,80 @@ function toggleMask(element) {
 
 // --- List Save Logic ---
 
-function saveRecord() {
-    if (!createOriginalImg) {
+function dataURLtoBlob(dataurl) {
+    const arr = dataurl.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+}
+
+async function saveRecord() {
+    if (!createOriginalImg || !createOriginalFile) {
         alert('元画像がありません。');
         return;
     }
     
-    // 現在のCanvasの描画状態（マスク）をDataURL化
-    const maskDataUrl = createCanvas.toDataURL('image/png');
-    // 読み込んだ元画像のDataURL
-    const originalDataUrl = createOriginalImg.src;
-    
-    const record = {
-        id: Date.now(),
-        original: originalDataUrl,
-        mask: maskDataUrl,
-        timestamp: new Date().toLocaleTimeString()
-    };
-    
-    savedRecords.push(record);
-    renderSavedList();
-    alert('リストに保存しました！');
+    const saveBtn = document.querySelector('button[onclick="saveRecord()"]');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    }
+
+    try {
+        // 現在のCanvasの描画状態（マスク）をDataURL化しBlobに変換
+        const maskDataUrl = createCanvas.toDataURL('image/png');
+        const maskBlob = dataURLtoBlob(maskDataUrl);
+        
+        const formData = new FormData();
+        // server.js は 'images' フィールドに配列で受け取る
+        formData.append('images', createOriginalFile);
+        formData.append('images', maskBlob, 'mask.png');
+        
+        const response = await fetch(`${API_BASE_URL}/upload-image`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Upload failed: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        
+        if (!result.urls || result.urls.length < 2) {
+            throw new Error('画像のURLが正しく取得できませんでした。');
+        }
+        
+        // Cloudinaryから返ってきたCDN URL
+        const originalCdnUrl = result.urls[0];
+        const maskCdnUrl = result.urls[1];
+        
+        const record = {
+            id: Date.now(),
+            original: originalCdnUrl,
+            mask: maskCdnUrl,
+            timestamp: new Date().toLocaleTimeString()
+        };
+        
+        savedRecords.push(record);
+        renderPlayList(); // プレイモード側のリストも更新
+        renderSavedList();
+        
+        alert('CDNへのアップロードが成功し、リストに保存されました！\n\n' + 'Original: ' + originalCdnUrl + '\nMask: ' + maskCdnUrl);
+    } catch (e) {
+        console.error('Upload error:', e);
+        alert('アップロードに失敗しました: ' + e.message);
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save"></i>';
+        }
+    }
 }
 
 function renderSavedList() {
