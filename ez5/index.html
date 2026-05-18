@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Fill-in-the-Blank</title>
+    <link rel="stylesheet" href="style.css">
+    <script>
+        if (localStorage.getItem('game_mode') !== 'off') {
+            document.write('<link rel="stylesheet" href="../game.css">');
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav>
+        <div class="top-link-container">
+            <a href="../index.html" id="top-link"><i class="fas fa-arrow-left"></i> TOP PAGE</a>
+        </div>
+        <div class="tab-container">
+            <button class="tab-btn active" id="tab-play" onclick="switchTab('play')">Play (学習)</button>
+            <button class="tab-btn" id="tab-create" onclick="switchTab('create')">Create (作成)</button>
+        </div>
+    </nav>
+
+    <main>
+        <!-- Play Mode View -->
+        <div id="play-view" class="view active">
+            <h2>学習モード (Play)</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">
+                元画像とマスク画像（透過PNG）を読み込みます。黒塗り部分をタップすると表示・非表示が切り替わります。
+            </p>
+            <div class="file-inputs">
+                <div>
+                    <label>元画像 (Original Image):</label>
+                    <input type="file" id="play-orig-img" accept="image/*">
+                </div>
+                <div>
+                    <label>マスク画像 (Mask Image):</label>
+                    <input type="file" id="play-mask-img" accept="image/png">
+                </div>
+            </div>
+            
+            <div id="play-error" class="error-msg"></div>
+            
+            <div class="canvas-container" id="play-canvas-container" style="display: none;">
+                <img id="play-bg-img" style="display:none; position: absolute; top:0; left:0; width:100%; height:100%; object-fit:contain; z-index: 1;">
+                <canvas id="play-canvas" style="position: relative; z-index: 2; cursor: pointer;"></canvas>
+            </div>
+        </div>
+
+        <!-- Create Mode View -->
+        <div id="create-view" class="view">
+            <h2>作成モード (Create)</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">
+                元画像を読み込み、隠したい部分を黒く塗りつぶします。「Download Pair」で元画像とマスク画像を個別に保存します。
+            </p>
+            <div class="file-inputs">
+                <div>
+                    <label>元画像 (Base Image):</label>
+                    <input type="file" id="create-orig-img" accept="image/*">
+                </div>
+            </div>
+
+            <div class="controls" id="create-controls" style="display: none;">
+                <button class="btn active" id="btn-brush" onclick="setMode('brush')"><i class="fas fa-paint-brush"></i> Brush</button>
+                <button class="btn" id="btn-eraser" onclick="setMode('eraser')"><i class="fas fa-eraser"></i> Eraser</button>
+                <div style="display: flex; align-items: center; gap: 0.5rem; background: var(--card-bg); padding: 0 1rem; border-radius: 8px; border: 1px solid var(--glass-border);">
+                    <label style="font-size: 0.8rem; color: var(--text-secondary);">Size:</label>
+                    <input type="range" id="brush-size" min="5" max="100" value="20" style="width: 100px;">
+                </div>
+                <button class="btn btn-primary" onclick="exportFiles()" style="margin-left: auto;">
+                    <i class="fas fa-download"></i> Download Pair
+                </button>
+            </div>
+
+            <div class="canvas-container" id="create-canvas-container" style="display: none;">
+                <img id="create-bg-img" style="display:none; position: absolute; top:0; left:0; width:100%; height:100%; object-fit:contain; z-index: 1;">
+                <canvas id="create-canvas" style="position: relative; z-index: 2; cursor: crosshair;"></canvas>
+            </div>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
