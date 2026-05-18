@@ -7,6 +7,10 @@ let drawMode = 'brush';
 let brushSize = 20;
 let savedRecords = []; // メモリ上に保存するリスト
 
+// Undo/Redo State
+let drawHistory = [];
+let historyStep = -1;
+
 document.addEventListener('DOMContentLoaded', () => {
     // Canvas Setup
     createCanvas = document.getElementById('create-canvas');
@@ -77,6 +81,11 @@ function setupCreateCanvas() {
     createCanvas.width = createOriginalImg.width;
     createCanvas.height = createOriginalImg.height;
     createCtx.clearRect(0, 0, createCanvas.width, createCanvas.height);
+    
+    // 履歴のリセットと初期状態の保存
+    drawHistory = [];
+    historyStep = -1;
+    saveState();
 }
 
 function setMode(mode) {
@@ -132,10 +141,64 @@ function draw(e) {
 }
 
 function stopDrawing() {
-    isDrawing = false;
-    if (createCtx) {
-        createCtx.beginPath();
+    if (isDrawing) {
+        isDrawing = false;
+        if (createCtx) {
+            createCtx.beginPath();
+        }
+        saveState(); // 描画終了時に状態を保存
     }
+}
+
+// --- Undo / Redo Logic ---
+function saveState() {
+    historyStep++;
+    // もしUndoした後に新しい描画をした場合は、その先のRedo履歴を破棄する
+    if (historyStep < drawHistory.length) {
+        drawHistory.length = historyStep;
+    }
+    
+    drawHistory.push(createCanvas.toDataURL('image/png'));
+    updateUndoRedoButtons();
+}
+
+function undo() {
+    if (historyStep > 0) {
+        historyStep--;
+        restoreState();
+    }
+}
+
+function redo() {
+    if (historyStep < drawHistory.length - 1) {
+        historyStep++;
+        restoreState();
+    }
+}
+
+function restoreState() {
+    const img = new Image();
+    img.onload = () => {
+        // 現在のキャンバスをクリアして履歴の画像を再描画する
+        createCtx.clearRect(0, 0, createCanvas.width, createCanvas.height);
+        // source-over を明示的に指定して上書き
+        createCtx.globalCompositeOperation = 'source-over';
+        createCtx.drawImage(img, 0, 0);
+        
+        // 描画モードを元の状態に戻す（消しゴムモードだった場合への対応）
+        if (drawMode === 'eraser') {
+            createCtx.globalCompositeOperation = 'destination-out';
+        }
+    };
+    img.src = drawHistory[historyStep];
+    updateUndoRedoButtons();
+}
+
+function updateUndoRedoButtons() {
+    const btnUndo = document.getElementById('btn-undo');
+    const btnRedo = document.getElementById('btn-redo');
+    if (btnUndo) btnUndo.disabled = historyStep <= 0;
+    if (btnRedo) btnRedo.disabled = historyStep >= drawHistory.length - 1;
 }
 
 function exportFiles() {

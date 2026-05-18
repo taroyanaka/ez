@@ -54,6 +54,10 @@
                     <label style="font-size: 0.8rem; color: var(--text-secondary);">Size:</label>
                     <input type="range" id="brush-size" min="5" max="100" value="20" style="width: 100px;">
                 </div>
+                
+                <button class="btn" id="btn-undo" onclick="undo()" disabled style="padding: 0.5rem;"><i class="fas fa-undo"></i></button>
+                <button class="btn" id="btn-redo" onclick="redo()" disabled style="padding: 0.5rem;"><i class="fas fa-redo"></i></button>
+
                 <button class="btn btn-primary" onclick="exportFiles()" style="margin-left: auto;">
                     <i class="fas fa-download"></i> Download Pair
                 </button>
