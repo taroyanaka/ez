@@ -165,7 +165,46 @@ h2 { margin-bottom: 0.5rem; }
     overflow: hidden;
     background: #000;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    touch-action: none; /* Prevent scrolling when drawing on mobile */
 }
+
+@media (max-width: 600px) {
+    nav {
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1rem;
+    }
+    
+    .top-link-container {
+        position: static;
+        transform: none;
+        align-self: flex-start;
+        margin-bottom: 0.5rem;
+    }
+    
+    main {
+        padding: 1rem;
+    }
+    
+    .controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .controls .btn {
+        justify-content: center;
+    }
+    
+    .controls > div {
+        justify-content: center;
+    }
+    
+    .btn-primary {
+        margin-left: 0 !important;
+    }
+}
+
 
 .canvas-container canvas, .canvas-container img {
     display: block;
