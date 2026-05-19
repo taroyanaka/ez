@@ -117,7 +117,7 @@
     <div class="auth-container" style="margin-top: 20px;">
         <h2>全般設定</h2>
         <div style="display: flex; align-items: center; gap: 10px;">
-            <input type="checkbox" id="game-mode-toggle" checked style="width: 20px; height: 20px; cursor: pointer;">
+            <input type="checkbox" id="game-mode-toggle" style="width: 20px; height: 20px; cursor: pointer;">
             <label for="game-mode-toggle" style="font-weight: bold; cursor: pointer;">ゲームモードを有効にする (各アプリのネオン風UI)</label>
         </div>
     </div>
@@ -144,8 +144,10 @@
             const authMsg = document.getElementById('auth-msg');
             const gameModeToggle = document.getElementById('game-mode-toggle');
 
-            // Game Mode Initialization
-            if (localStorage.getItem('game_mode') === 'off') {
+            // Game Mode Initialization (Default Off)
+            if (localStorage.getItem('game_mode') === 'on') {
+                gameModeToggle.checked = true;
+            } else {
                 gameModeToggle.checked = false;
             }
 
