@@ -12,9 +12,7 @@ let savedRecords = []; // メモリ上に保存するリスト
 let drawHistory = [];
 let historyStep = -1;
 
-// Auth
-const AUTH_USER_ID = localStorage.getItem('user_id');
-const AUTH_PASSWORD = localStorage.getItem('password');
+
 
 document.addEventListener('DOMContentLoaded', () => {
     // Canvas Setup
