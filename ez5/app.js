@@ -12,12 +12,20 @@ let savedRecords = []; // メモリ上に保存するリスト
 let drawHistory = [];
 let historyStep = -1;
 
+// Auth
+const AUTH_USER_ID = localStorage.getItem('user_id');
+const AUTH_PASSWORD = localStorage.getItem('password');
+
 document.addEventListener('DOMContentLoaded', () => {
     // Canvas Setup
     createCanvas = document.getElementById('create-canvas');
     createCtx = createCanvas.getContext('2d', { willReadFrequently: true });
     
-    renderSavedList();
+    if (AUTH_USER_ID) {
+        loadData();
+    } else {
+        renderSavedList();
+    }
 
     
     document.getElementById('create-orig-img').addEventListener('change', e => loadImage(e));
@@ -259,9 +267,35 @@ function dataURLtoBlob(dataurl) {
     return new Blob([u8arr], { type: mime });
 }
 
+async function loadData() {
+    if (!AUTH_USER_ID) return;
+    try {
+        const res = await fetch(`${API_BASE_URL}/fill_image/user/${AUTH_USER_ID}`);
+        if (!res.ok) throw new Error('Failed to load data');
+        const data = await res.json();
+        
+        savedRecords = data.map(item => ({
+            id: item.id,
+            original: item.original,
+            mask: item.mask,
+            timestamp: new Date().toLocaleTimeString() // DBからロードした時刻として表示
+        }));
+        
+        renderSavedList();
+        renderPlayList();
+    } catch (e) {
+        console.error('Data load error:', e);
+    }
+}
+
 async function saveRecord() {
     if (!createOriginalImg || !createOriginalFile) {
         alert('元画像がありません。');
+        return;
+    }
+    
+    if (!AUTH_USER_ID || !AUTH_PASSWORD) {
+        alert('保存にはログインが必要です。TOPページからログインしてください。');
         return;
     }
     
@@ -277,12 +311,16 @@ async function saveRecord() {
         const maskBlob = dataURLtoBlob(maskDataUrl);
         
         const formData = new FormData();
-        // server.js は 'images' フィールドに配列で受け取る
-        formData.append('images', createOriginalFile);
-        formData.append('images', maskBlob, 'mask.png');
+        // 各ファイルを個別のキー名でAppend（サーバー側でCDNにアップされ、DBへInsertされる）
+        formData.append('original', createOriginalFile);
+        formData.append('mask', maskBlob, 'mask.png');
         
-        const response = await fetch(`${API_BASE_URL}/upload-image`, {
+        const response = await fetch(`${API_BASE_URL}/fill_image`, {
             method: 'POST',
+            headers: {
+                'user_id': AUTH_USER_ID,
+                'password': AUTH_PASSWORD
+            },
             body: formData
         });
         
@@ -292,18 +330,14 @@ async function saveRecord() {
         
         const result = await response.json();
         
-        if (!result.urls || result.urls.length < 2) {
+        if (!result.item || !result.item.original || !result.item.mask) {
             throw new Error('画像のURLが正しく取得できませんでした。');
         }
         
-        // Cloudinaryから返ってきたCDN URL
-        const originalCdnUrl = result.urls[0];
-        const maskCdnUrl = result.urls[1];
-        
         const record = {
-            id: Date.now(),
-            original: originalCdnUrl,
-            mask: maskCdnUrl,
+            id: result.item.id,
+            original: result.item.original,
+            mask: result.item.mask,
             timestamp: new Date().toLocaleTimeString()
         };
         
@@ -311,10 +345,10 @@ async function saveRecord() {
         renderPlayList(); // プレイモード側のリストも更新
         renderSavedList();
         
-        alert('CDNへのアップロードが成功し、リストに保存されました！\n\n' + 'Original: ' + originalCdnUrl + '\nMask: ' + maskCdnUrl);
+        alert('DBへの保存が完了しました！');
     } catch (e) {
         console.error('Upload error:', e);
-        alert('アップロードに失敗しました: ' + e.message);
+        alert('保存に失敗しました: ' + e.message);
     } finally {
         if (saveBtn) {
             saveBtn.disabled = false;
@@ -359,7 +393,38 @@ function renderSavedList() {
     `).join('');
 }
 
-function deleteRecord(id) {
+async function deleteRecord(id) {
+    if (!AUTH_USER_ID || !AUTH_PASSWORD) {
+        alert('削除にはログインが必要です。');
+        return;
+    }
+
+    if (!confirm('本当に削除しますか？')) return;
+
+    // UI上で即時反映
+    const originalRecords = [...savedRecords];
     savedRecords = savedRecords.filter(r => r.id !== id);
     renderSavedList();
+    renderPlayList();
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/fill_image/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'user_id': AUTH_USER_ID,
+                'password': AUTH_PASSWORD
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Server deletion failed');
+        }
+    } catch (e) {
+        console.error('Delete error:', e);
+        alert('削除に失敗しました。');
+        // 失敗した場合はリストを元に戻す
+        savedRecords = originalRecords;
+        renderSavedList();
+        renderPlayList();
+    }
 }
