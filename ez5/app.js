@@ -268,7 +268,7 @@ function initPlayCanvases() {
         maskImg.crossOrigin = "anonymous";
         
         const setup = () => {
-            if (maskImg.complete) {
+            if (maskImg.complete && maskImg.naturalWidth > 0) {
                 drawPlayCanvas(record, origImg, maskImg, canvas);
             } else {
                 maskImg.onload = () => drawPlayCanvas(record, origImg, maskImg, canvas);
@@ -295,6 +295,39 @@ function drawPlayCanvas(record, origImg, maskImg, canvas) {
     
     const origData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const currentData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    
+    // クラウド側でのフォーマット変換(JPG等)や白背景PNG対策として、
+    // 白・透明ピクセルは完全に透明化し、黒い部分は完全な不透明黒に補正する
+    const oPixels = origData.data;
+    const cPixels = currentData.data;
+    const len = oPixels.length;
+    
+    for (let i = 0; i < len; i += 4) {
+        const r = oPixels[i];
+        const g = oPixels[i+1];
+        const b = oPixels[i+2];
+        const a = oPixels[i+3];
+        
+        // 白っぽい背景、または元から透明な部分は「マスクなし（透明）」とする
+        if (a < 50 || (r > 200 && g > 200 && b > 200)) {
+            oPixels[i+3] = 0;
+            cPixels[i+3] = 0;
+        } else {
+            // 黒っぽい部分は確実に黒塗り(アルファ255)として描画する
+            oPixels[i] = 0;
+            oPixels[i+1] = 0;
+            oPixels[i+2] = 0;
+            oPixels[i+3] = 255;
+            
+            cPixels[i] = 0;
+            cPixels[i+1] = 0;
+            cPixels[i+2] = 0;
+            cPixels[i+3] = 255;
+        }
+    }
+    
+    // 補正したデータをキャンバスに反映
+    ctx.putImageData(currentData, 0, 0);
     
     playMaskMap.set(record.id, {
         origData,
@@ -659,7 +692,7 @@ function deleteTempRecord(tempId) {
     renderSavedList();
 }
 
-async function uploadTempRecord(tempId, buttonEl) {
+async function uploadTempRecord(tempId, buttonEl, skipRender = false) {
     if (!AUTH_USER_ID || !AUTH_PASSWORD) {
         alert('サーバー保存にはログインが必要です。');
         return false;
@@ -700,8 +733,10 @@ async function uploadTempRecord(tempId, buttonEl) {
                 timestamp: new Date().toLocaleTimeString()
             });
             
-            renderSavedList();
-            renderPlayList();
+            if (!skipRender) {
+                renderSavedList();
+                renderPlayList();
+            }
             return true;
         }
     } catch (e) {
@@ -732,9 +767,12 @@ async function uploadAllTempRecords() {
     const tempIds = tempRecords.map(r => r.id);
     
     for (const id of tempIds) {
-        const success = await uploadTempRecord(id, null);
+        const success = await uploadTempRecord(id, null, true);
         if (success) successCount++;
     }
+    
+    renderSavedList();
+    renderPlayList();
     
     if (btn) {
         btn.disabled = false;
