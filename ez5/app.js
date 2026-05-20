@@ -6,7 +6,8 @@ let createCtx = null;
 let isDrawing = false;
 let drawMode = 'brush'; 
 let brushSize = 20;
-let savedRecords = []; // メモリ上に保存するリスト
+let savedRecords = []; // サーバー(DB)上に保存されたリスト
+let tempRecords = []; // ブラウザのメモリ上に一時保存されているリスト
 
 // Undo/Redo State
 let drawHistory = [];
@@ -229,9 +230,14 @@ function renderPlayList() {
         <div class="play-card" style="background: var(--card-bg); border-radius: 8px; border: 1px solid var(--glass-border); padding: 1rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                 <div style="font-weight: bold; color: var(--accent-color);">Question #${index + 1}</div>
-                <button class="btn btn-primary" onclick="toggleAllMasks(${record.id}, this)" style="padding: 0.2rem 0.8rem; font-size: 0.8rem;">
-                    <i class="fas fa-eye-slash"></i> 全て非表示
-                </button>
+                <div>
+                    <button class="btn btn-primary" onclick="toggleAllMasks(${record.id}, this)" style="padding: 0.2rem 0.8rem; font-size: 0.8rem; margin-right: 0.5rem;">
+                        <i class="fas fa-eye-slash"></i> 全て非表示
+                    </button>
+                    <button class="btn" onclick="deleteRecord(${record.id})" style="color: var(--danger); border-color: var(--danger); background: rgba(239, 68, 68, 0.1); padding: 0.2rem 0.8rem; font-size: 0.8rem;">
+                        <i class="fas fa-trash"></i> 削除
+                    </button>
+                </div>
             </div>
             
             <div class="play-canvas-wrapper" style="position: relative; width: 100%; border-radius: 4px; overflow: hidden; background: #000; user-select: none;">
@@ -471,67 +477,25 @@ async function saveRecord() {
         return;
     }
     
-    if (!AUTH_USER_ID || !AUTH_PASSWORD) {
-        alert('保存にはログインが必要です。TOPページからログインしてください。');
-        return;
-    }
+    // 現在のCanvasの描画状態（マスク）をDataURL化しBlobに変換
+    const maskDataUrl = createCanvas.toDataURL('image/png');
+    const maskBlob = dataURLtoBlob(maskDataUrl);
     
-    const saveBtn = document.querySelector('button[onclick="saveRecord()"]');
-    if (saveBtn) {
-        saveBtn.disabled = true;
-        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    }
-
-    try {
-        // 現在のCanvasの描画状態（マスク）をDataURL化しBlobに変換
-        const maskDataUrl = createCanvas.toDataURL('image/png');
-        const maskBlob = dataURLtoBlob(maskDataUrl);
-        
-        const formData = new FormData();
-        // 各ファイルを個別のキー名でAppend（サーバー側でCDNにアップされ、DBへInsertされる）
-        formData.append('original', createOriginalFile);
-        formData.append('mask', maskBlob, 'mask.png');
-        
-        const response = await fetch(`${API_BASE_URL}/fill_image`, {
-            method: 'POST',
-            headers: {
-                'user_id': AUTH_USER_ID,
-                'password': AUTH_PASSWORD
-            },
-            body: formData
-        });
-        
-        if (!response.ok) {
-            throw new Error(`Upload failed: ${response.statusText}`);
-        }
-        
-        const result = await response.json();
-        
-        if (!result.item || !result.item.original || !result.item.mask) {
-            throw new Error('画像のURLが正しく取得できませんでした。');
-        }
-        
-        const record = {
-            id: result.item.id,
-            original: result.item.original,
-            mask: result.item.mask,
-            timestamp: new Date().toLocaleTimeString()
-        };
-        
-        savedRecords.push(record);
-        renderPlayList(); // プレイモード側のリストも更新
-        renderSavedList();
-        
-        alert('DBへの保存が完了しました！');
-    } catch (e) {
-        console.error('Upload error:', e);
-        alert('保存に失敗しました: ' + e.message);
-    } finally {
-        if (saveBtn) {
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = '<i class="fas fa-save"></i>';
-        }
-    }
+    const record = {
+        id: `temp-${Date.now()}`,
+        isTemp: true,
+        originalFile: createOriginalFile,
+        maskBlob: maskBlob,
+        originalSrc: createOriginalImg.src,
+        maskSrc: maskDataUrl,
+        timestamp: new Date().toLocaleTimeString(),
+        name: createOriginalFile.name || '手書き作成'
+    };
+    
+    tempRecords.push(record);
+    renderSavedList();
+    
+    alert('リスト（一時保存）に追加しました！');
 }
 
 async function handleBulkImport(event) {
@@ -625,40 +589,23 @@ async function handleBulkImport(event) {
     let successCount = 0;
     
     for (const pair of passedPairs) {
-        try {
-            const formData = new FormData();
-            formData.append('original', pair.origFile);
-            formData.append('mask', pair.maskFile);
-            
-            const response = await fetch(`${API_BASE_URL}/fill_image`, {
-                method: 'POST',
-                headers: {
-                    'user_id': AUTH_USER_ID,
-                    'password': AUTH_PASSWORD
-                },
-                body: formData
-            });
-            
-            if (!response.ok) throw new Error(`Upload failed for ${pair.baseName}`);
-            const result = await response.json();
-            
-            if (result.item && result.item.original && result.item.mask) {
-                savedRecords.push({
-                    id: result.item.id,
-                    original: result.item.original,
-                    mask: result.item.mask,
-                    timestamp: new Date().toLocaleTimeString()
-                });
-                successCount++;
-            }
-        } catch (e) {
-            console.error('Import error for', pair.baseName, e);
-        }
+        const origUrl = URL.createObjectURL(pair.origFile);
+        const maskUrl = URL.createObjectURL(pair.maskFile);
+        
+        tempRecords.push({
+            id: `temp-${Date.now()}-${Math.random()}`,
+            isTemp: true,
+            originalFile: pair.origFile,
+            maskBlob: pair.maskFile,
+            originalSrc: origUrl,
+            maskSrc: maskUrl,
+            timestamp: new Date().toLocaleTimeString(),
+            name: pair.baseName
+        });
     }
     
-    renderPlayList();
     renderSavedList();
-    alert(`${successCount}ペアのインポートが完了しました。`);
+    alert(`${passedPairs.length}ペアを一時保存リストに追加しました。\n「全てアップロード」または「個別アップロード」でサーバーへ保存してください。`);
     event.target.value = '';
 }
 
@@ -666,36 +613,137 @@ function renderSavedList() {
     const listEl = document.getElementById('saved-list');
     if (!listEl) return;
     
-    if (savedRecords.length === 0) {
-        listEl.innerHTML = '<p style="color: var(--text-secondary);">保存されたデータはありません。</p>';
+    if (tempRecords.length === 0) {
+        listEl.innerHTML = '<p style="color: var(--text-secondary);">一時保存されたデータはありません。</p>';
         return;
     }
     
-    // リストにプレビューと情報、削除ボタンを表示
-    listEl.innerHTML = savedRecords.map((record, index) => `
+    let html = `
+        <div style="margin-bottom: 1rem; text-align: right;">
+            <button id="btn-upload-all" class="btn btn-primary" onclick="uploadAllTempRecords()" style="padding: 0.5rem 1rem;">
+                <i class="fas fa-cloud-upload-alt"></i> 全てアップロード
+            </button>
+        </div>
+    `;
+    
+    html += tempRecords.map((record, index) => `
         <div style="display: flex; align-items: center; gap: 1rem; background: var(--card-bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--glass-border);">
             <div style="font-weight: bold; font-size: 1.2rem; color: var(--accent-color); width: 30px;">#${index + 1}</div>
             
             <div style="position: relative; width: 80px; height: 80px; background: #000; border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,255,255,0.2);">
-                <img src="${record.original}" style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit: contain;">
-                <!-- マスクを重ねて表示 -->
-                <img src="${record.mask}" style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit: contain;">
+                <img src="${record.originalSrc}" style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit: contain;">
+                <img src="${record.maskSrc}" style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit: contain;">
             </div>
             
             <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
-                <div style="font-size: 0.9rem;">保存時刻: ${record.timestamp}</div>
-                <div style="font-size: 0.8rem; color: var(--text-secondary);">
-                    ペア (元画像 + マスク画像)
-                </div>
+                <div style="font-size: 0.9rem;">${record.name || '名称未設定'}</div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary);">追加時刻: ${record.timestamp}</div>
             </div>
             
-            <div>
-                <button class="btn" onclick="deleteRecord(${record.id})" style="color: var(--danger); border-color: var(--danger); background: rgba(239, 68, 68, 0.1);">
-                    <i class="fas fa-trash"></i> 削除
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <button class="btn btn-primary" onclick="uploadTempRecord('${record.id}', this)" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
+                    <i class="fas fa-cloud-upload-alt"></i> アップロード
+                </button>
+                <button class="btn" onclick="deleteTempRecord('${record.id}')" style="color: var(--danger); border-color: var(--danger); background: rgba(239, 68, 68, 0.1); padding: 0.4rem 0.8rem; font-size: 0.8rem;">
+                    <i class="fas fa-trash"></i> リストから削除
                 </button>
             </div>
         </div>
     `).join('');
+    
+    listEl.innerHTML = html;
+}
+
+function deleteTempRecord(tempId) {
+    tempRecords = tempRecords.filter(r => r.id !== tempId);
+    renderSavedList();
+}
+
+async function uploadTempRecord(tempId, buttonEl) {
+    if (!AUTH_USER_ID || !AUTH_PASSWORD) {
+        alert('サーバー保存にはログインが必要です。');
+        return false;
+    }
+    const idx = tempRecords.findIndex(r => r.id === tempId);
+    if (idx === -1) return false;
+    const record = tempRecords[idx];
+    
+    if (buttonEl) {
+        buttonEl.disabled = true;
+        buttonEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> アップロード中...';
+    }
+    
+    try {
+        const formData = new FormData();
+        formData.append('original', record.originalFile);
+        formData.append('mask', record.maskBlob, 'mask.png');
+        
+        const response = await fetch(`${API_BASE_URL}/fill_image`, {
+            method: 'POST',
+            headers: {
+                'user_id': AUTH_USER_ID,
+                'password': AUTH_PASSWORD
+            },
+            body: formData
+        });
+        
+        if (!response.ok) throw new Error('Upload failed');
+        const result = await response.json();
+        
+        if (result.item && result.item.original && result.item.mask) {
+            tempRecords.splice(idx, 1);
+            
+            savedRecords.push({
+                id: result.item.id,
+                original: result.item.original,
+                mask: result.item.mask,
+                timestamp: new Date().toLocaleTimeString()
+            });
+            
+            renderSavedList();
+            renderPlayList();
+            return true;
+        }
+    } catch (e) {
+        console.error(e);
+        if (buttonEl) {
+            buttonEl.disabled = false;
+            buttonEl.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> アップロード';
+        }
+        alert('アップロードに失敗しました。');
+        return false;
+    }
+}
+
+async function uploadAllTempRecords() {
+    if (!AUTH_USER_ID || !AUTH_PASSWORD) {
+        alert('サーバー保存にはログインが必要です。');
+        return;
+    }
+    if (tempRecords.length === 0) return;
+    
+    const btn = document.getElementById('btn-upload-all');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 全てアップロード中...';
+    }
+    
+    let successCount = 0;
+    const tempIds = tempRecords.map(r => r.id);
+    
+    for (const id of tempIds) {
+        const success = await uploadTempRecord(id, null);
+        if (success) successCount++;
+    }
+    
+    if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> 全てアップロード';
+    }
+    
+    if (successCount > 0) {
+        alert(`${successCount}/${tempIds.length} ペアのサーバー保存が完了しました。`);
+    }
 }
 
 async function deleteRecord(id) {
