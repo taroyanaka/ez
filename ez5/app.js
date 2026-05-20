@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     
     document.getElementById('create-orig-img').addEventListener('change', e => loadImage(e));
+    document.getElementById('bulk-import-imgs').addEventListener('change', e => handleBulkImport(e));
     document.getElementById('brush-size').addEventListener('input', e => {
         brushSize = parseInt(e.target.value);
     });
@@ -353,6 +354,134 @@ async function saveRecord() {
             saveBtn.innerHTML = '<i class="fas fa-save"></i>';
         }
     }
+}
+
+async function handleBulkImport(event) {
+    const files = Array.from(event.target.files);
+    if (!files.length) return;
+    
+    if (!AUTH_USER_ID || !AUTH_PASSWORD) {
+        alert('インポートにはログインが必要です。');
+        event.target.value = '';
+        return;
+    }
+
+    const originalMap = new Map(); // key: baseName
+    const maskMap = new Map();     // key: baseName
+    
+    for (const file of files) {
+        const name = file.name;
+        // filename-original.ext
+        const origMatch = name.match(/^(.*)-original\.[a-zA-Z0-9]+$/);
+        // filename-mask.png
+        const maskMatch = name.match(/^(.*)-mask\.png$/);
+        
+        if (origMatch) {
+            originalMap.set(origMatch[1], file);
+        } else if (maskMatch) {
+            if (file.type !== 'image/png') {
+                alert(`エラー: マスク画像(${name})はPNG形式である必要があります。`);
+                event.target.value = '';
+                return;
+            }
+            maskMap.set(maskMatch[1], file);
+        }
+    }
+    
+    const validPairs = [];
+    
+    for (const [baseName, origFile] of originalMap.entries()) {
+        const maskFile = maskMap.get(baseName);
+        if (maskFile) {
+            validPairs.push({ baseName, origFile, maskFile });
+        }
+    }
+    
+    if (validPairs.length === 0) {
+        alert('有効なペア（「○○-original.拡張子」と「○○-mask.png」）が見つかりませんでした。');
+        event.target.value = '';
+        return;
+    }
+    
+    const getImageDims = (file) => {
+        return new Promise((resolve, reject) => {
+            const url = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = () => {
+                URL.revokeObjectURL(url);
+                resolve({ width: img.width, height: img.height });
+            };
+            img.onerror = () => {
+                URL.revokeObjectURL(url);
+                reject(new Error(`画像の読み込みに失敗しました: ${file.name}`));
+            };
+            img.src = url;
+        });
+    };
+    
+    const passedPairs = [];
+    
+    for (const pair of validPairs) {
+        try {
+            const origDims = await getImageDims(pair.origFile);
+            const maskDims = await getImageDims(pair.maskFile);
+            
+            if (origDims.width !== maskDims.width || origDims.height !== maskDims.height) {
+                alert(`エラー: ペア「${pair.baseName}」の画像サイズが一致しません。\nOriginal: ${origDims.width}x${origDims.height}\nMask: ${maskDims.width}x${maskDims.height}`);
+                event.target.value = '';
+                return; 
+            }
+            passedPairs.push(pair);
+        } catch (err) {
+            alert(err.message);
+            event.target.value = '';
+            return;
+        }
+    }
+    
+    if (!confirm(`${passedPairs.length}ペア（計${passedPairs.length * 2}ファイル）の画像をインポートしますか？\n※アップロードには少し時間がかかる場合があります。`)) {
+        event.target.value = '';
+        return;
+    }
+    
+    let successCount = 0;
+    
+    for (const pair of passedPairs) {
+        try {
+            const formData = new FormData();
+            formData.append('original', pair.origFile);
+            formData.append('mask', pair.maskFile);
+            
+            const response = await fetch(`${API_BASE_URL}/fill_image`, {
+                method: 'POST',
+                headers: {
+                    'user_id': AUTH_USER_ID,
+                    'password': AUTH_PASSWORD
+                },
+                body: formData
+            });
+            
+            if (!response.ok) throw new Error(`Upload failed for ${pair.baseName}`);
+            const result = await response.json();
+            
+            if (result.item && result.item.original && result.item.mask) {
+                savedRecords.push({
+                    id: result.item.id,
+                    original: result.item.original,
+                    mask: result.item.mask,
+                    timestamp: new Date().toLocaleTimeString()
+                });
+                successCount++;
+            }
+        } catch (e) {
+            console.error('Import error for', pair.baseName, e);
+        }
+    }
+    
+    renderPlayList();
+    renderSavedList();
+    alert(`${successCount}ペアのインポートが完了しました。`);
+    event.target.value = '';
 }
 
 function renderSavedList() {

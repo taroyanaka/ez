@@ -40,10 +40,17 @@
             <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">
                 元画像を読み込み、隠したい部分をタップやドラッグで黒く塗りつぶします。「Save to List」でリストに一時保存します。
             </p>
-            <div class="file-inputs">
+            <div class="file-inputs" style="display: flex; gap: 2rem; flex-wrap: wrap;">
                 <div>
                     <label>元画像 (Base Image):</label>
                     <input type="file" id="create-orig-img" accept="image/*">
+                </div>
+                <div style="border-left: 1px solid var(--glass-border); padding-left: 2rem;">
+                    <label>一括インポート:</label>
+                    <input type="file" id="bulk-import-imgs" accept="image/*" multiple>
+                    <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem; max-width: 300px;">
+                        ※「ファイル名-original.拡張子」と「ファイル名-mask.png」のペアを複数選択
+                    </p>
                 </div>
             </div>
 
