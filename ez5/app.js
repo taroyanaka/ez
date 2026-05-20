@@ -214,6 +214,8 @@ function updateUndoRedoButtons() {
 
 // --- Play Mode Logic ---
 
+const playMaskMap = new Map();
+
 function renderPlayList() {
     const playListEl = document.getElementById('play-list-container');
     if (!playListEl) return;
@@ -225,30 +227,206 @@ function renderPlayList() {
     
     playListEl.innerHTML = savedRecords.map((record, index) => `
         <div class="play-card" style="background: var(--card-bg); border-radius: 8px; border: 1px solid var(--glass-border); padding: 1rem;">
-            <div style="font-weight: bold; color: var(--accent-color); margin-bottom: 0.5rem;">Question #${index + 1}</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <div style="font-weight: bold; color: var(--accent-color);">Question #${index + 1}</div>
+                <button class="btn btn-primary" onclick="toggleAllMasks(${record.id}, this)" style="padding: 0.2rem 0.8rem; font-size: 0.8rem;">
+                    <i class="fas fa-eye-slash"></i> 全て非表示
+                </button>
+            </div>
             
-            <div class="play-canvas-wrapper" onclick="toggleMask(this)" style="position: relative; width: 100%; border-radius: 4px; overflow: hidden; background: #000; cursor: pointer; user-select: none;">
+            <div class="play-canvas-wrapper" style="position: relative; width: 100%; border-radius: 4px; overflow: hidden; background: #000; user-select: none;">
                 <!-- 元画像 -->
-                <img src="${record.original}" style="display: block; width: 100%; height: auto; object-fit: contain;">
-                <!-- マスク画像 (デフォルト表示) -->
-                <img class="play-mask-img" src="${record.mask}" style="position: absolute; top:0; left:0; width: 100%; height: 100%; object-fit: contain; transition: opacity 0.2s;">
+                <img id="play-orig-${record.id}" src="${record.original}" style="display: block; width: 100%; height: auto; object-fit: contain;">
+                <!-- 個別操作用キャンバス -->
+                <canvas id="play-mask-${record.id}" style="position: absolute; top:0; left:0; width: 100%; height: 100%; cursor: pointer;"></canvas>
             </div>
             
             <p style="text-align: center; font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">
-                画像をタップして黒塗りを切り替え
+                画像をタップして、その箇所の黒塗りの表示/非表示を切り替え
             </p>
         </div>
     `).join('');
+    
+    initPlayCanvases();
 }
 
-function toggleMask(element) {
-    const maskImg = element.querySelector('.play-mask-img');
-    if (maskImg) {
-        if (maskImg.style.opacity === '0') {
-            maskImg.style.opacity = '1';
+function initPlayCanvases() {
+    playMaskMap.clear();
+    
+    savedRecords.forEach(record => {
+        const origImg = document.getElementById(`play-orig-${record.id}`);
+        const canvas = document.getElementById(`play-mask-${record.id}`);
+        if (!origImg || !canvas) return;
+        
+        const maskImg = new Image();
+        maskImg.crossOrigin = "anonymous";
+        
+        const setup = () => {
+            if (maskImg.complete) {
+                drawPlayCanvas(record, origImg, maskImg, canvas);
+            } else {
+                maskImg.onload = () => drawPlayCanvas(record, origImg, maskImg, canvas);
+            }
+        };
+        
+        if (origImg.complete && origImg.naturalWidth > 0) {
+            setup();
         } else {
-            maskImg.style.opacity = '0';
+            origImg.onload = setup;
         }
+        
+        maskImg.src = record.mask;
+    });
+}
+
+function drawPlayCanvas(record, origImg, maskImg, canvas) {
+    canvas.width = origImg.naturalWidth;
+    canvas.height = origImg.naturalHeight;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(maskImg, 0, 0, canvas.width, canvas.height);
+    
+    const origData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const currentData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    
+    playMaskMap.set(record.id, {
+        origData,
+        currentData,
+        width: canvas.width,
+        height: canvas.height,
+        canvas,
+        ctx,
+        isAllHidden: false
+    });
+    
+    canvas.onclick = (e) => handlePlayCanvasClick(e, record.id);
+}
+
+function getContiguousRegion(imgData, startX, startY, width, height) {
+    const pixels = imgData.data;
+    const startIndex = (startY * width + startX) * 4;
+    
+    if (pixels[startIndex + 3] === 0) return null; // 透明な部分は無視
+
+    const visited = new Uint8Array(width * height);
+    const regionIndices = [];
+    
+    const queueX = new Int32Array(width * height);
+    const queueY = new Int32Array(width * height);
+    let head = 0;
+    let tail = 0;
+    
+    queueX[tail] = startX;
+    queueY[tail] = startY;
+    tail++;
+    
+    visited[startY * width + startX] = 1;
+
+    while(head < tail) {
+        const x = queueX[head];
+        const y = queueY[head];
+        head++;
+        
+        const idx = (y * width + x) * 4;
+        regionIndices.push(idx);
+
+        if (x + 1 < width && !visited[y * width + (x + 1)]) {
+            visited[y * width + (x + 1)] = 1;
+            if (pixels[(y * width + (x + 1)) * 4 + 3] > 0) {
+                queueX[tail] = x + 1; queueY[tail] = y; tail++;
+            }
+        }
+        if (x - 1 >= 0 && !visited[y * width + (x - 1)]) {
+            visited[y * width + (x - 1)] = 1;
+            if (pixels[(y * width + (x - 1)) * 4 + 3] > 0) {
+                queueX[tail] = x - 1; queueY[tail] = y; tail++;
+            }
+        }
+        if (y + 1 < height && !visited[(y + 1) * width + x]) {
+            visited[(y + 1) * width + x] = 1;
+            if (pixels[((y + 1) * width + x) * 4 + 3] > 0) {
+                queueX[tail] = x; queueY[tail] = y + 1; tail++;
+            }
+        }
+        if (y - 1 >= 0 && !visited[(y - 1) * width + x]) {
+            visited[(y - 1) * width + x] = 1;
+            if (pixels[((y - 1) * width + x) * 4 + 3] > 0) {
+                queueX[tail] = x; queueY[tail] = y - 1; tail++;
+            }
+        }
+    }
+    return regionIndices;
+}
+
+function handlePlayCanvasClick(e, id) {
+    const dataObj = playMaskMap.get(id);
+    if (!dataObj) return;
+    
+    const rect = dataObj.canvas.getBoundingClientRect();
+    const scaleX = dataObj.width / rect.width;
+    const scaleY = dataObj.height / rect.height;
+    
+    const x = Math.floor((e.clientX - rect.left) * scaleX);
+    const y = Math.floor((e.clientY - rect.top) * scaleY);
+    
+    if (x < 0 || y < 0 || x >= dataObj.width || y >= dataObj.height) return;
+    
+    const origPixels = dataObj.origData.data;
+    const idx = (y * dataObj.width + x) * 4;
+    
+    if (origPixels[idx + 3] === 0) return; 
+    
+    const curPixels = dataObj.currentData.data;
+    const isCurrentlyVisible = curPixels[idx + 3] > 0;
+    
+    const regionIndices = getContiguousRegion(dataObj.origData, x, y, dataObj.width, dataObj.height);
+    if (!regionIndices) return;
+    
+    for (let i = 0; i < regionIndices.length; i++) {
+        const pIdx = regionIndices[i];
+        if (isCurrentlyVisible) {
+            curPixels[pIdx + 3] = 0; // Hide
+        } else {
+            curPixels[pIdx] = origPixels[pIdx];
+            curPixels[pIdx + 1] = origPixels[pIdx + 1];
+            curPixels[pIdx + 2] = origPixels[pIdx + 2];
+            curPixels[pIdx + 3] = origPixels[pIdx + 3]; // Show
+        }
+    }
+    
+    dataObj.ctx.putImageData(dataObj.currentData, 0, 0);
+}
+
+function toggleAllMasks(id, btn) {
+    const dataObj = playMaskMap.get(id);
+    if (!dataObj) return;
+    
+    dataObj.isAllHidden = !dataObj.isAllHidden;
+    
+    const curPixels = dataObj.currentData.data;
+    const origPixels = dataObj.origData.data;
+    const len = curPixels.length;
+    
+    for (let i = 0; i < len; i += 4) {
+        if (origPixels[i + 3] > 0) { 
+            if (dataObj.isAllHidden) {
+                curPixels[i + 3] = 0; 
+            } else {
+                curPixels[i] = origPixels[i];
+                curPixels[i+1] = origPixels[i+1];
+                curPixels[i+2] = origPixels[i+2];
+                curPixels[i+3] = origPixels[i+3];
+            }
+        }
+    }
+    
+    dataObj.ctx.putImageData(dataObj.currentData, 0, 0);
+    
+    if (dataObj.isAllHidden) {
+        btn.innerHTML = '<i class="fas fa-eye"></i> 全て表示';
+    } else {
+        btn.innerHTML = '<i class="fas fa-eye-slash"></i> 全て非表示';
     }
 }
 
