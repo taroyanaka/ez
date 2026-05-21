@@ -252,58 +252,85 @@ function renderPlayList() {
         return;
     }
     
+    // ファイル名（URLの末尾）を抽出するヘルパー
+    const getFileName = (url) => {
+        try {
+            return url.split('/').pop().split('?')[0];
+        } catch(e) {
+            return url;
+        }
+    };
+    
     playListEl.innerHTML = savedRecords.map((record, index) => `
         <div class="play-card" style="background: var(--card-bg); border-radius: 8px; border: 1px solid var(--glass-border); padding: 1rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                <div style="font-weight: bold; color: var(--accent-color);">Question #${index + 1}</div>
-                <button class="btn btn-primary" onclick="toggleAllMasks(${record.id}, this)" style="padding: 0.2rem 0.8rem; font-size: 0.8rem;">
-                    <i class="fas fa-eye-slash"></i> 全て非表示
+                <div>
+                    <div style="font-weight: bold; color: var(--accent-color);">Question #${index + 1}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); word-break: break-all;">${getFileName(record.original)}</div>
+                </div>
+                <button class="btn btn-primary" id="btn-load-${record.id}" onclick="loadPlayImage('${record.id}', this)" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; background: #3b82f6; border-color: #3b82f6;">
+                    <i class="fas fa-download"></i> 画像を読み込む
                 </button>
             </div>
             
-            <div class="play-canvas-wrapper" style="position: relative; width: 100%; border-radius: 4px; overflow: hidden; background: #000; user-select: none;">
-                <!-- 元画像 -->
-                <img id="play-orig-${record.id}" src="${record.original}" style="display: block; width: 100%; height: auto; object-fit: contain;">
-                <!-- 個別操作用キャンバス -->
-                <canvas id="play-mask-${record.id}" style="position: absolute; top:0; left:0; width: 100%; height: 100%; cursor: pointer;"></canvas>
+            <div id="play-content-${record.id}" style="display: none;">
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 0.5rem;">
+                    <button class="btn btn-primary" onclick="toggleAllMasks('${record.id}', this)" style="padding: 0.2rem 0.8rem; font-size: 0.8rem;">
+                        <i class="fas fa-eye-slash"></i> 全て非表示
+                    </button>
+                </div>
+                <div class="play-canvas-wrapper" style="position: relative; width: 100%; border-radius: 4px; overflow: hidden; background: #000; user-select: none;">
+                    <img id="play-orig-${record.id}" crossorigin="anonymous" style="display: block; width: 100%; height: auto; object-fit: contain;">
+                    <canvas id="play-mask-${record.id}" style="position: absolute; top:0; left:0; width: 100%; height: 100%; cursor: pointer;"></canvas>
+                </div>
+                <p style="text-align: center; font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                    画像をタップして、その箇所の黒塗りの表示/非表示を切り替え
+                </p>
             </div>
-            
-            <p style="text-align: center; font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">
-                画像をタップして、その箇所の黒塗りの表示/非表示を切り替え
-            </p>
         </div>
     `).join('');
     
-    initPlayCanvases();
+    // 画像は一括で読み込まず、ユーザーが「読み込む」ボタンを押すまで待機する
+    playMaskMap.clear();
 }
 
-function initPlayCanvases() {
-    playMaskMap.clear();
+function loadPlayImage(id, btn) {
+    const record = savedRecords.find(r => r.id === id);
+    if (!record) return;
     
-    savedRecords.forEach(record => {
-        const origImg = document.getElementById(`play-orig-${record.id}`);
-        const canvas = document.getElementById(`play-mask-${record.id}`);
-        if (!origImg || !canvas) return;
-        
-        const maskImg = new Image();
-        maskImg.crossOrigin = "anonymous";
-        
-        const setup = () => {
-            if (maskImg.complete && maskImg.naturalWidth > 0) {
-                drawPlayCanvas(record, origImg, maskImg, canvas);
-            } else {
-                maskImg.onload = () => drawPlayCanvas(record, origImg, maskImg, canvas);
-            }
-        };
-        
-        if (origImg.complete && origImg.naturalWidth > 0) {
-            setup();
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 読込中...';
+    
+    const contentDiv = document.getElementById(`play-content-${id}`);
+    const origImg = document.getElementById(`play-orig-${id}`);
+    const canvas = document.getElementById(`play-mask-${id}`);
+    
+    const maskImg = new Image();
+    maskImg.crossOrigin = "anonymous";
+    
+    const setup = () => {
+        if (maskImg.complete && maskImg.naturalWidth > 0) {
+            drawPlayCanvas(record, origImg, maskImg, canvas);
+            contentDiv.style.display = 'block';
+            btn.style.display = 'none';
         } else {
-            origImg.onload = setup;
+            maskImg.onload = () => {
+                drawPlayCanvas(record, origImg, maskImg, canvas);
+                contentDiv.style.display = 'block';
+                btn.style.display = 'none';
+            };
         }
-        
-        maskImg.src = record.mask;
-    });
+    };
+    
+    if (origImg.complete && origImg.naturalWidth > 0) {
+        setup();
+    } else {
+        origImg.onload = setup;
+    }
+    
+    // 実際に画像のダウンロードを開始
+    origImg.src = record.original;
+    maskImg.src = record.mask;
 }
 
 function drawPlayCanvas(record, origImg, maskImg, canvas) {
@@ -863,18 +890,23 @@ function renderDbList() {
         return;
     }
     
+    // ファイル名（URLの末尾）を抽出するヘルパー
+    const getFileName = (url) => {
+        try {
+            return url.split('/').pop().split('?')[0];
+        } catch(e) {
+            return url;
+        }
+    };
+    
     listEl.innerHTML = savedRecords.map((record, index) => `
         <div style="display: flex; align-items: center; gap: 1rem; background: var(--card-bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--glass-border);">
             <div style="font-weight: bold; font-size: 1.2rem; color: var(--accent-color); width: 30px;">#${index + 1}</div>
             
-            <div style="position: relative; width: 80px; height: 80px; background: #000; border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,255,255,0.2);">
-                <img src="${record.original}" crossorigin="anonymous" style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit: contain;">
-                <img src="${record.mask}" crossorigin="anonymous" style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit: contain;">
-            </div>
-            
-            <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
-                <div style="font-size: 0.9rem;">ID: ${record.id}</div>
-                <div style="font-size: 0.8rem; color: var(--text-secondary);">保存時刻: ${record.timestamp}</div>
+            <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; overflow: hidden;">
+                <div style="font-size: 0.9rem; font-weight: bold; margin-bottom: 0.2rem;">ファイル: ${getFileName(record.original)}</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);">ID: ${record.id}</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);">保存時刻: ${record.timestamp}</div>
             </div>
             
             <div style="display: flex; flex-direction: column; gap: 0.5rem;">
