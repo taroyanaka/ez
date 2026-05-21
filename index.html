@@ -145,8 +145,17 @@
             const gameModeToggle = document.getElementById('game-mode-toggle');
 
             // Game Mode Initialization (Default Off)
+            if (localStorage.getItem('game_mode') !== 'on') {
+                localStorage.setItem('game_mode', 'off');
+            }
+
             if (localStorage.getItem('game_mode') === 'on') {
                 gameModeToggle.checked = true;
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = 'game.css';
+                link.id = 'game-css-link';
+                document.head.appendChild(link);
             } else {
                 gameModeToggle.checked = false;
             }
@@ -154,8 +163,21 @@
             gameModeToggle.addEventListener('change', (e) => {
                 if (e.target.checked) {
                     localStorage.setItem('game_mode', 'on');
+                    if (!document.getElementById('game-css-link')) {
+                        const link = document.createElement('link');
+                        link.rel = 'stylesheet';
+                        link.href = 'game.css';
+                        link.id = 'game-css-link';
+                        document.head.appendChild(link);
+                    }
+                    // reload to trigger env.js initialization
+                    location.reload();
                 } else {
                     localStorage.setItem('game_mode', 'off');
+                    const link = document.getElementById('game-css-link');
+                    if (link) link.remove();
+                    // reload to clear env.js event listeners
+                    location.reload();
                 }
             });
 

@@ -556,6 +556,7 @@ async function loadData() {
         
         renderSavedList();
         renderPlayList();
+        renderDbList();
     } catch (e) {
         console.error('Data load error:', e);
     }
