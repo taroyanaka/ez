@@ -526,6 +526,18 @@ async function loadData() {
 }
 
 async function saveRecord() {
+    // 編集モード中の場合は「上書き保存」アクションにリダイレクト
+    if (currentEditingId !== null) {
+        const btn = document.getElementById(`btn-update-${currentEditingId}`);
+        if (btn) {
+            updateRecord(currentEditingId, btn);
+        } else {
+            // fallback if button not found for some reason
+            alert('上書き保存ボタンが見つかりません。');
+        }
+        return;
+    }
+
     if (!createOriginalImg || !createOriginalFile) {
         alert('元画像がありません。');
         return;
@@ -917,8 +929,12 @@ function editRecord(id) {
             historyStep = -1;
             saveState();
             
-            document.getElementById('create-controls').scrollIntoView({ behavior: 'smooth', block: 'start' });
-            alert(`編集モードに入りました（ID: ${id}）。\n修正後は該当リストアイテムの「上書き保存」を押してください。`);
+            document.getElementById('create-canvas-container').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // スクロールを阻害しないように少し遅延させてアラートを表示
+            setTimeout(() => {
+                alert(`編集モードに入りました（ID: ${id}）。\n修正後は該当リストアイテムの「上書き保存」、または上部のフロート保存ボタンを押してください。`);
+            }, 300);
         };
         maskImg.src = record.mask;
     };
@@ -963,6 +979,12 @@ async function updateRecord(id, btn) {
             }
             
             alert('上書き保存が完了しました！');
+            
+            // 編集用キャンバスとコントロールを非表示にする
+            document.getElementById('create-controls').style.display = 'none';
+            document.getElementById('create-canvas-container').style.display = 'none';
+            currentEditingId = null;
+            
             renderDbList();
             renderPlayList();
         }
@@ -970,7 +992,9 @@ async function updateRecord(id, btn) {
         console.error('Update error:', e);
         alert('上書き保存に失敗しました。');
     } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
     }
 }
