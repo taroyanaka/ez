@@ -195,7 +195,7 @@ h2 { margin-bottom: 0.5rem; }
     overflow: hidden;
     background: #000;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    touch-action: none; /* Prevent scrolling when drawing on mobile */
+    /* Removed touch-action: none to allow multi-touch zoom and pan */
 }
 
 @media (max-width: 600px) {

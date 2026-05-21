@@ -6,7 +6,7 @@ let AUTH_PASSWORD = localStorage.getItem('password') || '';
 
 // --- Game Mode Streak Configuration ---
 const GAME_STREAK_THRESHOLDS = [5, 10, 50, 100];
-const GAME_STREAK_TIMEOUT = 500; // milliseconds
+const GAME_STREAK_TIMEOUT = 2000; // milliseconds
 
 if (localStorage.getItem('game_mode') === 'on') {
     const buttonStates = new Map();

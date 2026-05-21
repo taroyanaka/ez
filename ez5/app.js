@@ -277,14 +277,14 @@ function renderPlayList() {
                     <div style="font-weight: bold; color: var(--accent-color);">Question #${index + 1}</div>
                     <div style="font-size: 0.75rem; color: var(--text-secondary); word-break: break-all;">${getFileName(record.original)}</div>
                 </div>
-                <button class="btn btn-primary" id="btn-load-${record.id}" onclick="loadPlayImage('${record.id}', this)" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; background: #3b82f6; border-color: #3b82f6;">
+                <button class="btn btn-primary" id="btn-load-${record.id}" onclick="loadPlayImage(${record.id}, this)" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; background: #3b82f6; border-color: #3b82f6;">
                     <i class="fas fa-download"></i> 画像を読み込む
                 </button>
             </div>
             
             <div id="play-content-${record.id}" style="display: none;">
                 <div style="display: flex; justify-content: flex-end; margin-bottom: 0.5rem;">
-                    <button class="btn btn-primary" onclick="toggleAllMasks('${record.id}', this)" style="padding: 0.2rem 0.8rem; font-size: 0.8rem;">
+                    <button class="btn btn-primary" onclick="toggleAllMasks(${record.id}, this)" style="padding: 0.2rem 0.8rem; font-size: 0.8rem;">
                         <i class="fas fa-eye-slash"></i> 全て非表示
                     </button>
                 </div>
