@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSS Tap Animation Test</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <section class="panel">
+      <div class="row" style="justify-content: space-between;">
+        <div class="counter">TAP <span id="tapCount">0</span></div>
+        <button class="tap-btn" id="tapButton" type="button">TAP / 連打</button>
+      </div>
+      <div class="row" style="margin-top: 10px;">
+        <label class="label" for="tapStep">nタップ毎に1アニメ追加:
+          <input id="tapStep" class="num" type="number" min="1" value="1">
+        </label>
+        <button class="tap-btn" id="resetButton" type="button" style="min-width: 120px;">RESET</button>
+        <span class="small">有効アニメ数: <span class="value" id="activeCount">0</span></span>
+      </div>
+      <div class="checks" id="checks"></div>
+    </section>
+
+    <section class="screen" aria-label="animation screen">
+      <div class="base-reels">
+        <div class="reel">7</div>
+        <div class="reel">7</div>
+        <div class="reel">7</div>
+      </div>
+
+      <div class="layer fruit-pattern" data-key="fruit">
+        <div class="fruit-banner">FRUIT 柄 出現 ?!</div>
+      </div>
+      <div class="layer zawa-layer" data-key="zawa">
+        <div class="zawa-text z1">ざわ</div>
+        <div class="zawa-text z2">ざわ…</div>
+        <div class="zawa-text z3">ざわざわ！</div>
+      </div>
+      <div class="layer gekiatsu-layer" data-key="gekiatsu">
+        <div class="gekiatsu-text">激アツ</div>
+      </div>
+      <div class="layer chance-text" data-key="chance">CHANCE</div>
+      <div class="layer rainbow-win" data-key="rainbow">BONUS確定</div>
+      <div class="layer flash-layer" data-key="flash"></div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
