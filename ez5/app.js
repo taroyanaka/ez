@@ -42,11 +42,20 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Touch support for drawing
     createCanvas.addEventListener('touchstart', e => { 
+        if (e.touches && e.touches.length >= 2) {
+            // 2本指以上の場合はブラウザのピンチ・スワイプ（画面移動）に任せる
+            isDrawing = false;
+            return;
+        }
         e.preventDefault(); 
         startDrawing(e);
     }, { passive: false });
     
     createCanvas.addEventListener('touchmove', e => { 
+        if (e.touches && e.touches.length >= 2) {
+            isDrawing = false;
+            return;
+        }
         e.preventDefault(); 
         draw(e);
     }, { passive: false });
