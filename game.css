@@ -1,44 +1,60 @@
-/* Game Mode Configuration */
-
-body {
-    /* ゲーミング風のダーク背景とネオンアクセント */
-    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364) !important;
-    animation: gaming-bg 10s ease infinite !important;
+/* Game Mode Button Glow Feature */
+button {
+    transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.1s ease !important;
 }
 
-@keyframes gaming-bg {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
-
-/* CRT スキャンライン効果 */
-body::after {
-    content: " ";
-    display: block;
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    right: 0;
-    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-    z-index: 9999;
-    background-size: 100% 4px, 3px 100%;
-    pointer-events: none;
-    opacity: 0.3;
-}
-
-/* 共通のアニメーション要素 */
 button:active {
-    transform: scale(0.9) !important;
+    transform: scale(0.95) !important;
 }
 
-/* カードなどのメイン要素にゲーミングネオン風のシャドウを追加 */
-.card-face, .flashcard-content, .quiz-card, .dictation-card {
-    box-shadow: 0 0 15px rgba(0, 255, 255, 0.5), 0 0 30px rgba(0, 255, 255, 0.3) !important;
-    border-color: rgba(0, 255, 255, 0.5) !important;
+/* Tier 1: >= 5 clicks */
+.glow-tier-1 {
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.8) !important;
+    border-color: rgba(0, 255, 255, 0.9) !important;
+    border-width: 2px !important;
+    border-style: solid !important;
 }
 
-h1, h2, h3 {
-    text-shadow: 0 0 10px rgba(255, 0, 255, 0.7), 0 0 20px rgba(255, 0, 255, 0.5) !important;
+/* Tier 2: >= 10 clicks */
+.glow-tier-2 {
+    box-shadow: 0 0 15px rgba(57, 255, 20), 0 0 5px rgba(57, 255, 20, 0.5) inset !important;
+    border-color: rgba(57, 255, 20, 1) !important;
+    border-width: 2px !important;
+    border-style: solid !important;
+}
+
+/* Tier 3: >= 50 clicks */
+.glow-tier-3 {
+    border-width: 3px !important;
+    border-style: solid !important;
+    animation: pulse-tier-3 0.3s infinite alternate !important;
+}
+
+@keyframes pulse-tier-3 {
+    0% {
+        box-shadow: 0 0 20px rgba(255, 0, 255, 0.8), inset 0 0 10px rgba(255, 0, 255, 0.5);
+        border-color: rgba(255, 0, 255, 0.8);
+    }
+    100% {
+        box-shadow: 0 0 35px rgba(255, 0, 255, 1), inset 0 0 20px rgba(255, 0, 255, 0.8);
+        border-color: rgba(255, 0, 255, 1);
+    }
+}
+
+/* Tier 4: >= 100 clicks */
+.glow-tier-4 {
+    border-width: 4px !important;
+    border-style: solid !important;
+    animation: flash-tier-4 0.1s infinite alternate !important;
+}
+
+@keyframes flash-tier-4 {
+    0% {
+        box-shadow: 0 0 30px rgba(255, 255, 0, 0.8), inset 0 0 15px rgba(255, 0, 0, 0.5);
+        border-color: rgba(255, 255, 0, 1);
+    }
+    100% {
+        box-shadow: 0 0 60px rgba(255, 0, 0, 1), inset 0 0 30px rgba(255, 255, 0, 0.8);
+        border-color: rgba(255, 0, 0, 1);
+    }
 }
