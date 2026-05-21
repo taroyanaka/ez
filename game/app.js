@@ -19,6 +19,62 @@
     const checksEl = document.getElementById("checks");
     const layers = Object.fromEntries(animationDefs.map((d) => [d.key, document.querySelector(`[data-key="${d.key}"]`)]));
 
+    // Vibration Configuration State
+    const vibrateEnabledEl = document.getElementById("vibrateEnabled");
+    const vibratePatternsEl = document.getElementById("vibratePatterns");
+    const vibrateConfigRowEl = document.getElementById("vibrateConfigRow");
+    const vibratePatternsMap = new Map();
+
+    function parseVibrationPatterns() {
+      vibratePatternsMap.clear();
+      const lines = vibratePatternsEl.value.split("\n");
+      for (const line of lines) {
+        const parts = line.split(":");
+        if (parts.length === 2) {
+          const tapNum = parseInt(parts[0].trim());
+          const patternStr = parts[1].trim();
+          if (!isNaN(tapNum) && patternStr) {
+            const vals = patternStr.split(",").map(v => parseInt(v.trim())).filter(v => !isNaN(v));
+            if (vals.length > 0) {
+              vibratePatternsMap.set(tapNum, vals);
+            }
+          }
+        }
+      }
+    }
+
+    function triggerVibration(tapCount) {
+      if (!vibrateEnabledEl.checked) return;
+      if (!navigator.vibrate) return;
+
+      // Find exact match or closest lower match
+      let matchedPattern = null;
+      let maxKey = 0;
+      for (const [key, pattern] of vibratePatternsMap.entries()) {
+        if (key <= tapCount && key > maxKey) {
+          maxKey = key;
+          matchedPattern = pattern;
+        }
+      }
+
+      if (matchedPattern) {
+        navigator.vibrate(matchedPattern);
+      }
+    }
+
+    function updateVibrateUIVisibility() {
+      if (vibrateEnabledEl.checked) {
+        vibrateConfigRowEl.style.opacity = "1";
+        vibratePatternsEl.disabled = false;
+      } else {
+        vibrateConfigRowEl.style.opacity = "0.5";
+        vibratePatternsEl.disabled = true;
+      }
+    }
+
+    vibrateEnabledEl.addEventListener("change", updateVibrateUIVisibility);
+    vibratePatternsEl.addEventListener("input", parseVibrationPatterns);
+
     function renderChecks() {
       checksEl.innerHTML = "";
       for (const def of animationDefs) {
@@ -64,6 +120,7 @@
     document.getElementById("tapButton").addEventListener("click", () => {
       state.tapCount += 1;
       updateLayers();
+      triggerVibration(state.tapCount);
     });
 
     document.getElementById("resetButton").addEventListener("click", () => {
@@ -78,5 +135,7 @@
     });
 
     state.tapStep = sanitizeStep(tapStepEl.value);
+    parseVibrationPatterns();
+    updateVibrateUIVisibility();
     renderChecks();
     updateLayers();
