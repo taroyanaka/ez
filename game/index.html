@@ -8,6 +8,29 @@
 </head>
 <body>
   <div class="app">
+    <section class="screen" aria-label="animation screen">
+      <div class="base-reels">
+        <div class="reel">7</div>
+        <div class="reel">7</div>
+        <div class="reel">7</div>
+      </div>
+
+      <div class="layer fruit-pattern" data-key="fruit">
+        <div class="fruit-banner">FRUIT 柄 出現 ?!</div>
+      </div>
+      <div class="layer zawa-layer" data-key="zawa">
+        <div class="zawa-text z1">ざわ</div>
+        <div class="zawa-text z2">ざわ…</div>
+        <div class="zawa-text z3">ざわざわ！</div>
+      </div>
+      <div class="layer gekiatsu-layer" data-key="gekiatsu">
+        <div class="gekiatsu-text">激アツ</div>
+      </div>
+      <div class="layer chance-text" data-key="chance">CHANCE</div>
+      <div class="layer rainbow-win" data-key="rainbow">BONUS確定</div>
+      <div class="layer flash-layer" data-key="flash"></div>
+    </section>
+
     <section class="panel">
       <div class="row" style="justify-content: space-between;">
         <div class="counter">TAP <span id="tapCount">0</span></div>
@@ -53,29 +76,6 @@
           <span class="small" style="color: var(--text-secondary); opacity: 0.7; font-size: 11px;">※ 偶数個（例: 10,10）の場合、API仕様により「10ms振動、10ms静止」の1回振動となります。複数回振動させる場合は「10,10,10」のように奇数個にしてください。</span>
         </label>
       </div>
-    </section>
-
-    <section class="screen" aria-label="animation screen">
-      <div class="base-reels">
-        <div class="reel">7</div>
-        <div class="reel">7</div>
-        <div class="reel">7</div>
-      </div>
-
-      <div class="layer fruit-pattern" data-key="fruit">
-        <div class="fruit-banner">FRUIT 柄 出現 ?!</div>
-      </div>
-      <div class="layer zawa-layer" data-key="zawa">
-        <div class="zawa-text z1">ざわ</div>
-        <div class="zawa-text z2">ざわ…</div>
-        <div class="zawa-text z3">ざわざわ！</div>
-      </div>
-      <div class="layer gekiatsu-layer" data-key="gekiatsu">
-        <div class="gekiatsu-text">激アツ</div>
-      </div>
-      <div class="layer chance-text" data-key="chance">CHANCE</div>
-      <div class="layer rainbow-win" data-key="rainbow">BONUS確定</div>
-      <div class="layer flash-layer" data-key="flash"></div>
     </section>
   </div>
 
