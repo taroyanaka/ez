@@ -118,7 +118,7 @@
         <h2>全般設定</h2>
         <div style="display: flex; align-items: center; gap: 10px;">
             <input type="checkbox" id="game-mode-toggle" style="width: 20px; height: 20px; cursor: pointer;">
-            <label for="game-mode-toggle" style="font-weight: bold; cursor: pointer;">ゲームモードを有効にする (各アプリのネオン風UI)</label>
+            <label for="game-mode-toggle" style="font-weight: bold; cursor: pointer;">ゲームモードを有効にする (演出画面・バイブレーション)</label>
         </div>
     </div>
 
@@ -152,11 +152,10 @@
 
             if (localStorage.getItem('game_mode') === 'on') {
                 gameModeToggle.checked = true;
-                const link = document.createElement('link');
-                link.rel = 'stylesheet';
-                link.href = 'game.css';
-                link.id = 'game-css-link';
-                document.head.appendChild(link);
+                const script = document.createElement('script');
+                script.src = 'game/loader.js';
+                script.id = 'game-loader-script';
+                document.head.appendChild(script);
             } else {
                 gameModeToggle.checked = false;
             }
@@ -164,20 +163,17 @@
             gameModeToggle.addEventListener('change', (e) => {
                 if (e.target.checked) {
                     localStorage.setItem('game_mode', 'on');
-                    if (!document.getElementById('game-css-link')) {
-                        const link = document.createElement('link');
-                        link.rel = 'stylesheet';
-                        link.href = 'game.css';
-                        link.id = 'game-css-link';
-                        document.head.appendChild(link);
+                    if (!document.getElementById('game-loader-script')) {
+                        const script = document.createElement('script');
+                        script.src = 'game/loader.js';
+                        script.id = 'game-loader-script';
+                        document.head.appendChild(script);
                     }
-                    // reload to trigger env.js initialization
+                    // reload to trigger initialization
                     location.reload();
                 } else {
                     localStorage.setItem('game_mode', 'off');
-                    const link = document.getElementById('game-css-link');
-                    if (link) link.remove();
-                    // reload to clear env.js event listeners
+                    // reload to clear
                     location.reload();
                 }
             });
