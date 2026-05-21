@@ -14,8 +14,9 @@
 </head>
 <body>
     <nav>
-        <div class="top-link-container">
+        <div class="top-link-container" style="display: flex; align-items: center; gap: 1rem;">
             <a href="../index.html" id="top-link"><i class="fas fa-arrow-left"></i> TOP PAGE</a>
+            <div id="login-required-msg" style="color: #ef4444; font-size: 0.8rem; font-weight: bold; display: none;">ログイン必要</div>
         </div>
         <div class="tab-container">
             <button class="tab-btn" id="tab-play" onclick="switchTab('play')">Play (学習)</button>
@@ -87,6 +88,14 @@
                 <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">※このデータはブラウザのメモリ上に一時保存されています。ページをリロードすると消去されます。</p>
                 <div id="saved-list" style="display: flex; flex-direction: column; gap: 1rem;">
                     <!-- Saved items will appear here -->
+                </div>
+            </div>
+
+            <div id="db-list-container" style="margin-top: 3rem;">
+                <h3>サーバーに保存済みのペア (DB保存)</h3>
+                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">※ 編集ボタンを押すと上のキャンバスにロードされます。修正後は上書き保存を押してください。</p>
+                <div id="db-list" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <!-- DB records will appear here -->
                 </div>
             </div>
         </div>

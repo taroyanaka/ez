@@ -8,6 +8,7 @@ let drawMode = 'brush';
 let brushSize = 20;
 let savedRecords = []; // サーバー(DB)上に保存されたリスト
 let tempRecords = []; // ブラウザのメモリ上に一時保存されているリスト
+let currentEditingId = null;
 
 // Undo/Redo State
 let drawHistory = [];
@@ -24,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadData();
     } else {
         renderSavedList();
+        renderDbList();
     }
 
     
@@ -60,7 +62,31 @@ function switchTab(tab) {
     
     if (tab === 'play') {
         renderPlayList();
+    } else if (tab === 'create') {
+        renderDbList();
     }
+}
+
+function checkAuth() {
+    if (!AUTH_USER_ID || !AUTH_PASSWORD) {
+        const msg = document.getElementById('login-required-msg');
+        const link = document.getElementById('top-link');
+        if (msg) {
+            msg.style.display = 'block';
+            msg.animate([
+                { opacity: 1 },
+                { opacity: 0, offset: 0.5 },
+                { opacity: 1 }
+            ], {
+                duration: 500,
+                iterations: 6,
+                delay: 500
+            });
+        }
+        if (link) link.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+    }
+    return true;
 }
 
 function loadImage(event) {
@@ -230,14 +256,9 @@ function renderPlayList() {
         <div class="play-card" style="background: var(--card-bg); border-radius: 8px; border: 1px solid var(--glass-border); padding: 1rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                 <div style="font-weight: bold; color: var(--accent-color);">Question #${index + 1}</div>
-                <div>
-                    <button class="btn btn-primary" onclick="toggleAllMasks(${record.id}, this)" style="padding: 0.2rem 0.8rem; font-size: 0.8rem; margin-right: 0.5rem;">
-                        <i class="fas fa-eye-slash"></i> 全て非表示
-                    </button>
-                    <button class="btn" onclick="deleteRecord(${record.id})" style="color: var(--danger); border-color: var(--danger); background: rgba(239, 68, 68, 0.1); padding: 0.2rem 0.8rem; font-size: 0.8rem;">
-                        <i class="fas fa-trash"></i> 削除
-                    </button>
-                </div>
+                <button class="btn btn-primary" onclick="toggleAllMasks(${record.id}, this)" style="padding: 0.2rem 0.8rem; font-size: 0.8rem;">
+                    <i class="fas fa-eye-slash"></i> 全て非表示
+                </button>
             </div>
             
             <div class="play-canvas-wrapper" style="position: relative; width: 100%; border-radius: 4px; overflow: hidden; background: #000; user-select: none;">
@@ -735,6 +756,7 @@ async function uploadTempRecord(tempId, buttonEl, skipRender = false) {
             
             if (!skipRender) {
                 renderSavedList();
+                renderDbList();
                 renderPlayList();
             }
             return true;
@@ -772,6 +794,7 @@ async function uploadAllTempRecords() {
     }
     
     renderSavedList();
+    renderDbList();
     renderPlayList();
     
     if (btn) {
@@ -785,10 +808,7 @@ async function uploadAllTempRecords() {
 }
 
 async function deleteRecord(id) {
-    if (!AUTH_USER_ID || !AUTH_PASSWORD) {
-        alert('削除にはログインが必要です。');
-        return;
-    }
+    if (!checkAuth()) return;
 
     if (!confirm('本当に削除しますか？')) return;
 
@@ -796,6 +816,7 @@ async function deleteRecord(id) {
     const originalRecords = [...savedRecords];
     savedRecords = savedRecords.filter(r => r.id !== id);
     renderSavedList();
+    renderDbList();
     renderPlayList();
     
     try {
@@ -816,6 +837,140 @@ async function deleteRecord(id) {
         // 失敗した場合はリストを元に戻す
         savedRecords = originalRecords;
         renderSavedList();
+        renderDbList();
         renderPlayList();
+    }
+}
+
+function renderDbList() {
+    const listEl = document.getElementById('db-list');
+    if (!listEl) return;
+    
+    if (savedRecords.length === 0) {
+        listEl.innerHTML = '<p style="color: var(--text-secondary);">サーバーに保存されたデータはありません。</p>';
+        return;
+    }
+    
+    listEl.innerHTML = savedRecords.map((record, index) => `
+        <div style="display: flex; align-items: center; gap: 1rem; background: var(--card-bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--glass-border);">
+            <div style="font-weight: bold; font-size: 1.2rem; color: var(--accent-color); width: 30px;">#${index + 1}</div>
+            
+            <div style="position: relative; width: 80px; height: 80px; background: #000; border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,255,255,0.2);">
+                <img src="${record.original}" crossorigin="anonymous" style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit: contain;">
+                <img src="${record.mask}" crossorigin="anonymous" style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit: contain;">
+            </div>
+            
+            <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+                <div style="font-size: 0.9rem;">ID: ${record.id}</div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary);">保存時刻: ${record.timestamp}</div>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <button class="btn btn-primary" onclick="editRecord(${record.id})" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; background: #3b82f6; border-color: #3b82f6;">
+                    <i class="fas fa-edit"></i> 編集
+                </button>
+                <button class="btn btn-primary" onclick="updateRecord(${record.id}, this)" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; background: #10b981; border-color: #10b981;" id="btn-update-${record.id}" disabled>
+                    <i class="fas fa-save"></i> 上書き保存
+                </button>
+                <button class="btn" onclick="deleteRecord(${record.id})" style="color: var(--danger); border-color: var(--danger); background: rgba(239, 68, 68, 0.1); padding: 0.4rem 0.8rem; font-size: 0.8rem;">
+                    <i class="fas fa-trash"></i> 削除
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function editRecord(id) {
+    if (!checkAuth()) return;
+    
+    const record = savedRecords.find(r => r.id === id);
+    if (!record) return;
+    
+    currentEditingId = id;
+    
+    document.querySelectorAll('[id^="btn-update-"]').forEach(btn => btn.disabled = true);
+    const updateBtn = document.getElementById(`btn-update-${id}`);
+    if (updateBtn) updateBtn.disabled = false;
+    
+    const origImg = new Image();
+    origImg.crossOrigin = "anonymous";
+    origImg.onload = () => {
+        createOriginalImg = origImg;
+        
+        const bgImg = document.getElementById('create-bg-img');
+        bgImg.src = origImg.src;
+        bgImg.style.display = 'block';
+        
+        document.getElementById('create-controls').style.display = 'flex';
+        document.getElementById('create-canvas-container').style.display = 'block';
+        
+        createCanvas.width = origImg.width;
+        createCanvas.height = origImg.height;
+        
+        const maskImg = new Image();
+        maskImg.crossOrigin = "anonymous";
+        maskImg.onload = () => {
+            createCtx.clearRect(0, 0, createCanvas.width, createCanvas.height);
+            createCtx.drawImage(maskImg, 0, 0, createCanvas.width, createCanvas.height);
+            
+            drawHistory = [];
+            historyStep = -1;
+            saveState();
+            
+            document.getElementById('create-controls').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            alert(`編集モードに入りました（ID: ${id}）。\n修正後は該当リストアイテムの「上書き保存」を押してください。`);
+        };
+        maskImg.src = record.mask;
+    };
+    origImg.src = record.original;
+}
+
+async function updateRecord(id, btn) {
+    if (!checkAuth()) return;
+    if (currentEditingId !== id) {
+        alert('このデータは現在編集状態ではありません。「編集」ボタンを押してから操作してください。');
+        return;
+    }
+    
+    btn.disabled = true;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上書き中...';
+    
+    try {
+        const maskDataUrl = createCanvas.toDataURL('image/png');
+        const maskBlob = dataURLtoBlob(maskDataUrl);
+        
+        const formData = new FormData();
+        formData.append('mask', maskBlob, 'mask.png');
+        
+        const response = await fetch(`${API_BASE_URL}/fill_image/${id}`, {
+            method: 'PUT',
+            headers: {
+                'user_id': AUTH_USER_ID,
+                'password': AUTH_PASSWORD
+            },
+            body: formData
+        });
+        
+        if (!response.ok) throw new Error('Update failed');
+        const result = await response.json();
+        
+        if (result.item && result.item.mask) {
+            const idx = savedRecords.findIndex(r => r.id === id);
+            if (idx !== -1) {
+                savedRecords[idx].mask = result.item.mask;
+                savedRecords[idx].timestamp = new Date().toLocaleTimeString();
+            }
+            
+            alert('上書き保存が完了しました！');
+            renderDbList();
+            renderPlayList();
+        }
+    } catch (e) {
+        console.error('Update error:', e);
+        alert('上書き保存に失敗しました。');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
     }
 }
