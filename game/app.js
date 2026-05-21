@@ -47,11 +47,16 @@
       if (!vibrateEnabledEl.checked) return;
       if (!navigator.vibrate) return;
 
-      // Find exact match or closest lower match
+      // Only trigger vibration when a new animation threshold is hit (tapCount is a multiple of tapStep)
+      if (tapCount === 0 || tapCount % state.tapStep !== 0) return;
+
+      const level = Math.floor(tapCount / state.tapStep);
+
+      // Find exact match or closest lower match based on the animation level
       let matchedPattern = null;
       let maxKey = 0;
       for (const [key, pattern] of vibratePatternsMap.entries()) {
-        if (key <= tapCount && key > maxKey) {
+        if (key <= level && key > maxKey) {
           maxKey = key;
           matchedPattern = pattern;
         }
@@ -117,11 +122,14 @@
       return Math.floor(n);
     }
 
-    document.getElementById("tapButton").addEventListener("click", () => {
+    const doTap = () => {
       state.tapCount += 1;
       updateLayers();
       triggerVibration(state.tapCount);
-    });
+    };
+
+    document.getElementById("tapButton").addEventListener("click", doTap);
+    document.querySelector(".screen").addEventListener("click", doTap);
 
     document.getElementById("resetButton").addEventListener("click", () => {
       state.tapCount = 0;
