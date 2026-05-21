@@ -98,9 +98,27 @@ function checkAuth() {
     return true;
 }
 
-function loadImage(event) {
+async function loadImage(event) {
     const file = event.target.files[0];
     if (!file) return;
+
+    if (currentEditingId !== null) {
+        const wantsToSave = confirm(`現在「ID: ${currentEditingId}」を編集中です。現在の編集内容を上書き保存しますか？\n\n[OK] 保存してから新規画像を読み込む\n[キャンセル] 保存せずに破棄して新規画像を読み込む`);
+        if (wantsToSave) {
+            const btn = document.getElementById(`btn-update-${currentEditingId}`);
+            if (btn) {
+                await updateRecord(currentEditingId, btn);
+            }
+        } else {
+            // 破棄する場合は編集状態をクリアするだけ
+            currentEditingId = null;
+            document.querySelectorAll('[id^="btn-update-"]').forEach(btn => btn.disabled = true);
+        }
+    } else {
+        // 新規作成から別の新規作成へ移る場合も念のためクリア
+        currentEditingId = null;
+    }
+
     createOriginalFile = file;
     
     const reader = new FileReader();
@@ -611,6 +629,20 @@ async function handleBulkImport(event) {
         return;
     }
 
+    if (currentEditingId !== null) {
+        const wantsToSave = confirm(`現在「ID: ${currentEditingId}」を編集中です。現在の編集内容を上書き保存しますか？\n\n[OK] 保存してから一括インポートへ進む\n[キャンセル] 保存せずに破棄して一括インポートへ進む`);
+        if (wantsToSave) {
+            const btn = document.getElementById(`btn-update-${currentEditingId}`);
+            if (btn) {
+                await updateRecord(currentEditingId, btn);
+            }
+        } else {
+            // 破棄する場合は編集状態をクリアするだけ
+            currentEditingId = null;
+            document.querySelectorAll('[id^="btn-update-"]').forEach(btn => btn.disabled = true);
+        }
+    }
+
     const originalMap = new Map(); // key: baseName
     const maskMap = new Map();     // key: baseName
     
@@ -917,9 +949,17 @@ function renderDbList() {
                 <div style="font-size: 0.9rem; font-weight: bold; margin-bottom: 0.2rem;">ファイル: ${getFileName(record.original)}</div>
                 <div style="font-size: 0.75rem; color: var(--text-secondary);">ID: ${record.id}</div>
                 <div style="font-size: 0.75rem; color: var(--text-secondary);">保存時刻: ${record.timestamp}</div>
+                
+                <div id="preview-container-${record.id}" style="display: none; margin-top: 10px; position: relative; width: 100px; height: 100px; background: #000; border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,255,255,0.2);">
+                    <img id="preview-orig-${record.id}" crossorigin="anonymous" style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit: contain;">
+                    <img id="preview-mask-${record.id}" crossorigin="anonymous" style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit: contain;">
+                </div>
             </div>
             
             <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <button class="btn btn-primary" onclick="showPreview(${record.id}, this)" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; background: #8b5cf6; border-color: #8b5cf6;">
+                    <i class="fas fa-image"></i> プレビュー
+                </button>
                 <button class="btn btn-primary" onclick="editRecord(${record.id})" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; background: #3b82f6; border-color: #3b82f6;">
                     <i class="fas fa-edit"></i> 編集
                 </button>
@@ -932,6 +972,26 @@ function renderDbList() {
             </div>
         </div>
     `).join('');
+}
+
+function showPreview(id, btn) {
+    const record = savedRecords.find(r => r.id === id);
+    if (!record) return;
+
+    const container = document.getElementById(`preview-container-${id}`);
+    if (!container) return;
+
+    if (container.style.display === 'none') {
+        const origImg = document.getElementById(`preview-orig-${id}`);
+        const maskImg = document.getElementById(`preview-mask-${id}`);
+        origImg.src = record.original;
+        maskImg.src = record.mask;
+        container.style.display = 'block';
+        btn.innerHTML = '<i class="fas fa-image"></i> プレビュー非表示';
+    } else {
+        container.style.display = 'none';
+        btn.innerHTML = '<i class="fas fa-image"></i> プレビュー';
+    }
 }
 
 function editRecord(id) {
