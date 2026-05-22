@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Activity Logs & Analytics</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+  <!-- Load Local Chart.js with CDN Fallback -->
+  <script src="chart.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/chart.js';"></script>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <a href="../index.html" class="back-link">← TOP PAGE</a>
+      <h1>Activity Logs & Analytics</h1>
+      <p class="subtitle">学習モードと編集/作成モードのアクティビティ分析</p>
+    </header>
+
+    <!-- Stats Summary Cards -->
+    <section class="summary-grid">
+      <div class="card">
+        <h3>総滞在時間</h3>
+        <p class="value" id="total-time">0分</p>
+        <span class="card-desc">全モードの累積利用時間</span>
+      </div>
+      <div class="card">
+        <h3>総タップ数</h3>
+        <p class="value" id="total-taps">0回</p>
+        <span class="card-desc">全モードの操作回数</span>
+      </div>
+      <div class="card highlight">
+        <h3>最も活発なモード</h3>
+        <p class="value" id="active-mode">-</p>
+        <span class="card-desc" id="active-mode-desc">タップ数に基づくアクティビティ</span>
+      </div>
+    </section>
+
+    <!-- Charts Section -->
+    <section class="charts-grid">
+      <div class="chart-card">
+        <h2>⏱️ 滞在時間の比較</h2>
+        <div class="chart-container">
+          <canvas id="timeChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h2>⚡ タップ数の比較</h2>
+        <div class="chart-container">
+          <canvas id="tapsChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Raw Data View & Controls -->
+    <section class="controls-section">
+      <div class="section-header">
+        <h2>📋 ログデータ詳細</h2>
+        <button id="btn-reset" class="btn-danger">ログデータをリセット</button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>モード</th>
+              <th>滞在時間 (秒)</th>
+              <th>滞在時間 (分:秒)</th>
+              <th>タップ数 (回)</th>
+              <th>タップ密度 (タップ/分)</th>
+            </tr>
+          </thead>
+          <tbody id="raw-data-body">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
