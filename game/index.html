@@ -77,8 +77,70 @@
         </label>
       </div>
     </section>
+
+    <!-- Tap Race Battle Section -->
+    <section class="panel" style="text-align: center; margin-top: 20px;">
+      <h2 style="color: #ffd700; margin-bottom: 10px;">5秒タップ競争 (Test)</h2>
+      
+      <!-- Start for everyone / 全員分を一斉に開始 -->
+      <button class="tap-btn" id="startBtn" onclick="send('START')" style="padding: 10px 20px; font-size: 14px;">
+        Start for All / 全員で開始
+      </button>
+      
+      <hr style="margin: 20px 0; border-color: #5a4a1f;">
+      
+      <!-- Main Tap Button / 連打用ボタン -->
+      <button class="tap-btn" id="battleTapBtn" onclick="send('TAP')" disabled 
+              style="padding: 30px; font-size: 1.5em; width: 80%; max-width: 300px; cursor: pointer;">
+        BATTLE TAP!!
+      </button>
+
+      <h3 id="status" style="color: #fff; margin-top: 15px;">Waiting... / 待機中</h3>
+      <div id="results" style="white-space: pre-wrap; font-size: 1.1em; line-height: 1.6; color: #fff6c4; margin-top: 10px; text-align: left; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 4px; min-height: 50px;"></div>
+    </section>
   </div>
 
   <script src="app.js"></script>
+  <script>
+    // --- UPDATED CONNECTION / 接続先を更新 ---
+    const ws = new WebSocket('wss://ez-server-d7h7.onrender.com');
+    
+    const startBtn = document.getElementById('startBtn');
+    const battleTapBtn = document.getElementById('battleTapBtn');
+    const status = document.getElementById('status');
+    const resultsDiv = document.getElementById('results');
+
+    // Utility to send JSON / JSON送信用の共通関数
+    function send(type) { 
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type })); 
+      }
+    }
+
+    ws.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+
+      // Triggered when server broadcasts start / サーバーが開始を放送した時
+      if (msg.type === 'START_GAME') {
+        startBtn.disabled = true;
+        battleTapBtn.disabled = false;
+        status.innerText = "GO!! / 連打しろ！！";
+        resultsDiv.innerText = "";
+        battleTapBtn.focus();
+      } 
+      
+      // Triggered when server sends results / サーバーが結果を送信した時
+      if (msg.type === 'END_GAME') {
+        battleTapBtn.disabled = true;
+        startBtn.disabled = false;
+        status.innerText = "Finish! / 終了！";
+        resultsDiv.innerText = "--- Rankings ---\n" + msg.results.join('\n');
+      }
+    };
+
+    ws.onopen = () => console.log("Connected to Render server / Renderサーバーに接続しました");
+    ws.onclose = () => alert("Connection lost / 接続が切れました");
+    ws.onerror = (err) => console.error("WebSocket Error:", err);
+  </script>
 </body>
 </html>
