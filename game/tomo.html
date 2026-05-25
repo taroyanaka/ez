@@ -48,6 +48,38 @@
         .item-icon { font-size: 20px; }
 
         #toast { position: absolute; top: 12%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.75); color: white; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: bold; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 100; text-align: center; }
+
+        /* モバイル向けレスポンシブ対応 */
+        @media (max-width: 600px) {
+            .avatar-panel {
+                top: 60px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 95%;
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: space-between;
+                padding: 8px;
+            }
+            .avatar-panel h2 { display: none; }
+            .select-group { width: 48%; margin-bottom: 4px; }
+            
+            .ui-layer { padding: 6px; }
+            .header-panel { padding: 8px; }
+            .title-box h1 { font-size: 12px; }
+            .title-box p { font-size: 9px; }
+            .tab-btn { font-size: 10px; padding: 4px; }
+            
+            .main-controls { max-width: 100%; gap: 4px; }
+            .control-pad { width: 120px; gap: 4px; }
+            .btn { font-size: 10px; padding: 6px; }
+            .btn-delete { font-size: 9px; padding: 6px; }
+            
+            .inventory-box { padding: 8px; }
+            .item-list { min-height: 60px; }
+            .item-card { flex: 0 0 60px; height: 60px; font-size: 9px; }
+            .item-icon { font-size: 16px; }
+        }
     </style>
 </head>
 <body>
