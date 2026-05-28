@@ -28,9 +28,9 @@ document.addEventListener('DOMContentLoaded', () => {
         renderDbList();
     }
 
-    
     document.getElementById('create-orig-img').addEventListener('change', e => loadImage(e));
     document.getElementById('bulk-import-imgs').addEventListener('change', e => handleBulkImport(e));
+    document.getElementById('bulk-import-originals').addEventListener('change', e => handleBulkImportOriginals(e));
     document.getElementById('brush-size').addEventListener('input', e => {
         brushSize = parseInt(e.target.value);
     });
@@ -274,8 +274,10 @@ function renderPlayList() {
     const playListEl = document.getElementById('play-list-container');
     if (!playListEl) return;
     
-    if (savedRecords.length === 0) {
-        playListEl.innerHTML = '<p style="color: var(--text-secondary);">保存されたデータがありません。Createモードでリストに保存してください。</p>';
+    const validRecords = savedRecords.filter(r => r.mask);
+    
+    if (validRecords.length === 0) {
+        playListEl.innerHTML = '<p style="color: var(--text-secondary);">プレイ可能なデータ（マスク画像あり）がありません。</p>';
         return;
     }
     
@@ -288,7 +290,7 @@ function renderPlayList() {
         }
     };
     
-    playListEl.innerHTML = savedRecords.map((record, index) => `
+    playListEl.innerHTML = validRecords.map((record, index) => `
         <div class="play-card" style="background: var(--card-bg); border-radius: 8px; border: 1px solid var(--glass-border); padding: 1rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                 <div>
@@ -744,6 +746,54 @@ async function handleBulkImport(event) {
     event.target.value = '';
 }
 
+async function handleBulkImportOriginals(event) {
+    const files = Array.from(event.target.files);
+    if (!files.length) return;
+    
+    if (!AUTH_USER_ID || !AUTH_PASSWORD) {
+        alert('追加にはログインが必要です。');
+        event.target.value = '';
+        return;
+    }
+
+    if (currentEditingId !== null) {
+        const wantsToSave = confirm(`現在「ID: ${currentEditingId}」を編集中です。現在の編集内容を上書き保存しますか？\n\n[OK] 保存してから一括追加へ進む\n[キャンセル] 保存せずに破棄して一括追加へ進む`);
+        if (wantsToSave) {
+            const btn = document.getElementById(`btn-update-${currentEditingId}`);
+            if (btn) {
+                await updateRecord(currentEditingId, btn);
+            }
+        } else {
+            currentEditingId = null;
+            document.querySelectorAll('[id^="btn-update-"]').forEach(btn => btn.disabled = true);
+        }
+    }
+
+    if (!confirm(`${files.length}件の画像をインポートしますか？\n※アップロードには少し時間がかかる場合があります。`)) {
+        event.target.value = '';
+        return;
+    }
+    
+    for (const file of files) {
+        const origUrl = URL.createObjectURL(file);
+        
+        tempRecords.push({
+            id: `temp-${Date.now()}-${Math.random()}`,
+            isTemp: true,
+            originalFile: file,
+            maskBlob: null,
+            originalSrc: origUrl,
+            maskSrc: null,
+            timestamp: new Date().toLocaleTimeString(),
+            name: file.name
+        });
+    }
+    
+    renderSavedList();
+    alert(`${files.length}件を一時保存リストに追加しました。\n「全てアップロード」または「個別アップロード」でサーバーへ保存してください。`);
+    event.target.value = '';
+}
+
 function renderSavedList() {
     const listEl = document.getElementById('saved-list');
     if (!listEl) return;
@@ -767,7 +817,7 @@ function renderSavedList() {
             
             <div style="position: relative; width: 80px; height: 80px; background: #000; border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,255,255,0.2);">
                 <img src="${record.originalSrc}" style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit: contain;">
-                <img src="${record.maskSrc}" style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit: contain;">
+                ${record.maskSrc ? `<img src="${record.maskSrc}" style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit: contain;">` : ''}
             </div>
             
             <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
@@ -810,10 +860,17 @@ async function uploadTempRecord(tempId, buttonEl, skipRender = false) {
     
     try {
         const formData = new FormData();
-        formData.append('original', record.originalFile);
-        formData.append('mask', record.maskBlob, 'mask.png');
+        let endpoint = `${API_BASE_URL}/fill_image`;
         
-        const response = await fetch(`${API_BASE_URL}/fill_image`, {
+        if (record.maskBlob) {
+            formData.append('original', record.originalFile);
+            formData.append('mask', record.maskBlob, 'mask.png');
+        } else {
+            formData.append('files', record.originalFile);
+            endpoint = `${API_BASE_URL}/upload-originals`;
+        }
+        
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
                 'user_id': AUTH_USER_ID,
@@ -825,20 +882,28 @@ async function uploadTempRecord(tempId, buttonEl, skipRender = false) {
         if (!response.ok) throw new Error('Upload failed');
         const result = await response.json();
         
-        if (result.item && result.item.original && result.item.mask) {
+        if (record.maskBlob) {
+            if (result.item && result.item.original && result.item.mask) {
+                tempRecords.splice(idx, 1);
+                
+                savedRecords.push({
+                    id: result.item.id,
+                    original: result.item.original,
+                    mask: result.item.mask,
+                    timestamp: new Date().toLocaleTimeString()
+                });
+                
+                if (!skipRender) {
+                    renderSavedList();
+                    renderDbList();
+                    renderPlayList();
+                }
+                return true;
+            }
+        } else {
             tempRecords.splice(idx, 1);
-            
-            savedRecords.push({
-                id: result.item.id,
-                original: result.item.original,
-                mask: result.item.mask,
-                timestamp: new Date().toLocaleTimeString()
-            });
-            
             if (!skipRender) {
-                renderSavedList();
-                renderDbList();
-                renderPlayList();
+                await loadData();
             }
             return true;
         }
@@ -874,9 +939,7 @@ async function uploadAllTempRecords() {
         if (success) successCount++;
     }
     
-    renderSavedList();
-    renderDbList();
-    renderPlayList();
+    await loadData(); // Reload all to get updated DB items
     
     if (btn) {
         btn.disabled = false;
@@ -985,7 +1048,12 @@ function showPreview(id, btn) {
         const origImg = document.getElementById(`preview-orig-${id}`);
         const maskImg = document.getElementById(`preview-mask-${id}`);
         origImg.src = record.original;
-        maskImg.src = record.mask;
+        if (record.mask) {
+            maskImg.src = record.mask;
+            maskImg.style.display = 'block';
+        } else {
+            maskImg.style.display = 'none';
+        }
         container.style.display = 'block';
         btn.innerHTML = '<i class="fas fa-image"></i> プレビュー非表示';
     } else {
@@ -1021,24 +1089,37 @@ function editRecord(id) {
         createCanvas.width = origImg.width;
         createCanvas.height = origImg.height;
         
-        const maskImg = new Image();
-        maskImg.crossOrigin = "anonymous";
-        maskImg.onload = () => {
+        if (record.mask) {
+            const maskImg = new Image();
+            maskImg.crossOrigin = "anonymous";
+            maskImg.onload = () => {
+                createCtx.clearRect(0, 0, createCanvas.width, createCanvas.height);
+                createCtx.drawImage(maskImg, 0, 0, createCanvas.width, createCanvas.height);
+                
+                drawHistory = [];
+                historyStep = -1;
+                saveState();
+                
+                document.getElementById('create-canvas-container').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // スクロールを阻害しないように少し遅延させてアラートを表示
+                setTimeout(() => {
+                    alert(`編集モードに入りました（ID: ${id}）。\n修正後は該当リストアイテムの「上書き保存」、または上部のフロート保存ボタンを押してください。`);
+                }, 300);
+            };
+            maskImg.src = record.mask;
+        } else {
             createCtx.clearRect(0, 0, createCanvas.width, createCanvas.height);
-            createCtx.drawImage(maskImg, 0, 0, createCanvas.width, createCanvas.height);
-            
             drawHistory = [];
             historyStep = -1;
             saveState();
             
             document.getElementById('create-canvas-container').scrollIntoView({ behavior: 'smooth', block: 'center' });
             
-            // スクロールを阻害しないように少し遅延させてアラートを表示
             setTimeout(() => {
-                alert(`編集モードに入りました（ID: ${id}）。\n修正後は該当リストアイテムの「上書き保存」、または上部のフロート保存ボタンを押してください。`);
+                alert(`新規マスク作成モードに入りました（ID: ${id}）。\n黒く塗りつぶした後、「上書き保存」を押してください。`);
             }, 300);
-        };
-        maskImg.src = record.mask;
+        }
     };
     origImg.src = record.original;
 }

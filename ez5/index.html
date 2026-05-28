@@ -49,6 +49,13 @@
                         ※「ファイル名-original.拡張子」と「ファイル名-mask.png」のペアを複数選択
                     </p>
                 </div>
+                <div style="border-left: 1px solid var(--glass-border); padding-left: 2rem;">
+                    <label>オリジナル画像のみ一括追加:</label>
+                    <input type="file" id="bulk-import-originals" accept="image/*" multiple>
+                    <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.5rem; max-width: 300px;">
+                        ※マスクなしで複数追加。後から編集でマスクを追加できます。
+                    </p>
+                </div>
             </div>
 
             <div class="controls floating-toolbar" id="create-controls" style="display: none;">
