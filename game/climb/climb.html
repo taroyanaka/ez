@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Only Up Clone - Mobile Prototype</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: sans-serif; user-select: none; }
+        #canvas-container { width: 100vw; height: 100vh; }
+        
+        /* スマホ用UI */
+        #joystick-container {
+            position: absolute; bottom: 40px; left: 40px;
+            width: 120px; height: 120px; z-index: 10;
+        }
+        #jump-button {
+            position: absolute; bottom: 60px; right: 40px;
+            width: 80px; height: 80px; border-radius: 50%;
+            background: rgba(255, 255, 255, 0.6); border: 3px solid #fff;
+            color: #333; font-weight: bold; font-size: 16px; z-index: 10;
+            outline: none; -webkit-tap-highlight-color: transparent;
+        }
+        #jump-button:active { background: rgba(255, 255, 255, 0.9); }
+        
+        /* メッセージ表示 */
+        #status-ui {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(0, 0, 0, 0.5); color: white;
+            padding: 10px 15px; border-radius: 5px; font-size: 14px; z-index: 10;
+            pointer-events: none;
+        }
+        #goal-message {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 64px; font-weight: bold; color: #ffd700;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+            display: none; z-index: 10; pointer-events: none;
+        }
+    </style>
+    <script src="libs/three.min.js"></script>
+    <script src="libs/nipplejs.min.js"></script>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+    <div id="joystick-container"></div>
+    <button id="jump-button">JUMP</button>
+    <button id="toggle-auto-log">Auto: ON</button>
+    <div id="status-ui">モード: <span id="mode-text"></span></div>
+    <div id="goal-message">GOAL!!</div>
+
+    <script>
+        // 簡潔版: 物理エンジンと大玉を削除し、手動の位置制御で挙動を再現します
+        let IS_AUTO_PLAY = true;
+        const MOVE_SPEED = 4;
+        const JUMP_V = 8;
+        const GRAVITY = -20;
+        let scene, camera, renderer;
+        let playerMesh;
+        let joystickInput = { x: 0, y: 0 };
+        let playerVelY = 0;
+        let isGrounded = true;
+        let raycaster;
+        let groundMeshes = [];
+        const PLAYER_HALF_HEIGHT = 0.8;
+        let keyState = { w:false, a:false, s:false, d:false };
+        const checkPoints = [
+            { x: 0,  y: 1.5, z: -5 },
+            { x: 0,  y: 3.5, z: -10 },
+            { x: 0,  y: 4.5, z: -16 },
+            { x: 0,  y: 9.5, z: -34 },
+            { x: 0,  y: 10.5, z: -40 }
+        ];
+        let currentTargetIndex = 0;
+        let isGoal = false;
+
+        function init() {
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB);
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            container.appendChild(renderer.domElement);
+
+            const ambient = new THREE.AmbientLight(0xffffff, 0.7); scene.add(ambient);
+            const dir = new THREE.DirectionalLight(0xffffff, 0.6); dir.position.set(20,40,20); scene.add(dir);
+
+            // raycaster for ground collision
+            raycaster = new THREE.Raycaster();
+
+            // ステージ（静的メッシュのみ）
+            makeBox(10, 0.5, 10, 0, -0.25, 0, 0x7cfc00);
+            makeBox(3,1,3,0,0.5,-5,0xffffff);
+            makeBox(3,1,3,0,2.5,-10,0xffffff);
+            const slope = makeBox(4,0.5,20,0,6.5,-24,0xaaaaaa);
+            slope.rotation.x = -15 * Math.PI / 180;
+            makeBox(4,0.2,4,0,10,-40,0xffd700);
+
+            // プレイヤー
+            playerMesh = new THREE.Mesh(new THREE.BoxGeometry(0.8,1.6,0.8), new THREE.MeshStandardMaterial({ color:0xff0000 }));
+            playerMesh.position.set(0,2,0); scene.add(playerMesh);
+
+            setupControls();
+            setupToggleAuto();
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('keydown', onKeyDown);
+            window.addEventListener('keyup', onKeyUp);
+        }
+
+        function makeBox(w,h,d,x,y,z,color){
+            const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), new THREE.MeshStandardMaterial({color}));
+            m.position.set(x,y,z); scene.add(m);
+            // register for ground collision checks
+            groundMeshes.push(m);
+            return m;
+        }
+
+        function onKeyDown(e){
+            if (!IS_AUTO_PLAY){
+                if (e.key === 'w' || e.key === 'W') keyState.w = true;
+                if (e.key === 'a' || e.key === 'A') keyState.a = true;
+                if (e.key === 's' || e.key === 'S') keyState.s = true;
+                if (e.key === 'd' || e.key === 'D') keyState.d = true;
+                if (e.key === 'ArrowUp') keyState.w = true;
+                if (e.key === 'ArrowLeft') keyState.a = true;
+                if (e.key === 'ArrowDown') keyState.s = true;
+                if (e.key === 'ArrowRight') keyState.d = true;
+                if (e.key === ' ' || e.key === 'Spacebar') doJump();
+                updateJoystickFromKeys();
+            }
+        }
+
+        function onKeyUp(e){
+            if (!IS_AUTO_PLAY){
+                if (e.key === 'w' || e.key === 'W') keyState.w = false;
+                if (e.key === 'a' || e.key === 'A') keyState.a = false;
+                if (e.key === 's' || e.key === 'S') keyState.s = false;
+                if (e.key === 'd' || e.key === 'D') keyState.d = false;
+                if (e.key === 'ArrowUp') keyState.w = false;
+                if (e.key === 'ArrowLeft') keyState.a = false;
+                if (e.key === 'ArrowDown') keyState.s = false;
+                if (e.key === 'ArrowRight') keyState.d = false;
+                updateJoystickFromKeys();
+            }
+        }
+
+        function updateJoystickFromKeys(){
+            const x = (keyState.d ? 1 : 0) - (keyState.a ? 1 : 0);
+            const y = (keyState.w ? 1 : 0) - (keyState.s ? 1 : 0);
+            joystickInput.x = x;
+            joystickInput.y = y;
+        }
+
+        function setupControls(){
+            // joystick (nipplejs)
+            try{
+                const manager = nipplejs.create({
+                    zone: document.getElementById('joystick-container'),
+                    mode: 'static',
+                    position: { left: '60px', bottom: '60px' },
+                    color: 'white'
+                });
+                manager.on('move', (evt, data)=>{
+                    if (data && data.vector){ joystickInput.x = data.vector.x; joystickInput.y = data.vector.y; }
+                });
+                manager.on('end', ()=>{ joystickInput.x = 0; joystickInput.y = 0; });
+            }catch(e){ /* nipple not available */ }
+
+            const jumpBtn = document.getElementById('jump-button');
+            if (jumpBtn){
+                jumpBtn.addEventListener('touchstart', (ev)=>{ ev.preventDefault(); doJump(); });
+                jumpBtn.addEventListener('click', ()=>{ if(!('ontouchstart' in window)) doJump(); });
+            }
+
+            // show/hide joystick based on mode
+            const joy = document.getElementById('joystick-container');
+            if (joy) joy.style.display = IS_AUTO_PLAY ? 'none' : '';
+        }
+
+        function updateAutoPlay(dt){
+            const target = checkPoints[currentTargetIndex];
+            const dx = target.x - playerMesh.position.x;
+            const dz = target.z - playerMesh.position.z;
+            const dist = Math.hypot(dx,dz);
+            if (dist < 0.6){ if (currentTargetIndex < checkPoints.length-1) currentTargetIndex++; }
+            if (dist > 0.01){
+                playerMesh.position.x += (dx/dist) * MOVE_SPEED * dt;
+                playerMesh.position.z += (dz/dist) * MOVE_SPEED * dt;
+            }
+            // 簡易的な高さ合わせ（ジャンプ風）
+            const ty = target.y;
+            playerMesh.position.y += (ty - playerMesh.position.y) * Math.min(1, dt*2);
+            if (playerMesh.position.z <= -39 && playerMesh.position.y >= 9.5 && !isGoal){
+                isGoal = true; document.getElementById('goal-message').style.display = 'block';
+            }
+        }
+
+        function updateManualPlay(dt){
+            // joystickInput.y: 前(+) / 後(-) - nipple returns y positive upwards, we invert for z
+            playerMesh.position.x += joystickInput.x * MOVE_SPEED * dt;
+            playerMesh.position.z += -joystickInput.y * MOVE_SPEED * dt;
+            // vertical physics with raycast ground detection
+            if (raycaster && groundMeshes.length > 0){
+                const origin = playerMesh.position.clone();
+                raycaster.set(origin, new THREE.Vector3(0, -1, 0));
+                const intersects = raycaster.intersectObjects(groundMeshes, true);
+                if (intersects.length > 0){
+                    const groundY = intersects[0].point.y;
+                    const distanceToGround = origin.y - groundY;
+                    // if close enough to ground, snap and clear vertical velocity
+                    if (distanceToGround <= PLAYER_HALF_HEIGHT + 0.05){
+                        playerMesh.position.y = groundY + PLAYER_HALF_HEIGHT;
+                        playerVelY = 0;
+                        isGrounded = true;
+                    } else {
+                        // in air
+                        playerMesh.position.y += playerVelY * dt;
+                        playerVelY += GRAVITY * dt;
+                        isGrounded = false;
+                    }
+                } else {
+                    // no ground below
+                    playerMesh.position.y += playerVelY * dt;
+                    playerVelY += GRAVITY * dt;
+                    isGrounded = false;
+                }
+            } else {
+                // fallback
+                playerMesh.position.y += playerVelY * dt;
+                playerVelY += GRAVITY * dt;
+                isGrounded = playerMesh.position.y <= 2;
+                if (isGrounded){ playerMesh.position.y = 2; playerVelY = 0; }
+            }
+        }
+
+        function doJump(){
+            if (isGrounded && !isGoal){ playerVelY = JUMP_V; isGrounded = false; }
+        }
+
+        function animate(t){
+            requestAnimationFrame(animate);
+            if (typeof animate.last === 'undefined') animate.last = t;
+            const dt = (t - animate.last)/1000; animate.last = t;
+            if (!isGoal){
+                if (IS_AUTO_PLAY) updateAutoPlay(dt);
+                else updateManualPlay(dt);
+            }
+            camera.position.set(playerMesh.position.x, playerMesh.position.y + 4, playerMesh.position.z + 8);
+            camera.lookAt(playerMesh.position.x, playerMesh.position.y + 1, playerMesh.position.z - 2);
+            renderer.render(scene, camera);
+        }
+
+        function setupToggleAuto(){
+            const btn = document.getElementById('toggle-auto-log');
+            const modeText = document.getElementById('mode-text');
+            const joy = document.getElementById('joystick-container');
+            function update(){
+                btn.innerText = IS_AUTO_PLAY ? 'Auto: ON' : 'Auto: OFF';
+                modeText.innerText = IS_AUTO_PLAY ? '自動' : '手動';
+                if (joy) joy.style.display = IS_AUTO_PLAY ? 'none' : '';
+                if (IS_AUTO_PLAY) { joystickInput.x = 0; joystickInput.y = 0; }
+            }
+            btn.addEventListener('click', ()=>{ IS_AUTO_PLAY = !IS_AUTO_PLAY; update(); });
+            update();
+        }
+
+        function onWindowResize(){ camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
+
+        window.onload = ()=>{ init(); requestAnimationFrame(animate); };
+    </script>
+</body>
+</html>
