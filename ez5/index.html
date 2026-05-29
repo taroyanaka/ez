@@ -14,9 +14,15 @@
             <a href="../index.html" id="top-link"><i class="fas fa-arrow-left"></i> TOP PAGE</a>
             <div id="login-required-msg" style="color: #ef4444; font-size: 0.8rem; font-weight: bold; display: none;">ログイン必要</div>
         </div>
-        <div class="tab-container">
-            <button class="tab-btn" id="tab-play" onclick="switchTab('play')">Play (学習)</button>
-            <button class="tab-btn active" id="tab-create" onclick="switchTab('create')">Create (作成)</button>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div id="my-data-only-container" style="display: flex; align-items: center; gap: 0.3rem;">
+                <input type="checkbox" id="my-data-only-toggle" checked onchange="handleToggleMyData()" style="cursor: pointer; accent-color: #3b82f6;">
+                <label for="my-data-only-toggle" style="font-size: 0.8rem; color: var(--text-secondary); font-weight: bold; cursor: pointer;">マイデータのみ表示</label>
+            </div>
+            <div class="tab-container">
+                <button class="tab-btn" id="tab-play" onclick="switchTab('play')">Play (学習)</button>
+                <button class="tab-btn active" id="tab-create" onclick="switchTab('create')">Create (作成)</button>
+            </div>
         </div>
     </nav>
 

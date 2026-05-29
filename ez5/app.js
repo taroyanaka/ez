@@ -570,7 +570,15 @@ function dataURLtoBlob(dataurl) {
 async function loadData() {
     if (!AUTH_USER_ID) return;
     try {
-        const res = await fetch(`${API_BASE_URL}/fill_image/user/${AUTH_USER_ID}`);
+        const myDataOnlyToggle = document.getElementById('my-data-only-toggle');
+        const isMyDataOnly = myDataOnlyToggle ? myDataOnlyToggle.checked : true;
+        
+        let url = `${API_BASE_URL}/fill_image`;
+        if (isMyDataOnly) {
+            url = `${API_BASE_URL}/fill_image/user/${AUTH_USER_ID}`;
+        }
+        
+        const res = await fetch(url);
         if (!res.ok) throw new Error('Failed to load data');
         const data = await res.json();
         
@@ -587,6 +595,10 @@ async function loadData() {
     } catch (e) {
         console.error('Data load error:', e);
     }
+}
+
+function handleToggleMyData() {
+    loadData();
 }
 
 async function saveRecord() {
