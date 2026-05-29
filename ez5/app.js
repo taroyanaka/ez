@@ -9,6 +9,7 @@ let brushSize = 20;
 let savedRecords = []; // サーバー(DB)上に保存されたリスト
 let tempRecords = []; // ブラウザのメモリ上に一時保存されているリスト
 let currentEditingId = null;
+let createOrigImgQueue = []; // 連続編集の待機キュー
 
 // Undo/Redo State
 let drawHistory = [];
@@ -99,8 +100,8 @@ function checkAuth() {
 }
 
 async function loadImage(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+    const files = Array.from(event.target.files);
+    if (!files.length) return;
 
     if (currentEditingId !== null) {
         const wantsToSave = confirm(`現在「ID: ${currentEditingId}」を編集中です。現在の編集内容を上書き保存しますか？\n\n[OK] 保存してから新規画像を読み込む\n[キャンセル] 保存せずに破棄して新規画像を読み込む`);
@@ -119,6 +120,12 @@ async function loadImage(event) {
         currentEditingId = null;
     }
 
+    createOrigImgQueue = files.slice(1);
+    loadSingleImage(files[0]);
+    event.target.value = ''; // 連続で同じファイルを選択できるようにリセット
+}
+
+function loadSingleImage(file) {
     createOriginalFile = file;
     
     const reader = new FileReader();
@@ -618,7 +625,13 @@ async function saveRecord() {
     tempRecords.push(record);
     renderSavedList();
     
-    alert('リスト（一時保存）に追加しました！');
+    if (createOrigImgQueue.length > 0) {
+        const nextFile = createOrigImgQueue.shift();
+        alert(`リスト（一時保存）に追加しました。\n続いてキューの次の画像（${nextFile.name}）を読み込みます。`);
+        loadSingleImage(nextFile);
+    } else {
+        alert('リスト（一時保存）に追加しました！');
+    }
 }
 
 async function handleBulkImport(event) {
