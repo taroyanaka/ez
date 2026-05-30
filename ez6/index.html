@@ -28,6 +28,10 @@
         <!-- Play Mode View -->
         <div id="play-view" class="view active">
             <div class="settings-panel">
+                <div class="setting-group" style="width: 100%; display: flex; justify-content: center; margin-bottom: 0.5rem;">
+                    <label for="q-select"><i class="fas fa-list"></i> 開始問題:</label>
+                    <select id="q-select" style="background: rgba(255, 255, 255, 0.1); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.5rem; border-radius: 4px; margin-left: 0.5rem; max-width: 300px; flex: 1;"></select>
+                </div>
                 <div class="setting-group">
                     <label for="speed-slider"><i class="fas fa-tachometer-alt"></i> 読み上げ速度: <span id="speed-val">1.0</span>x</label>
                     <input type="range" id="speed-slider" min="0.5" max="2.0" step="0.1" value="1.0" oninput="updateSpeed()">

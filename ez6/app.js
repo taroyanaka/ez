@@ -27,6 +27,7 @@ const els = {
     viewCreate: document.getElementById('create-view'),
     
     // Play View
+    qSelect: document.getElementById('q-select'),
     speedSlider: document.getElementById('speed-slider'),
     speedVal: document.getElementById('speed-val'),
     timerInput: document.getElementById('timer-input'),
@@ -247,10 +248,23 @@ function updatePlayUIState() {
         els.emptyState.style.display = 'block';
         els.gameContainer.style.display = 'none';
         els.timerInput.disabled = false;
+        if(els.qSelect) els.qSelect.disabled = false;
+        if(els.qSelect) els.qSelect.innerHTML = '';
     } else {
         els.emptyState.style.display = 'none';
         els.gameContainer.style.display = 'flex';
         els.totalQCount.textContent = sentences.length;
+        
+        // Update select options if not playing
+        if (!playState.isPlaying && els.qSelect) {
+            els.qSelect.innerHTML = '';
+            sentences.forEach((s, i) => {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = `${i + 1}. ${s.substring(0, 20)}${s.length > 20 ? '...' : ''}`;
+                els.qSelect.appendChild(opt);
+            });
+        }
     }
 }
 
@@ -269,12 +283,13 @@ function startGame() {
     
     playState.isPlaying = true;
     playState.isPaused = false;
-    playState.qIndex = 0;
+    playState.qIndex = parseInt(els.qSelect.value) || 0;
     playState.wordIndex = 0;
     
     // Disable inputs during play
     els.timerInput.disabled = true;
     els.speedSlider.disabled = true;
+    if(els.qSelect) els.qSelect.disabled = true;
     
     updatePlayButtonUI();
     processCurrentWord();
@@ -312,6 +327,7 @@ function stopGame() {
     
     els.timerInput.disabled = false;
     els.speedSlider.disabled = false;
+    if(els.qSelect) els.qSelect.disabled = false;
     
     els.currentWordDisplay.textContent = '--';
     els.timerBar.style.width = '100%';
@@ -481,6 +497,7 @@ function nextSentence() {
         stopGame();
         alert('すべての問題を終了しました！');
     } else {
+        if(els.qSelect) els.qSelect.value = playState.qIndex;
         processCurrentWord();
     }
 }
