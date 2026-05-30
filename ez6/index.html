@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TTS Word Quiz</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav>
+        <div id="top-link-container" class="top-link-container">
+            <a href="../index.html" id="top-link">
+                <i class="fas fa-arrow-left"></i> TOP
+            </a>
+        </div>
+        <div class="tab-container">
+            <button id="tab-play" class="tab-btn active" onclick="switchTab('play')">
+                <i class="fas fa-play"></i> プレイモード
+            </button>
+            <button id="tab-create" class="tab-btn" onclick="switchTab('create')">
+                <i class="fas fa-pen-to-square"></i> 作成モード
+            </button>
+        </div>
+    </nav>
+
+    <main>
+        <!-- Play Mode View -->
+        <div id="play-view" class="view active">
+            <div class="settings-panel">
+                <div class="setting-group">
+                    <label for="speed-slider"><i class="fas fa-tachometer-alt"></i> 読み上げ速度: <span id="speed-val">1.0</span>x</label>
+                    <input type="range" id="speed-slider" min="0.5" max="2.0" step="0.1" value="1.0" oninput="updateSpeed()">
+                </div>
+                <div class="setting-group">
+                    <label for="timer-input"><i class="fas fa-clock"></i> 制限時間 (秒):</label>
+                    <input type="number" id="timer-input" min="1" max="10" value="2" step="0.5">
+                </div>
+            </div>
+
+            <div id="empty-state" style="display: none; text-align: center; margin-top: 3rem;">
+                <i class="fas fa-box-open" style="font-size: 4rem; color: var(--text-secondary); margin-bottom: 1rem;"></i>
+                <h2>問題がありません</h2>
+                <p style="color: var(--text-secondary);">「作成モード」タブから問題を追加してください</p>
+            </div>
+
+            <div id="game-container" style="display: none; flex-direction: column; align-items: center; gap: 2rem; width: 100%;">
+                
+                <div style="font-size: 0.875rem; color: var(--text-secondary);">
+                    問題 <span id="current-q-index">1</span> / <span id="total-q-count">0</span>
+                </div>
+
+                <div class="word-display" id="current-word-display">
+                    --
+                </div>
+
+                <div id="timer-bar-container">
+                    <div id="timer-bar"></div>
+                </div>
+
+                <div class="choices-container" id="choices-container">
+                    <button class="choice-btn" onclick="selectChoice(0)" disabled>選択肢1</button>
+                    <button class="choice-btn" onclick="selectChoice(1)" disabled>選択肢2</button>
+                    <button class="choice-btn" onclick="selectChoice(2)" disabled>選択肢3</button>
+                </div>
+
+                <div class="controls">
+                    <button class="btn btn-primary" id="play-btn" onclick="togglePlay()">
+                        <i class="fas fa-play" id="play-icon"></i> <span id="play-text">スタート</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Mode View -->
+        <div id="create-view" class="view">
+            <div class="card-form">
+                <h3>問題の追加</h3>
+                <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                    英語の文章を入力してください。自動的に単語に分割され、クイズになります。<br>
+                    ※記号は自動で削除されます。3単語以上必要です。
+                </p>
+                <div class="input-group">
+                    <textarea id="sentence-input" rows="5" placeholder="例: My name is taro."></textarea>
+                </div>
+                <div id="create-feedback" style="color: var(--danger); font-size: 0.875rem; margin-top: 0.5rem; height: 1.2rem;"></div>
+                <div style="display: flex; justify-content: flex-end; margin-top: 1rem;">
+                    <button class="btn btn-primary" onclick="addSentence()">
+                        <i class="fas fa-plus"></i> 追加
+                    </button>
+                </div>
+            </div>
+
+            <div class="sentences-list-container">
+                <h3>現在の問題リスト (<span id="list-count">0</span>)</h3>
+                <button class="btn" onclick="clearAllSentences()" style="background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid var(--danger); margin-bottom: 1rem; font-size: 0.875rem; padding: 0.25rem 0.75rem;">
+                    <i class="fas fa-trash"></i> すべて削除
+                </button>
+                <ul id="sentences-list"></ul>
+            </div>
+        </div>
+    </main>
+
+    <!-- Stack UI -->
+    <button id="stack-toggle-btn" onclick="toggleStack()">
+        <i class="fas fa-layer-group"></i>
+        <span id="stack-badge" style="display: none;">0</span>
+    </button>
+
+    <div id="stack-panel">
+        <div class="stack-header">
+            <h3>間違えた問題 (スタック)</h3>
+            <button class="btn-icon" onclick="toggleStack()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="stack-list" class="stack-list">
+            <!-- Stacked items will appear here -->
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <button class="btn btn-primary" onclick="retryStack()" style="justify-content: center;">
+                <i class="fas fa-redo"></i> スタックから問題を復元してリトライ
+            </button>
+            <button class="btn" onclick="clearStack()" style="justify-content: center; background: rgba(255,255,255,0.05);">
+                <i class="fas fa-trash"></i> スタックをクリア
+            </button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
