@@ -3,6 +3,10 @@ let sentences = [];
 let stack = [];
 let currentTab = 'play';
 
+// Kuromoji State
+let tokenizerInstance = null;
+let isKuromojiReady = false;
+
 // Play State
 let playState = {
     isPlaying: false,
@@ -28,6 +32,7 @@ const els = {
     
     // Play View
     qSelect: document.getElementById('q-select'),
+    langSelect: document.getElementById('lang-select'),
     speedSlider: document.getElementById('speed-slider'),
     speedVal: document.getElementById('speed-val'),
     timerInput: document.getElementById('timer-input'),
@@ -52,7 +57,11 @@ const els = {
     // Stack View
     stackPanel: document.getElementById('stack-panel'),
     stackList: document.getElementById('stack-list'),
-    stackBadge: document.getElementById('stack-badge')
+    stackBadge: document.getElementById('stack-badge'),
+
+    // Kuromoji Status
+    kuromojiStatus: document.getElementById('kuromoji-status'),
+    posFilters: document.querySelectorAll('.pos-filter')
 };
 
 // Initialize
@@ -62,7 +71,37 @@ function init() {
     renderStack();
     updatePlayUIState();
     
-    // Setup TTS voices (browser sometimes needs time to load them)
+    // Setup Kuromoji
+    els.playBtn.disabled = true; // Disable until ready
+    if (typeof kuromoji !== 'undefined') {
+        kuromoji.builder({ dicPath: "dict/" }).build((err, _tokenizer) => {
+            if (err) {
+                els.kuromojiStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> 辞書ロード失敗';
+                els.kuromojiStatus.style.color = 'var(--danger)';
+                console.error("Kuromoji load error", err);
+                return;
+            }
+            tokenizerInstance = _tokenizer;
+            isKuromojiReady = true;
+            els.kuromojiStatus.style.display = 'none'; // Hide status when ready
+            els.playBtn.disabled = false;
+            
+            // Re-render list just in case to show correct word counts
+            renderSentencesList();
+        });
+    } else {
+        els.kuromojiStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Kuromojiライブラリが見つかりません';
+        els.kuromojiStatus.style.color = 'var(--danger)';
+    }
+
+    // Bind checkbox changes
+    els.posFilters.forEach(f => {
+        f.addEventListener('change', () => {
+            renderSentencesList(); // Update word counts when POS changes
+        });
+    });
+
+    // Setup TTS voices
     window.speechSynthesis.onvoiceschanged = () => {
         window.speechSynthesis.getVoices();
     };
@@ -172,9 +211,24 @@ function cleanWord(word) {
     return word.replace(/[^\w\s\u3000-\u303F\u3040-\u309F\u30A0-\u30FF\uFF00-\uFFEF\u4E00-\u9FAF]/g, '').trim();
 }
 
+function getSelectedPOS() {
+    const selected = [];
+    els.posFilters.forEach(f => {
+        if (f.checked) selected.push(f.value);
+    });
+    return selected;
+}
+
 function parseSentenceToWords(sentence) {
-    // split by space and clean
-    return sentence.split(/\s+/).map(cleanWord).filter(w => w.length > 0);
+    if (!isKuromojiReady || !tokenizerInstance) return [];
+    
+    const tokens = tokenizerInstance.tokenize(sentence);
+    const selectedPOS = getSelectedPOS();
+    
+    return tokens
+        .filter(t => selectedPOS.includes(t.pos))
+        .map(t => cleanWord(t.surface_form))
+        .filter(w => w.length > 0);
 }
 
 // Create Mode
@@ -290,6 +344,7 @@ function startGame() {
     els.timerInput.disabled = true;
     els.speedSlider.disabled = true;
     if(els.qSelect) els.qSelect.disabled = true;
+    if(els.langSelect) els.langSelect.disabled = true;
     
     updatePlayButtonUI();
     processCurrentWord();
@@ -328,6 +383,7 @@ function stopGame() {
     els.timerInput.disabled = false;
     els.speedSlider.disabled = false;
     if(els.qSelect) els.qSelect.disabled = false;
+    if(els.langSelect) els.langSelect.disabled = false;
     
     els.currentWordDisplay.textContent = '--';
     els.timerBar.style.width = '100%';
@@ -422,7 +478,7 @@ function processCurrentWord() {
 function speak(text, onEndCallback) {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-US'; // Defaulting to english reading
+    utterance.lang = els.langSelect ? els.langSelect.value : 'ja-JP';
     utterance.rate = playState.speed;
     
     utterance.onend = () => {

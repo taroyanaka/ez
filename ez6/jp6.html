@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日本語単語・品詞解析 - Pure CSS ローカル専用版</title>
+    
+    <script src="./lib/kuromoji@0.1.2.js"></script>
+
+    <style>
+        /* --- 基本リセット & 共通スタイル --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #f9fafb;
+            color: #111827;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.5;
+            padding: 1rem;
+        }
+        @media (min-width: 768px) {
+            body { padding: 2rem; }
+        }
+        
+        /* --- レイアウトコンテナ --- */
+        .container {
+            max-width: 56rem; /* max-w-4xl */
+            margin: 0 auto;
+        }
+        .space-y-6 > * + * { margin-top: 1.5rem; }
+        .space-y-4 > * + * { margin-top: 1rem; }
+        .gap-6 { gap: 1.5rem; }
+
+        /* --- ヘッダー --- */
+        header {
+            border-b: 1px solid #e5e7eb;
+            padding-bottom: 1rem;
+        }
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #4f46e5;
+        }
+        header p {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+
+        /* --- カード（白背景のパネル） --- */
+        .card {
+            background-color: #ffffff;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        
+        /* --- テキストエリア & ボタン --- */
+        label {
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        .sample-btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .btn-sample {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            border: none;
+            background-color: #f3f4f6;
+            color: #4b5563;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn-sample:hover { background-color: #e5e7eb; }
+        .btn-purple {
+            background-color: #faf5ff;
+            color: #7e22ce;
+            font-weight: 500;
+        }
+        .btn-purple:hover { background-color: #f3e8ff; }
+
+        textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            font-family: inherit;
+            font-size: 1rem;
+            resize: vertical;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        .btn-primary {
+            background-color: #4f46e5;
+            color: #ffffff;
+            padding: 0.5rem 1.25rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn-primary:hover { background-color: #4338ca; }
+
+        /* --- ステータス文 --- */
+        .status {
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .status-loading { color: #d97706; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        .status-ready { color: #059669; }
+        .status-error { color: #dc2626; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+
+        /* --- 2カラム・結果表示エリア --- */
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+        }
+        @media (min-width: 768px) {
+            .grid { grid-template-columns: 1fr 1fr; }
+        }
+        .result-title-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        .result-title {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #1f2937;
+        }
+        .badge-type {
+            font-size: 0.75rem;
+            font-family: monospace;
+            padding: 0.125rem 0.5rem;
+            border-radius: 0.25rem;
+        }
+        .bg-blue-light { background-color: #dbeafe; color: #1e40af; }
+        .bg-purple-light { background-color: #f3e8ff; color: #6b21a8; }
+
+        .result-box {
+            padding: 0.75rem;
+            background-color: #f9fafb;
+            border: 1px solid #f3f4f6;
+            border-radius: 0.5rem;
+            min-h: 250px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .text-count {
+            font-size: 0.75rem;
+            text-align: right;
+            color: #9ca3af;
+            margin-top: 0.5rem;
+        }
+
+        /* --- 解析結果のトークンバッジ群 --- */
+        .word-badge {
+            display: inline-block;
+            background-color: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            padding: 0.125rem 0.5rem;
+            margin: 0.25rem;
+            font-size: 0.875rem;
+            color: #1f2937;
+            transition: all 0.2s;
+        }
+        .word-badge:hover {
+            background-color: #e5e7eb;
+            transform: translateY(-1px);
+        }
+
+        .pos-badge {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            border-radius: 0.5rem;
+            padding: 0.375rem 0.625rem;
+            margin: 0.25rem;
+            font-size: 0.875rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            border: 1px solid transparent;
+        }
+        .pos-label {
+            font-size: 0.65rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            opacity: 0.7;
+            margin-top: 0.125rem;
+        }
+
+        /* 品詞別カラー用クラス */
+        .meishi { background-color: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+        .doshi { background-color: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+        .joshi { background-color: #fefce8; border-color: #fef08a; color: #854d0e; }
+        .jodoshi { background-color: #fffbeb; border-color: #fde68a; color: #92400e; }
+        .keiyoshi { background-color: #fef2f2; border-color: #fee2e2; color: #991b1b; }
+        .fukushi { background-color: #faf5ff; border-color: #e9d5ff; color: #6b21a8; }
+        .setzokushi { background-color: #fdf2f8; border-color: #fbcfe8; color: #9d174d; }
+        .rentaishi { background-color: #f0fdfa; border-color: #ccfbf1; color: #115e59; }
+        .kandoshi { background-color: #fff1f2; border-color: #fecdd3; color: #9f1239; }
+        .filler { background-color: #fef9c3; border-color: #fef08a; color: #713f12; }
+        .kigo { background-color: #f3f4f6; border-color: #e5e7eb; color: #374151; }
+        .sonota { background-color: #eef2ff; border-color: #e0e7ff; color: #3730a3; }
+    </style>
+</head>
+<body class="space-y-6">
+    <div class="container space-y-6">
+        <header>
+            <h1>Kuromoji.js 全品詞パース検証 (Pure CSS版)</h1>
+            <p>外部CDN（Tailwind）を完全撤廃。ローカルのライブラリとdict/フォルダのみでスタンドアロン動作します</p>
+        </header>
+
+        <div class="card space-y-4">
+            <div class="flex-between">
+                <label for="inputText">解析する日本語テキスト</label>
+                <div class="sample-btn-group">
+                    <button onclick="loadSample(1)" class="btn-sample">日常</button>
+                    <button onclick="loadSample(2)" class="btn-sample">IT</button>
+                    <button onclick="loadSample(3)" class="btn-sample">小説</button>
+                    <button onclick="loadSample(4)" class="btn-sample">英単語</button>
+                    <button onclick="loadSample(5)" class="btn-sample btn-purple">全品詞(開発)</button>
+                    <button onclick="loadSample(6)" class="btn-sample btn-purple">全品詞(日常)</button>
+                    <button onclick="loadSample(7)" class="btn-sample btn-purple">全品詞(ゲーム)</button>
+                </div>
+            </div>
+            <textarea id="inputText" rows="3" placeholder="ここに日本語の文章を入力してください..."></textarea>
+            <div class="flex-between">
+                <button onclick="analyzeText()" id="analyzeBtn" class="btn-primary">解析を実行</button>
+                <div id="kuromojiStatus" class="status status-loading">
+                    ⏳ ローカルの辞書フォルダ（dict/）を読み込み中...
+                </div>
+            </div>
+        </div>
+
+        <div class="grid gap-6">
+            
+            <div class="card" style="display: flex; flex-direction: column;">
+                <div class="result-title-area">
+                    <h2 class="result-title">1. 単語区切り</h2>
+                    <span class="badge-type bg-blue-light">分かち書き</span>
+                </div>
+                <div id="resultKuromoji" class="result-box">
+                    <span style="color: #9ca3af; font-size: 0.875rem;">ローカル辞書の読み込みをお待ちください...</span>
+                </div>
+                <div id="countKuromoji" class="text-count">単語数: -</div>
+            </div>
+
+            <div class="card" style="display: flex; flex-direction: column;">
+                <div class="result-title-area">
+                    <h2 class="result-title">2. 品詞詳細表示</h2>
+                    <span class="badge-type bg-purple-light">形態素情報</span>
+                </div>
+                <div id="resultPOS" class="result-box">
+                    <span style="color: #9ca3af; font-size: 0.875rem;">解析を実行するとここに品詞別の色分けが出ます</span>
+                </div>
+                <div id="countPOS" class="text-count">トークン総数: -</div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const samples = {
+            1: "私の名前は太郎です。これはテストのアプリです。昨日は友達と公園へ行きました。",
+            2: "最新のスマートフォンでAIを使って、リアルタイムなTTSクイズゲームを開発する。",
+            3: "吾輩は猫である。名前はまだ無い。どこで生れたかとんと見当がつかぬ。",
+            4: "GitHubにpushしたコードにCORSのエラーが出て、GoogleのChromeでデバッグするのに一苦労した。",
+            5: "うわあ、ええと、あのバグはかなり凄まじいですが、しかし私は絶対に諦めないぞ！",
+            6: "ほら、まあ、この新しいお菓子はとても美味しいですよ、だから一緒に食べませんか？",
+            7: "おい、ええ、あの強敵はかなり手強いな……。しかし、このスキルがあれば勝てるはずだ！"
+        };
+
+        // 品詞とCSSクラスのマッピング
+        const posClasses = {
+            "名詞": "meishi",
+            "動詞": "doshi",
+            "助詞": "joshi",
+            "助動詞": "jodoshi",
+            "形容詞": "keiyoshi",
+            "副詞": "fukushi",
+            "接続詞": "setzokushi",
+            "連体詞": "rentaishi",
+            "感動詞": "kandoshi",
+            "フィラー": "filler",
+            "記号": "kigo"
+        };
+
+        let tokenizerInstance = null;
+        let isKuromojiReady = false;
+
+        window.onload = function() {
+            loadSample(5);
+            
+            if (typeof kuromoji !== 'undefined') {
+                initKuromoji();
+            } else {
+                const statusEl = document.getElementById('kuromojiStatus');
+                statusEl.innerText = "⚠️ ./lib/kuromoji@0.1.2.js が見つかりません。パスを確認してください。";
+                statusEl.className = "status status-error";
+            }
+        };
+
+        function loadSample(id) {
+            document.getElementById('inputText').value = samples[id];
+            if (isKuromojiReady) analyzeText();
+        }
+
+        function initKuromoji() {
+            const statusEl = document.getElementById('kuromojiStatus');
+            const kuromojiResultEl = document.getElementById('resultKuromoji');
+            
+            try {
+                kuromoji.builder({ dicPath: "dict/" }).build((err, _tokenizer) => {
+                    if (err) {
+                        console.error(err);
+                        statusEl.innerText = "❌ ローカル辞書のロードに失敗しました: " + err.message;
+                        statusEl.className = "status status-error";
+                        return;
+                    }
+                    tokenizerInstance = _tokenizer;
+                    isKuromojiReady = true;
+                    statusEl.innerText = "✅ ローカル環境の準備が完全に完了しました！";
+                    statusEl.className = "status status-ready";
+                    kuromojiResultEl.innerHTML = '<span style="color: #9ca3af; font-size: 0.875rem;">解析を実行してください</span>';
+                    
+                    analyzeText();
+                });
+            } catch (e) {
+                statusEl.innerText = "❌ Kuromoji初期化エラー: " + e.message;
+                statusEl.className = "status status-error";
+            }
+        }
+
+        function analyzeText() {
+            const text = document.getElementById('inputText').value;
+            if (!text) return;
+
+            if (isKuromojiReady && tokenizerInstance) {
+                try {
+                    const rawTokens = tokenizerInstance.tokenize(text);
+                    
+                    // 1. 通常の分かち書き
+                    const kuromojiTokens = rawTokens.map(t => t.surface_form);
+                    renderPlainTokens('resultKuromoji', 'countKuromoji', kuromojiTokens);
+                    
+                    // 2. 品詞別色分けUI
+                    renderPOSTokens('resultPOS', 'countPOS', rawTokens);
+                    
+                } catch (e) {
+                    document.getElementById('resultKuromoji').innerText = "解析エラー: " + e.message;
+                    document.getElementById('resultPOS').innerText = "解析エラー: " + e.message;
+                }
+            }
+        }
+
+        function renderPlainTokens(elementId, countId, tokens) {
+            const container = document.getElementById(elementId);
+            container.innerHTML = '';
+            const filtered = tokens.filter(t => t.trim().length > 0);
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<span style="color: #9ca3af; font-size: 0.875rem;">有効な単語がありません</span>';
+                document.getElementById(countId).innerText = "単語数: 0";
+                return;
+            }
+
+            filtered.forEach(token => {
+                const span = document.createElement('span');
+                span.className = 'word-badge';
+                span.innerText = token;
+                container.appendChild(span);
+            });
+            document.getElementById(countId).innerText = `単語数: ${filtered.length}`;
+        }
+
+        function renderPOSTokens(elementId, countId, rawTokens) {
+            const container = document.getElementById(elementId);
+            container.innerHTML = '';
+            
+            const filtered = rawTokens.filter(t => t.surface_form.trim().length > 0);
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<span style="color: #9ca3af; font-size: 0.875rem;">解析データがありません</span>';
+                document.getElementById(countId).innerText = "トークン総数: 0";
+                return;
+            }
+
+            filtered.forEach(token => {
+                const mainPOS = token.pos; 
+                const cssClass = posClasses[mainPOS] || "sonota";
+                
+                const div = document.createElement('div');
+                div.className = `pos-badge ${cssClass}`;
+                
+                const wordSpan = document.createElement('span');
+                wordSpan.style.fontWeight = '500';
+                wordSpan.innerText = token.surface_form;
+                
+                const posSpan = document.createElement('span');
+                posSpan.className = 'pos-label';
+                posSpan.innerText = mainPOS;
+                
+                div.appendChild(wordSpan);
+                div.appendChild(posSpan);
+                container.appendChild(div);
+            });
+
+            document.getElementById(countId).innerText = `トークン総数: ${filtered.length}`;
+        }
+    </script>
+</body>
+</html>

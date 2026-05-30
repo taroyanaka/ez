@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Kuromoji.js 最小構成テスト（品詞フィルター付）</title>
+    <script src="./lib/kuromoji@0.1.2.js"></script>
+</head>
+<body>
+
+    <h1>Kuromoji.js 最小構成テスト（品詞フィルター付）</h1>
+    <p id="kuromojiStatus" style="color: dimgray;">⏳ 辞書読み込み中...</p>
+
+    <hr>
+
+    <p>
+        <button onclick="loadSample(1)">日常</button>
+        <button onclick="loadSample(2)">IT</button>
+        <button onclick="loadSample(3)">小説</button>
+        <button onclick="loadSample(4)">英単語</button>
+        <button onclick="loadSample(5)">全品詞1</button>
+        <button onclick="loadSample(6)">全品詞2</button>
+        <button onclick="loadSample(7)">全品詞3</button>
+    </p>
+
+    <p>
+        <textarea id="inputText" rows="4" cols="60" placeholder="文章を入力してください"></textarea><br>
+        <button onclick="analyzeText()">解析を実行</button>
+    </p>
+
+    <hr>
+
+    <h2>表示する品詞の選択</h2>
+    <p id="filterArea">
+        <label><input type="checkbox" value="名詞" checked onchange="analyzeText()">名詞</label>
+        <label><input type="checkbox" value="動詞" checked onchange="analyzeText()">動詞</label>
+        <label><input type="checkbox" value="形容詞" checked onchange="analyzeText()">形容詞</label>
+        <label><input type="checkbox" value="副詞" checked onchange="analyzeText()">副詞</label>
+        <label><input type="checkbox" value="助詞" onchange="analyzeText()">助詞</label> <label><input type="checkbox" value="助動詞" onchange="analyzeText()">助動詞</label> <label><input type="checkbox" value="接続詞" checked onchange="analyzeText()">接続詞</label>
+        <label><input type="checkbox" value="連体詞" checked onchange="analyzeText()">連体詞</label>
+        <label><input type="checkbox" value="感動詞" checked onchange="analyzeText()">感動詞</label>
+        <label><input type="checkbox" value="フィラー" checked onchange="analyzeText()">フィラー</label>
+        <label><input type="checkbox" value="記号" onchange="analyzeText()">記号</label> </p>
+
+    <hr>
+
+    <h2>1. 単語区切り（分かち書き）</h2>
+    <p id="resultKuromoji">辞書ロード中...</p>
+
+    <h2>2. 品詞詳細表示</h2>
+    <p id="resultPOS">解析を実行するとここに品詞が出ます</p>
+
+    <h2>3. 選択した品詞のみを抽出</h2>
+    <p id="resultFiltered">ここにチェックした品詞だけが並びます</p>
+
+    <script>
+        const samples = {
+            1: "私の名前は太郎です。これはテストのアプリです。昨日は友達と公園へ行きました。",
+            2: "最新のスマートフォンでAIを使って、リアルタイムなTTSクイズゲームを開発する。",
+            3: "吾輩は猫である。名前はまだ無い。どこで生れたかとんと見当がつかぬ。",
+            4: "GitHubにpushしたコードにCORSのエラーが出て、GoogleのChromeでデバッグするのに一苦労した。",
+            5: "うわあ、ええと、あのバグはかなり凄まじいですが、しかし私は絶対に諦めないぞ！",
+            6: "ほら, まあ、この新しいお菓子はとても美味しいですよ、だから一緒に食べませんか？",
+            7: "おい、ええ、あの強敵はかなり手強いな……。しかし、このスキルがあれば勝てるはずだ！"
+        };
+
+        let tokenizerInstance = null;
+        let isKuromojiReady = false;
+
+        window.onload = function() {
+            loadSample(5);
+            if (typeof kuromoji !== 'undefined') {
+                kuromoji.builder({ dicPath: "dict/" }).build((err, _tokenizer) => {
+                    if (err) {
+                        document.getElementById('kuromojiStatus').innerText = "❌ 辞書ロード失敗: " + err.message;
+                        return;
+                    }
+                    tokenizerInstance = _tokenizer;
+                    isKuromojiReady = true;
+                    document.getElementById('kuromojiStatus').innerText = "✅ 準備完了！";
+                    analyzeText();
+                });
+            } else {
+                document.getElementById('kuromojiStatus').innerText = "⚠️ ライブラリが見つかりません。";
+            }
+        };
+
+        function loadSample(id) {
+            document.getElementById('inputText').value = samples[id];
+            if (isKuromojiReady) analyzeText();
+        }
+
+        function analyzeText() {
+            const text = document.getElementById('inputText').value;
+            if (!text || !isKuromojiReady || !tokenizerInstance) return;
+
+            try {
+                const rawTokens = tokenizerInstance.tokenize(text);
+                const filtered = rawTokens.filter(t => t.surface_form.trim().length > 0);
+
+                // 1. 分かち書きの出力
+                const words = filtered.map(t => t.surface_form);
+                document.getElementById('resultKuromoji').innerText = words.join(' / ');
+
+                // 2. 品詞の出力
+                const posContainer = document.getElementById('resultPOS');
+                posContainer.innerHTML = '';
+                filtered.forEach(token => {
+                    posContainer.innerText += `${token.surface_form}[${token.pos}]  `;
+                });
+
+                // 3. 選択した品詞のみを抽出
+                const checkedPos = Array.from(document.querySelectorAll('#filterArea input:checked')).map(el => el.value);
+                const targetTokens = filtered.filter(token => checkedPos.includes(token.pos));
+                const targetWords = targetTokens.map(token => token.surface_form);
+                
+                document.getElementById('resultFiltered').innerText = targetWords.length > 0 ? targetWords.join(' / ') : "（該当する単語がありません）";
+
+            } catch (e) {
+                alert("解析エラー: " + e.message);
+            }
+        }
+    </script>
+</body>
+</html>

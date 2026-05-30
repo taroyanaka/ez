@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日本語単語・品詞解析 - 全品詞網羅テスト</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+
+    <script src="./lib/kuromoji@0.1.2.js"></script>
+
+    <style>
+        .word-badge {
+            display: inline-block;
+            background-color: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            padding: 0.125rem 0.5rem;
+            margin: 0.25rem;
+            font-size: 0.875rem;
+            color: #1f2937;
+            transition: all 0.2s;
+        }
+        .word-badge:hover {
+            background-color: #e5e7eb;
+            transform: translateY(-1px);
+        }
+        /* 品詞ごとのカラーバッジ */
+        .pos-badge {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            border-radius: 0.5rem;
+            padding: 0.375rem 0.625rem;
+            margin: 0.25rem;
+            font-size: 0.875rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .pos-label {
+            font-size: 0.65rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            opacity: 0.7;
+            margin-top: 0.125rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen p-4 md:p-8">
+    <div class="max-w-4xl mx-auto space-y-6">
+        <header class="border-b border-gray-200 pb-4">
+            <h1 class="text-2xl font-bold text-indigo-600">Kuromoji.js 全品詞パース検証</h1>
+            <p class="text-sm text-gray-500 mt-1">全12種類の品詞が同時に混ざった文章が、どのように色分け判定されるかテストできます</p>
+        </header>
+
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 space-y-4">
+            <div class="flex justify-between items-center">
+                <label for="inputText" class="block text-sm font-semibold">解析する日本語テキスト</label>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="loadSample(1)" class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-md hover:bg-gray-200">日常</button>
+                    <button onclick="loadSample(2)" class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-md hover:bg-gray-200">IT</button>
+                    <button onclick="loadSample(3)" class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-md hover:bg-gray-200">小説</button>
+                    <button onclick="loadSample(4)" class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-md hover:bg-gray-200">英単語</button>
+                    <button onclick="loadSample(5)" class="text-xs bg-purple-50 text-purple-600 px-2 py-1 rounded-md hover:bg-purple-100 font-medium">🆕 全品詞(開発)</button>
+                    <button onclick="loadSample(6)" class="text-xs bg-purple-50 text-purple-600 px-2 py-1 rounded-md hover:bg-purple-100 font-medium">🆕 全品詞(日常)</button>
+                    <button onclick="loadSample(7)" class="text-xs bg-purple-50 text-purple-600 px-2 py-1 rounded-md hover:bg-purple-100 font-medium">🆕 全品詞(ゲーム)</button>
+                </div>
+            </div>
+            <textarea id="inputText" rows="3" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="ここに日本語の文章を入力してください..."></textarea>
+            <div class="flex items-center justify-between">
+                <button onclick="analyzeText()" id="analyzeBtn" class="bg-indigo-600 text-white px-5 py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors cursor-pointer">
+                    解析を実行
+                </button>
+                <div id="kuromojiStatus" class="text-xs text-amber-600 font-semibold animate-pulse">
+                    ⏳ ローカルの辞書フォルダ（dict/）を読み込み中...
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="font-bold text-lg text-gray-800">1. 単語区切り</h2>
+                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">分かち書き</span>
+                </div>
+                <div id="resultKuromoji" class="p-3 bg-gray-50 border border-gray-100 rounded-lg flex-1 min-h-[250px] overflow-y-auto">
+                    <span class="text-gray-400 text-sm">ローカル辞書の読み込みをお待ちください...</span>
+                </div>
+                <div id="countKuromoji" class="text-xs text-right text-gray-400 mt-2">単語数: -</div>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="font-bold text-lg text-gray-800">2. 品詞詳細表示</h2>
+                    <span class="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-mono">形態素情報</span>
+                </div>
+                <div id="resultPOS" class="p-3 bg-gray-50 border border-gray-100 rounded-lg flex-1 min-h-[250px] overflow-y-auto">
+                    <span class="text-gray-400 text-sm">解析を実行するとここに品詞別の色分けが出ます</span>
+                </div>
+                <div id="countPOS" class="text-xs text-right text-gray-400 mt-2">トークン総数: -</div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const samples = {
+            1: "私の名前は太郎です。これはテストのアプリです。昨日は友達と公園へ行きました。",
+            2: "最新のスマートフォンでAIを使って、リアルタイムなTTSクイズゲームを開発する。",
+            3: "吾輩は猫である。名前はまだ無い。どこで生れたかとんと見当がつかぬ。",
+            4: "GitHubにpushしたコードにCORSのエラーが出て、GoogleのChromeでデバッグするのに一苦労した。",
+            // 🆕 全品詞サンプル3種（名詞・動詞・助詞・助動詞・形容詞・副詞・接続詞・連体詞・感動詞・記号・フィラーを全て含む）
+            5: "うわあ、ええと、あのバグはかなり凄まじいですが、しかし私は絶対に諦めないぞ！",
+            6: "ほら、まあ、この新しいお菓子はとても美味しいですよ、だから一緒に食べませんか？",
+            7: "おい、ええ、あの強敵はかなり手強いな……。しかし、このスキルがあれば勝てるはずだ！"
+        };
+
+        // 品詞ごとのカラーマップ定義（フィラーを追加）
+        const posColors = {
+            "名詞": { bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-800" },
+            "動詞": { bg: "bg-green-50", border: "border-green-200", text: "text-green-800" },
+            "助詞": { bg: "bg-yellow-50", border: "border-yellow-200", text: "text-yellow-800" },
+            "助動詞": { bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-800" },
+            "形容詞": { bg: "bg-red-50", border: "border-red-200", text: "text-red-800" },
+            "副詞": { bg: "bg-purple-50", border: "border-purple-200", text: "text-purple-800" },
+            "接続詞": { bg: "bg-pink-50", border: "border-pink-200", text: "text-pink-800" },
+            "連体詞": { bg: "bg-teal-50", border: "border-teal-200", text: "text-teal-800" },
+            "感動詞": { bg: "bg-rose-100", border: "border-rose-300", text: "text-rose-800" },
+            "フィラー": { bg: "bg-yellow-100", border: "border-yellow-300", text: "text-yellow-900" },
+            "記号": { bg: "bg-gray-100", border: "border-gray-300", text: "text-gray-600" },
+            "その他": { bg: "bg-indigo-50", border: "border-indigo-200", text: "text-indigo-800" }
+        };
+
+        let tokenizerInstance = null;
+        let isKuromojiReady = false;
+
+        window.onload = function() {
+            loadSample(5); // 初期選択を全品詞網羅（開発）に設定
+            
+            if (typeof kuromoji !== 'undefined') {
+                initKuromoji();
+            } else {
+                document.getElementById('kuromojiStatus').innerText = "⚠️ ./lib/kuromoji@0.1.2.js が見つかりません。パスを確認してください。";
+                document.getElementById('kuromojiStatus').className = "text-xs text-red-600 font-semibold";
+            }
+        };
+
+        function loadSample(id) {
+            document.getElementById('inputText').value = samples[id];
+            if (isKuromojiReady) analyzeText();
+        }
+
+        function initKuromoji() {
+            const statusEl = document.getElementById('kuromojiStatus');
+            const kuromojiResultEl = document.getElementById('resultKuromoji');
+            
+            try {
+                kuromoji.builder({ dicPath: "dict/" }).build((err, _tokenizer) => {
+                    if (err) {
+                        console.error(err);
+                        statusEl.innerText = "❌ ローカル辞書のロードに失敗しました: " + err.message;
+                        statusEl.className = "text-xs text-red-600 font-semibold";
+                        return;
+                    }
+                    tokenizerInstance = _tokenizer;
+                    isKuromojiReady = true;
+                    statusEl.innerText = "✅ ローカル辞書の準備が完了しました！";
+                    statusEl.className = "text-xs text-green-600 font-semibold";
+                    kuromojiResultEl.innerHTML = '<span class="text-gray-400 text-sm">解析を実行してください</span>';
+                    
+                    analyzeText();
+                });
+            } catch (e) {
+                statusEl.innerText = "❌ Kuromoji初期化エラー: " + e.message;
+                statusEl.className = "text-xs text-red-600 font-semibold";
+            }
+        }
+
+        function analyzeText() {
+            const text = document.getElementById('inputText').value;
+            if (!text) return;
+
+            if (isKuromojiReady && tokenizerInstance) {
+                try {
+                    const rawTokens = tokenizerInstance.tokenize(text);
+                    
+                    // 1. 通常の分かち書き
+                    const kuromojiTokens = rawTokens.map(t => t.surface_form);
+                    renderPlainTokens('resultKuromoji', 'countKuromoji', kuromojiTokens);
+                    
+                    // 2. 品詞別色分けUI
+                    renderPOSTokens('resultPOS', 'countPOS', rawTokens);
+                    
+                } catch (e) {
+                    document.getElementById('resultKuromoji').innerText = "解析エラー: " + e.message;
+                    document.getElementById('resultPOS').innerText = "解析エラー: " + e.message;
+                }
+            }
+        }
+
+        function renderPlainTokens(elementId, countId, tokens) {
+            const container = document.getElementById(elementId);
+            container.innerHTML = '';
+            const filtered = tokens.filter(t => t.trim().length > 0);
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<span class="text-gray-400 text-sm">有効な単語がありません</span>';
+                document.getElementById(countId).innerText = "単語数: 0";
+                return;
+            }
+
+            filtered.forEach(token => {
+                const span = document.createElement('span');
+                span.className = 'word-badge';
+                span.innerText = token;
+                container.appendChild(span);
+            });
+            document.getElementById(countId).innerText = `単語数: ${filtered.length}`;
+        }
+
+        function renderPOSTokens(elementId, countId, rawTokens) {
+            const container = document.getElementById(elementId);
+            container.innerHTML = '';
+            
+            const filtered = rawTokens.filter(t => t.surface_form.trim().length > 0);
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<span class="text-gray-400 text-sm">解析データがありません</span>';
+                document.getElementById(countId).innerText = "トークン総数: 0";
+                return;
+            }
+
+            filtered.forEach(token => {
+                const mainPOS = token.pos; 
+                const colorConfig = posColors[mainPOS] || posColors["その他"];
+                
+                const div = document.createElement('div');
+                div.className = `pos-badge border ${colorConfig.bg} ${colorConfig.border} ${colorConfig.text}`;
+                
+                const wordSpan = document.createElement('span');
+                wordSpan.className = 'font-medium';
+                wordSpan.innerText = token.surface_form;
+                
+                const posSpan = document.createElement('span');
+                posSpan.className = 'pos-label';
+                posSpan.innerText = mainPOS;
+                
+                div.appendChild(wordSpan);
+                div.appendChild(posSpan);
+                container.appendChild(div);
+            });
+
+            document.getElementById(countId).innerText = `トークン総数: ${filtered.length}`;
+        }
+    </script>
+</body>
+</html>
