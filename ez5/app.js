@@ -772,51 +772,57 @@ async function handleBulkImport(event) {
 }
 
 async function handleBulkImportOriginals(event) {
-    const files = Array.from(event.target.files);
-    if (!files.length) return;
-    
-    if (!AUTH_USER_ID || !AUTH_PASSWORD) {
-        alert('追加にはログインが必要です。');
-        event.target.value = '';
-        return;
-    }
-
-    if (currentEditingId !== null) {
-        const wantsToSave = confirm(`現在「ID: ${currentEditingId}」を編集中です。現在の編集内容を上書き保存しますか？\n\n[OK] 保存してから一括追加へ進む\n[キャンセル] 保存せずに破棄して一括追加へ進む`);
-        if (wantsToSave) {
-            const btn = document.getElementById(`btn-update-${currentEditingId}`);
-            if (btn) {
-                await updateRecord(currentEditingId, btn);
-            }
-        } else {
-            currentEditingId = null;
-            document.querySelectorAll('[id^="btn-update-"]').forEach(btn => btn.disabled = true);
-        }
-    }
-
-    if (!confirm(`${files.length}件の画像をインポートしますか？\n※アップロードには少し時間がかかる場合があります。`)) {
-        event.target.value = '';
-        return;
-    }
-    
-    for (const file of files) {
-        const origUrl = URL.createObjectURL(file);
+    try {
+        const files = Array.from(event.target.files);
+        if (!files.length) return;
         
-        tempRecords.push({
-            id: `temp-${Date.now()}-${Math.random()}`,
-            isTemp: true,
-            originalFile: file,
-            maskBlob: null,
-            originalSrc: origUrl,
-            maskSrc: null,
-            timestamp: new Date().toLocaleTimeString(),
-            name: file.name
-        });
+        if (!AUTH_USER_ID || !AUTH_PASSWORD) {
+            alert('追加にはログインが必要です。');
+            event.target.value = '';
+            return;
+        }
+
+        if (currentEditingId !== null) {
+            const wantsToSave = confirm(`現在「ID: ${currentEditingId}」を編集中です。現在の編集内容を上書き保存しますか？\n\n[OK] 保存してから一括追加へ進む\n[キャンセル] 保存せずに破棄して一括追加へ進む`);
+            if (wantsToSave) {
+                const btn = document.getElementById(`btn-update-${currentEditingId}`);
+                if (btn) {
+                    await updateRecord(currentEditingId, btn);
+                }
+            } else {
+                currentEditingId = null;
+                document.querySelectorAll('[id^="btn-update-"]').forEach(btn => btn.disabled = true);
+            }
+        }
+
+        if (!confirm(`${files.length}件の画像をインポートしますか？\n※アップロードには少し時間がかかる場合があります。`)) {
+            event.target.value = '';
+            return;
+        }
+        
+        for (const file of files) {
+            const origUrl = URL.createObjectURL(file);
+            
+            tempRecords.push({
+                id: `temp-${Date.now()}-${Math.random()}`,
+                isTemp: true,
+                originalFile: file,
+                maskBlob: null,
+                originalSrc: origUrl,
+                maskSrc: null,
+                timestamp: new Date().toLocaleTimeString(),
+                name: file.name
+            });
+        }
+        
+        renderSavedList();
+        alert(`${files.length}件を一時保存リストに追加しました。\n「全てアップロード」または「個別アップロード」でサーバーへ保存してください。`);
+        event.target.value = '';
+    } catch (error) {
+        console.error("オリジナル画像一括追加エラー:", error);
+        alert("画像の追加中にエラーが発生しました。");
+        event.target.value = '';
     }
-    
-    renderSavedList();
-    alert(`${files.length}件を一時保存リストに追加しました。\n「全てアップロード」または「個別アップロード」でサーバーへ保存してください。`);
-    event.target.value = '';
 }
 
 function renderSavedList() {
