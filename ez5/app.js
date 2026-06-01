@@ -899,6 +899,11 @@ async function uploadTempRecord(tempId, buttonEl, skipRender = false) {
         } else {
             formData.append('files', record.originalFile);
             endpoint = `${API_BASE_URL}/upload-originals`;
+            
+            const targetTextarea = document.getElementById('bulk-import-targets');
+            if (targetTextarea && targetTextarea.value.trim() !== '') {
+                formData.append('target', targetTextarea.value.trim());
+            }
         }
         
         const response = await fetch(endpoint, {
