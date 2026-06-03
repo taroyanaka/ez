@@ -357,16 +357,56 @@
             }
             if (npc.isStopped) return;
 
-            let target = platforms.find(p => p.isActive && p.center.y > npc.mesh.position.y + 0.1);
+            let maxJumpHeight = (JUMP_FORCE * JUMP_FORCE) / (2 * GRAVITY);
+            let flightFramesPerJump = 2 * (JUMP_FORCE / GRAVITY);
+            
+            let currentUpwardReach = npc.velocity.y > 0 ? (npc.velocity.y * npc.velocity.y) / (2 * GRAVITY) : 0;
+            let totalReachY = currentUpwardReach + (npc.remainingJumps * maxJumpHeight);
+            let totalReachXZ = (npc.remainingJumps * flightFramesPerJump * PLAYER_SPEED);
+            if (npc.velocity.y > 0) totalReachXZ += (2 * npc.velocity.y / GRAVITY) * PLAYER_SPEED;
+
+            let candidates = platforms.filter(p => {
+                if (!p.isActive && p.type !== 'disappearing') return false; 
+                
+                let isSafe = true;
+                if (p.type === 'disappearing') {
+                    let cycle = p.typeConfig.hideDuration + p.typeConfig.showDuration;
+                    let t = (performance.now() + p.typeConfig.timer) % cycle;
+                    if (t >= p.typeConfig.showDuration - 1500) isSafe = false; 
+                    if (!p.isActive) isSafe = false; 
+                }
+                if (!isSafe) return false;
+
+                let diffY = p.max.y - (npc.mesh.position.y - npc.height/2);
+                let diffX = p.center.x - npc.mesh.position.x;
+                let diffZ = p.center.z - npc.mesh.position.z;
+                let distXZ = Math.sqrt(diffX*diffX + diffZ*diffZ);
+                
+                return diffY <= totalReachY * 0.9 && distXZ <= totalReachXZ * 0.9 && p.center.y > npc.mesh.position.y - 1.0;
+            });
+
+            let target = candidates.sort((a,b) => b.center.y - a.center.y)[0];
+            if (!target) {
+                target = platforms.find(p => p.isActive && p.center.y > npc.mesh.position.y + 0.1);
+            }
             if (!target) return;
+
             let diff = new THREE.Vector3().subVectors(target.center, npc.mesh.position);
             let distXZ = Math.sqrt(diff.x**2 + diff.z**2);
             if (distXZ > 0.1) {
                 npc.velocity.x = THREE.MathUtils.lerp(npc.velocity.x, (diff.x/distXZ) * PLAYER_SPEED, 0.1);
                 npc.velocity.z = THREE.MathUtils.lerp(npc.velocity.z, (diff.z/distXZ) * PLAYER_SPEED, 0.1);
             }
-            if (npc.onGround && distXZ < 6.0) {
-                tryJump(npc);
+
+            let targetIsAbove = target.max.y > npc.mesh.position.y - npc.height/2 + 0.1;
+            if (npc.onGround) {
+                if (targetIsAbove || distXZ > 3.0) tryJump(npc);
+            } else {
+                if (npc.velocity.y <= 0.0) {
+                    if (targetIsAbove || distXZ > 2.0) {
+                        tryJump(npc);
+                    }
+                }
             }
         }
 
