@@ -68,34 +68,36 @@
 
     <!-- 險ｭ螳壹Δ繝ｼ繝繝ｫ -->
     <div id="settings-modal" style="display:none; position:absolute; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); z-index:100; justify-content:center; align-items:center; pointer-events:auto;">
-        <div style="background:white; padding:20px; border-radius:10px; width:300px; max-height:90vh; overflow-y:auto; color:black; font-family:sans-serif;">
-            <h2 style="margin-top:0;">Settings</h2>
+        <div style="background:white; padding:20px; border-radius:10px; width:300px; max-height:85vh; display:flex; flex-direction:column; box-sizing:border-box; color:black; font-family:sans-serif;">
+            <h2 style="margin-top:0; flex-shrink:0;">Settings</h2>
             
-            <label>NPC Count:</label><br>
-            <input type="number" id="input-NPC_COUNT" min="0" step="1" style="width:100%; margin-bottom:10px; padding:5px; box-sizing:border-box;"><br>
+            <div style="overflow-y:auto; flex-grow:1; margin-bottom:15px; padding-right:5px;">
+                <label>NPC Count:</label><br>
+                <input type="number" id="input-NPC_COUNT" min="0" step="1" style="width:100%; margin-bottom:10px; padding:5px; box-sizing:border-box;"><br>
+                
+                <label>Total Tiles:</label><br>
+                <input type="number" id="input-TOTAL_TILES" min="5" step="1" style="width:100%; margin-bottom:10px; padding:5px; box-sizing:border-box;"><br>
+                
+                <label>Player Speed:</label><br>
+                <input type="number" id="input-PLAYER_SPEED" min="0.01" step="0.01" style="width:100%; margin-bottom:10px; padding:5px; box-sizing:border-box;"><br>
+                
+                <label>Jump Force:</label><br>
+                <input type="number" id="input-JUMP_FORCE" min="0.1" step="0.01" style="width:100%; margin-bottom:10px; padding:5px; box-sizing:border-box;"><br>
+                
+                <label>Gravity:</label><br>
+                <input type="number" id="input-GRAVITY" min="0.001" step="0.001" style="width:100%; margin-bottom:10px; padding:5px; box-sizing:border-box;"><br>
+                
+                <label>Punch Cooldown (ms):</label><br>
+                <input type="number" id="input-PUNCH_COOLDOWN" min="0" step="100" style="width:100%; margin-bottom:10px; padding:5px; box-sizing:border-box;"><br>
+                
+                <label>Punch Range:</label><br>
+                <input type="number" id="input-PUNCH_RANGE" min="1" step="0.5" style="width:100%; margin-bottom:10px; padding:5px; box-sizing:border-box;"><br>
+                
+                <label>Kill Window (ms):</label><br>
+                <input type="number" id="input-KILL_WINDOW" min="1000" step="1000" style="width:100%; margin-bottom:10px; padding:5px; box-sizing:border-box;"><br>
+            </div>
             
-            <label>Total Tiles:</label><br>
-            <input type="number" id="input-TOTAL_TILES" min="5" step="1" style="width:100%; margin-bottom:10px; padding:5px; box-sizing:border-box;"><br>
-            
-            <label>Player Speed:</label><br>
-            <input type="number" id="input-PLAYER_SPEED" min="0.01" step="0.01" style="width:100%; margin-bottom:10px; padding:5px; box-sizing:border-box;"><br>
-            
-            <label>Jump Force:</label><br>
-            <input type="number" id="input-JUMP_FORCE" min="0.1" step="0.01" style="width:100%; margin-bottom:10px; padding:5px; box-sizing:border-box;"><br>
-            
-            <label>Gravity:</label><br>
-            <input type="number" id="input-GRAVITY" min="0.001" step="0.001" style="width:100%; margin-bottom:10px; padding:5px; box-sizing:border-box;"><br>
-            
-            <label>Punch Cooldown (ms):</label><br>
-            <input type="number" id="input-PUNCH_COOLDOWN" min="0" step="100" style="width:100%; margin-bottom:10px; padding:5px; box-sizing:border-box;"><br>
-            
-            <label>Punch Range:</label><br>
-            <input type="number" id="input-PUNCH_RANGE" min="1" step="0.5" style="width:100%; margin-bottom:10px; padding:5px; box-sizing:border-box;"><br>
-            
-            <label>Kill Window (ms):</label><br>
-            <input type="number" id="input-KILL_WINDOW" min="1000" step="1000" style="width:100%; margin-bottom:20px; padding:5px; box-sizing:border-box;"><br>
-            
-            <div style="display:flex; justify-content:space-between; gap:5px;">
+            <div style="display:flex; justify-content:space-between; gap:5px; flex-shrink:0;">
                 <button onclick="closeSettings()" style="flex:1; padding:10px; background:#ccc; border:none; border-radius:5px; cursor:pointer;">Cancel</button>
                 <button onclick="resetSettings()" style="flex:1; padding:10px; background:#ff9800; color:white; border:none; border-radius:5px; cursor:pointer;">Default</button>
                 <button onclick="saveSettings()" style="flex:1.5; padding:10px; background:#e91e63; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Save & Restart</button>
