@@ -488,6 +488,35 @@
             }
         }
 
+        function awardKillCredit(deadChar) {
+            if (deadChar.lastHitBy && (performance.now() - deadChar.lastHitTime < KILL_WINDOW)) {
+                let killer = [player, ...npcs].find(c => c.id === deadChar.lastHitBy);
+                if (killer) {
+                    killer.maxJumps += 2; 
+                    if (killer.id === "player") {
+                        document.getElementById('game-status').innerText = `🎯 INSTAKILL! MAX JUMPS: +2 (${killer.maxJumps})`;
+                        setTimeout(() => { document.getElementById('game-status').innerText = ""; }, 2000);
+                    }
+                }
+            }
+            deadChar.lastHitBy = null;
+        }
+
+        function createPunchVisual(pos) {
+            const v = new THREE.Mesh(new THREE.RingGeometry(0, PUNCH_RANGE, 32), new THREE.MeshBasicMaterial({ color: 0xff1744, transparent: true, opacity: 0.5, side: THREE.DoubleSide }));
+            v.rotation.x = Math.PI/2; v.position.copy(pos); v.position.y -= 0.5;
+            scene.add(v);
+            punchVisuals.push({ mesh: v, time: performance.now() });
+        }
+
+        function checkNPCPunchTrigger(npc) {
+            if (isInSpawnSafeZone(npc)) return; 
+            if (performance.now() - npc.lastPunchTime < PUNCH_COOLDOWN) return;
+            
+            let target = [player, ...npcs].find(t => t.id !== npc.id && npc.mesh.position.distanceTo(t.mesh.position) < PUNCH_RANGE - 0.5);
+            if (target && !isInSpawnSafeZone(target)) execute4WayPunch(npc);
+        }
+
         function updateOverheadLabels() {
             const all = [player, ...npcs];
             const tempV = new THREE.Vector3();
