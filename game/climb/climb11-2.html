@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Only Up Clone - Configurable</title>
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #87CEEB; font-family: sans-serif; user-select: none; -webkit-user-select: none; }
+        #canvas-container { width: 100vw; height: 100vh; display: block; }
+        #ui-layer { position: absolute; top: 10px; left: 10px; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); font-size: 20px; pointer-events: none; display: flex; flex-direction: column; gap: 5px; z-index: 20; }
+        #height-display { font-size: 28px; font-weight: bold; }
+        #jump-display { font-size: 18px; color: #00e676; font-weight: bold; }
+        #punch-display { font-size: 18px; color: #ff9800; font-weight: bold; }
+        #game-status { font-size: 32px; font-weight: bold; color: #ffeb3b; background-color: rgba(0,0,0,0.4); padding: 10px; border-radius: 5px; }
+        #mode-toggle-btn { margin-top: 10px; padding: 10px 20px; font-size: 16px; font-weight: bold; background-color: #e91e63; color: white; border: none; border-radius: 5px; cursor: pointer; pointer-events: auto; box-shadow: 2px 2px 5px rgba(0,0,0,0.3); width: 150px; }
+        #mode-toggle-btn.auto-mode { background-color: #00e676; color: #333; }
+        
+        #settings-btn { margin-top: 10px; padding: 10px 20px; font-size: 16px; font-weight: bold; background-color: #3f51b5; color: white; border: none; border-radius: 5px; cursor: pointer; pointer-events: auto; box-shadow: 2px 2px 5px rgba(0,0,0,0.3); width: 150px; }
+        
+        #leaderboard { position: absolute; top: 10px; right: 10px; width: 240px; max-height: 45vh; background-color: rgba(0,0,0,0.6); color: white; padding: 10px; border-radius: 5px; font-size: 12px; overflow-y: auto; z-index: 20; pointer-events: none; }
+        #leaderboard h3 { margin: 0 0 5px 0; font-size: 14px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 3px; color: #ffeb3b; }
+        .rank-item { display: flex; justify-content: space-between; margin: 3px 0; align-items: center; }
+        .rank-item.player-row { color: #ff4081; font-weight: bold; background-color: rgba(255,255,255,0.2); border-radius: 2px; padding: 1px 4px; }
+        .jump-count { color: #00e676; margin-left: 5px; }
+        
+        /* --- 頭上UI関連のスタイル拡張 --- */
+        .overhead-label { position: absolute; color: white; font-weight: bold; font-size: 11px; background: rgba(0,0,0,0.65); padding: 4px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.25); pointer-events: none; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; gap: 3px; z-index: 10; opacity: 0; white-space: nowrap; }
+        .overhead-label.player-label { background: rgba(233, 30, 99, 0.8); border-color: #ff4081; font-size: 13px; padding: 5px 8px; }
+        
+        /* パンチゲージの外枠 */
+        .gauge-container { width: 50px; height: 5px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden; position: relative; margin-top: 1px; }
+        /* パンチゲージの中身（バー） */
+        .gauge-bar { width: 100%; height: 100%; background: #00e676; width: 100%; transition: background-color 0.1s; }
+        /* モバイル幅では順位表を非表示にする */
+        @media (max-width: 768px) {
+            #leaderboard { display: none; }
+        }
+        /* タッチ領域とジョイスティック */
+        #joystick-zone { position: absolute; bottom: 20px; left: 20px; width: 150px; height: 150px; z-index: 12; }
+        #jump-touch-zone { position: absolute; top: 0; right: 0; width: 50vw; height: 100vh; z-index: 8; }
+        #punch-touch-zone { position: absolute; top: 0; left: 0; width: 50vw; height: 100vh; z-index: 8; }
+    </style>
+    <script src="libs/three.min.js"></script>
+    <script src="libs/nipplejs.min.js"></script>
+</head>
+<body>
+
+    <div id="ui-layer">
+        <div id="height-display">Height: 0m</div>
+        <div id="jump-display">Max Jumps: 2</div>
+        <div id="punch-display">PUNCH: READY</div>
+        <div id="game-status"></div>
+        <button id="mode-toggle-btn" onclick="toggleMode()">MODE: MANUAL</button>
+        <button id="settings-btn" onclick="openSettings()">⚙️ SETTINGS</button>
+    </div>
+
+    <div id="leaderboard">
+        <h3>🏆 LEADERBOARD (JUMPS)</h3>
+        <div id="rank-list"></div>
+    </div>
+    
+    <div id="overhead-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; z-index: 9;"></div>
+
+    <div id="joystick-zone"></div>
+    <div id="punch-touch-zone"></div>
+    <div id="jump-touch-zone"></div>
+    <div id="canvas-container"></div>
+
+    <!-- 設定モーダル -->
+    <div id="settings-modal" style="display:none; position:absolute; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); z-index:100; justify-content:center; align-items:center; pointer-events:auto;">
+        <div style="background:white; padding:20px; border-radius:10px; width:300px; max-height:90vh; overflow-y:auto; color:black; font-family:sans-serif;">
+            <h2 style="margin-top:0;">Settings</h2>
+            
+            <label>NPC Count:</label><br>
+            <input type="number" id="input-NPC_COUNT" min="0" step="1" style="width:100%; margin-bottom:10px; padding:5px; box-sizing:border-box;"><br>
+            
+            <label>Total Tiles:</label><br>
+            <input type="number" id="input-TOTAL_TILES" min="5" step="1" style="width:100%; margin-bottom:10px; padding:5px; box-sizing:border-box;"><br>
+            
+            <label>Player Speed:</label><br>
+            <input type="number" id="input-PLAYER_SPEED" min="0.01" step="0.01" style="width:100%; margin-bottom:10px; padding:5px; box-sizing:border-box;"><br>
+            
+            <label>Jump Force:</label><br>
+            <input type="number" id="input-JUMP_FORCE" min="0.1" step="0.01" style="width:100%; margin-bottom:10px; padding:5px; box-sizing:border-box;"><br>
+            
+            <label>Gravity:</label><br>
+            <input type="number" id="input-GRAVITY" min="0.001" step="0.001" style="width:100%; margin-bottom:10px; padding:5px; box-sizing:border-box;"><br>
+            
+            <label>Punch Cooldown (ms):</label><br>
+            <input type="number" id="input-PUNCH_COOLDOWN" min="0" step="100" style="width:100%; margin-bottom:10px; padding:5px; box-sizing:border-box;"><br>
+            
+            <label>Punch Range:</label><br>
+            <input type="number" id="input-PUNCH_RANGE" min="1" step="0.5" style="width:100%; margin-bottom:10px; padding:5px; box-sizing:border-box;"><br>
+            
+            <label>Kill Window (ms):</label><br>
+            <input type="number" id="input-KILL_WINDOW" min="1000" step="1000" style="width:100%; margin-bottom:20px; padding:5px; box-sizing:border-box;"><br>
+            
+            <div style="display:flex; justify-content:space-between; gap:5px;">
+                <button onclick="closeSettings()" style="flex:1; padding:10px; background:#ccc; border:none; border-radius:5px; cursor:pointer;">Cancel</button>
+                <button onclick="resetSettings()" style="flex:1; padding:10px; background:#ff9800; color:white; border:none; border-radius:5px; cursor:pointer;">Default</button>
+                <button onclick="saveSettings()" style="flex:1.5; padding:10px; background:#e91e63; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Save & Restart</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 設定 (localStorage対応) ---
+        function getConfig(key, defaultVal, isFloat) {
+            let val = localStorage.getItem('climb_' + key);
+            if (val === null) return defaultVal;
+            let num = isFloat ? parseFloat(val) : parseInt(val);
+            return isNaN(num) ? defaultVal : num;
+        }
+
+        const PLAYER_SPEED = getConfig('PLAYER_SPEED', 0.12, true);
+        const JUMP_FORCE = getConfig('JUMP_FORCE', 0.375, true);
+        const GRAVITY = getConfig('GRAVITY', 0.0098, true);
+        const TOTAL_TILES = getConfig('TOTAL_TILES', 25, false);
+        const PUNCH_COOLDOWN = getConfig('PUNCH_COOLDOWN', 2000, false);
+        const PUNCH_RANGE = getConfig('PUNCH_RANGE', 3.5, true);
+        const KILL_WINDOW = getConfig('KILL_WINDOW', 5000, false);
+        const NPC_COUNT = Math.max(0, getConfig('NPC_COUNT', 20, false));
+        
+        let scene, camera, renderer;
+        let player = { id: "player", name: "PLAYER", mesh: null, radius: 1.0, height: 1.8, velocity: new THREE.Vector3(), onGround: false, currentPlatform: null, maxJumps: 2, remainingJumps: 2, canJumpAfterHit: true, lastPunchTime: 0, lastHitBy: null, lastHitTime: 0, joystickInput: { x: 0, z: 0 }, domLabel: null };
+        let npcs = [], platforms = [], punchVisuals = [], keyboard = {}, prevKeyboard = {}, isAutoMode = false, isGameOver = false;
+        
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB);
+            scene.fog = new THREE.FogExp2(0x87CEEB, 0.008); 
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(50, 120, 50);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            const playerGeo = new THREE.CylinderGeometry(player.radius, player.radius, player.height, 16);
+            player.mesh = new THREE.Mesh(playerGeo, new THREE.MeshLambertMaterial({ color: 0xe91e63 }));
+            player.mesh.position.set(0, player.height / 2, 0);
+            player.mesh.castShadow = true;
+            scene.add(player.mesh);
+
+            player.onGround = true;
+            player.remainingJumps = player.maxJumps;
+
+            createOverheadLabel(player, true);
+            createNPCs(NPC_COUNT);
+            generateStage();
+            setupInputs();
+            animate();
+        }
+
+        function createOverheadLabel(char, isPlayer = false) {
+            const label = document.createElement('div');
+            label.className = isPlayer ? 'overhead-label player-label' : 'overhead-label';
+            
+            const infoText = document.createElement('div');
+            infoText.className = 'char-info-text';
+            label.appendChild(infoText);
+
+            const gaugeContainer = document.createElement('div');
+            gaugeContainer.className = 'gauge-container';
+            const gaugeBar = document.createElement('div');
+            gaugeBar.className = 'gauge-bar';
+            gaugeContainer.appendChild(gaugeBar);
+            label.appendChild(gaugeContainer);
+
+            document.getElementById('overhead-container').appendChild(label);
+            
+            char.domLabel = label;
+            char.domInfoText = infoText;
+            char.domGaugeBar = gaugeBar;
+        }
+
+        function createNPCs(count) {
+            if (count <= 0) return;
+            const npcGeo = new THREE.CylinderGeometry(player.radius, player.radius, player.height, 16);
+            for(let i = 0; i < count; i++) {
+                const mesh = new THREE.Mesh(npcGeo, new THREE.MeshLambertMaterial({ color: new THREE.Color().setHSL((i * 0.05) % 1.0, 0.8, 0.4 + Math.random()*0.2) }));
+                mesh.castShadow = true;
+                mesh.position.set((Math.random()-0.5)*16, player.height/2, (Math.random()-0.5)*16);
+                scene.add(mesh);
+                
+                let npcObj = { id: `npc_${i}`, name: `NPC ${i+1}`, mesh: mesh, radius: player.radius, height: player.height, velocity: new THREE.Vector3(), onGround: false, currentPlatform: null, maxJumps: 2, remainingJumps: 2, canJumpAfterHit: true, lastPunchTime: 0, lastHitBy: null, lastHitTime: 0, stopTimer: 0, isStopped: false, domLabel: null };
+                createOverheadLabel(npcObj, false);
+                npcs.push(npcObj);
+            }
+        }
+
+        function generateStage() {
+            createPlatform(0, -0.5, 0, 30, 1, 30, 0x333333, false, true, 'normal'); 
+            let currentX = 0, currentY = 1.0, currentZ = -5;
+            let tileTypes = ['normal', 'disappearing', 'moving_v', 'moving_h'];
+            for (let i = 1; i < TOTAL_TILES - 1; i++) {
+                let baseScale = ((1.5 + Math.random() * 0.5) * 3.0) * 0.5 * Math.pow(1.05, i);
+                currentX += ((Math.random() - 0.5) * 5) * baseScale;
+                currentY += ((Math.random() * 1.3 + 1.1) * 0.5) * baseScale; 
+                currentZ += ((Math.random() - 0.5) * 5 - 3) * baseScale;
+                
+                let type = 'normal';
+                if (i > 2) {
+                    type = tileTypes[Math.floor(Math.random() * tileTypes.length)];
+                }
+                
+                let typeConfig = {};
+                let color = 0x4caf50;
+                
+                if (type === 'disappearing') {
+                    typeConfig = { hideDuration: 3000, showDuration: 7000, timer: Math.random() * 10000 };
+                    color = 0x9c27b0;
+                } else if (type === 'moving_v') {
+                    typeConfig = { speed: 1.0 + Math.random() * 1.0, range: 2 + Math.random() * 2, originY: currentY, phase: Math.random() * Math.PI * 2 };
+                    color = 0x03a9f4;
+                } else if (type === 'moving_h') {
+                    typeConfig = { speed: 1.0 + Math.random() * 1.0, range: 3 + Math.random() * 3, originX: currentX, phase: Math.random() * Math.PI * 2 };
+                    color = 0xff9800;
+                }
+                
+                createPlatform(currentX, currentY, currentZ, 7, 0.4, 7, color, false, false, type, typeConfig);
+            }
+            if (TOTAL_TILES > 1) {
+                let baseScale = ((1.5 + Math.random() * 0.5) * 3.0) * 0.5 * Math.pow(1.05, Math.max(1, TOTAL_TILES - 1));
+                currentX += ((Math.random() - 0.5) * 5) * baseScale;
+                currentY += ((Math.random() * 1.3 + 1.1) * 0.5) * baseScale; 
+                currentZ += ((Math.random() - 0.5) * 5 - 3) * baseScale;
+                createPlatform(currentX, currentY + 2, currentZ - 5, 15, 0.5, 15, 0xffd700, true, false, 'normal');
+            }
+        }
+
+        function createPlatform(x, y, z, w, h, d, color, isGoal, isSpawnTile = false, type = 'normal', typeConfig = {}) {
+            const material = new THREE.MeshStandardMaterial({ color });
+            if (type === 'disappearing') material.transparent = true;
+            const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+            mesh.position.set(x, y, z);
+            mesh.receiveShadow = true;
+            scene.add(mesh);
+            platforms.push({ 
+                mesh, 
+                center: new THREE.Vector3(x, y, z), 
+                min: new THREE.Vector3(x-w/2, y-h/2, z-d/2), 
+                max: new THREE.Vector3(x+w/2, y+h/2, z+d/2), 
+                isGoal, 
+                isSpawnTile,
+                w, h, d,
+                type,
+                typeConfig,
+                isActive: true,
+                deltaX: 0, deltaY: 0, deltaZ: 0
+            });
+        }
+
+        function updatePlatforms() {
+            let now = performance.now();
+            platforms.forEach(p => {
+                p.deltaX = 0; p.deltaY = 0; p.deltaZ = 0;
+                
+                if (p.type === 'disappearing') {
+                    let cycle = p.typeConfig.hideDuration + p.typeConfig.showDuration;
+                    let t = (now + p.typeConfig.timer) % cycle;
+                    if (t < p.typeConfig.showDuration) {
+                        if (!p.isActive) {
+                            p.mesh.visible = true;
+                            p.isActive = true;
+                        }
+                        if (p.typeConfig.showDuration - t < 1500) {
+                            p.mesh.material.opacity = Math.floor(now / 150) % 2 === 0 ? 0.3 : 0.8;
+                        } else {
+                            p.mesh.material.opacity = 1.0;
+                        }
+                    } else {
+                        if (p.isActive) {
+                            p.mesh.visible = false;
+                            p.isActive = false;
+                        }
+                    }
+                } else if (p.type === 'moving_v') {
+                    let newY = p.typeConfig.originY + Math.sin(now * p.typeConfig.speed * 0.001 + p.typeConfig.phase) * p.typeConfig.range;
+                    p.deltaY = newY - p.mesh.position.y;
+                    p.mesh.position.y = newY;
+                    p.center.y = newY;
+                    p.min.y = newY - p.h / 2;
+                    p.max.y = newY + p.h / 2;
+                } else if (p.type === 'moving_h') {
+                    let newX = p.typeConfig.originX + Math.sin(now * p.typeConfig.speed * 0.001 + p.typeConfig.phase) * p.typeConfig.range;
+                    p.deltaX = newX - p.mesh.position.x;
+                    p.mesh.position.x = newX;
+                    p.center.x = newX;
+                    p.min.x = newX - p.w / 2;
+                    p.max.x = newX + p.w / 2;
+                }
+            });
+        }
+
+        function isInSpawnSafeZone(char) {
+            if (!char.mesh) return false;
+            let footY = char.mesh.position.y - char.height / 2;
+            if (footY > 0.5) return false; 
+            let spawnPlat = platforms.find(p => p.isSpawnTile);
+            if (!spawnPlat) return false;
+            let pos = char.mesh.position;
+            return (pos.x >= spawnPlat.min.x && pos.x <= spawnPlat.max.x && pos.z >= spawnPlat.min.z && pos.z <= spawnPlat.max.z);
+        }
+
+        function execute4WayPunch(attacker) {
+            if (isGameOver) return;
+            if (isInSpawnSafeZone(attacker)) return;
+
+            const now = performance.now();
+            if (now - attacker.lastPunchTime < PUNCH_COOLDOWN) return; 
+            attacker.lastPunchTime = now;
+            createPunchVisual(attacker.mesh.position);
+
+            const allChars = [player, ...npcs];
+            allChars.forEach(target => {
+                if (target.id === attacker.id) return; 
+                if (isInSpawnSafeZone(target)) return;
+
+                let dist = attacker.mesh.position.distanceTo(target.mesh.position);
+                if (dist < PUNCH_RANGE) {
+                    target.lastHitBy = attacker.id;
+                    target.lastHitTime = now;
+                    target.mesh.position.y = -41;
+                    target.velocity.set(0, -10, 0); 
+                }
+            });
+        }
+
+        function tryJump(char) {
+            if (!char.canJumpAfterHit || isGameOver) return;
+            if (char.onGround) {
+                char.velocity.y = JUMP_FORCE;
+                char.onGround = false;
+                char.currentPlatform = null; 
+                char.remainingJumps = char.maxJumps - 1; 
+            } else if (char.remainingJumps > 0) {
+                char.velocity.y = JUMP_FORCE;
+                char.remainingJumps--; 
+            }
+        }
+
+        function calculateAIMovement(npc) {
+            if (isGameOver) return;
+            checkNPCPunchTrigger(npc);
+            npc.stopTimer--;
+            if (npc.stopTimer <= 0) {
+                npc.isStopped = Math.random() < 0.3;
+                npc.stopTimer = Math.random() * 60 + 30;
+            }
+            if (npc.isStopped) return;
+
+            let target = platforms.find(p => p.isActive && p.center.y > npc.mesh.position.y + 0.1);
+            if (!target) return;
+            let diff = new THREE.Vector3().subVectors(target.center, npc.mesh.position);
+            let distXZ = Math.sqrt(diff.x**2 + diff.z**2);
+            if (distXZ > 0.1) {
+                npc.velocity.x = THREE.MathUtils.lerp(npc.velocity.x, (diff.x/distXZ) * PLAYER_SPEED, 0.1);
+                npc.velocity.z = THREE.MathUtils.lerp(npc.velocity.z, (diff.z/distXZ) * PLAYER_SPEED, 0.1);
+            }
+            if (npc.onGround && distXZ < 6.0) {
+                tryJump(npc);
+            }
+        }
+
+        function setupInputs() {
+            window.addEventListener('keydown', (e) => {
+                if (document.getElementById('settings-modal').style.display === 'flex') return;
+                if (e.repeat) return; 
+                keyboard[e.code] = true;
+                if (e.code === 'Space' && !isAutoMode) tryJump(player);
+                if (e.code === 'KeyF' && !isAutoMode) execute4WayPunch(player);
+            });
+            window.addEventListener('keyup', (e) => keyboard[e.code] = false);
+            
+            const joystick = nipplejs.create({ zone: document.getElementById('joystick-zone'), mode: 'static', position: { left: '75px', bottom: '75px' }, color: 'white' });
+
+            joystick.on('move', (evt, data) => {
+                if (document.getElementById('settings-modal').style.display === 'flex') return;
+                if (!isAutoMode && data && data.angle) {
+                    let moveX = Math.cos(data.angle.radian || data.angle.radian);
+                    let moveZ = -Math.sin(data.angle.radian || data.angle.radian);
+                    let force = Math.min(data.force || 1, 1);
+
+                    const len = Math.sqrt(moveX * moveX + moveZ * moveZ);
+                    if (len > 0) {
+                        moveX /= len;
+                        moveZ /= len;
+                    }
+
+                    player.joystickInput.x = moveX * force;
+                    player.joystickInput.z = moveZ * force;
+                }
+            });
+
+            joystick.on('end', () => {
+                player.joystickInput.x = 0;
+                player.joystickInput.z = 0;
+            });
+            
+            document.getElementById('jump-touch-zone').addEventListener('touchstart', (e) => { e.preventDefault(); if(document.getElementById('settings-modal').style.display === 'flex') return; if(!isAutoMode) tryJump(player); }, { passive: false });
+            document.getElementById('punch-touch-zone').addEventListener('touchstart', (e) => { e.preventDefault(); if(document.getElementById('settings-modal').style.display === 'flex') return; if(!isAutoMode) execute4WayPunch(player); }, { passive: false });
+        }
+
+        function updateCharacterPhysics(char, isNPC) {
+            if (!isGameOver) {
+                if (isNPC) calculateAIMovement(char);
+                    else if (!isAutoMode) {
+                        let inputX = 0, inputZ = 0;
+                        if (keyboard['KeyW'] || keyboard['ArrowUp']) inputZ -= 1;
+                        if (keyboard['KeyS'] || keyboard['ArrowDown']) inputZ += 1;
+                        if (keyboard['KeyA'] || keyboard['ArrowLeft']) inputX -= 1;
+                        if (keyboard['KeyD'] || keyboard['ArrowRight']) inputX += 1;
+
+                        inputX += (char.joystickInput.x || 0);
+                        inputZ += (char.joystickInput.z || 0);
+
+                        const inputVec = new THREE.Vector3(inputX, 0, inputZ);
+                        if (inputVec.lengthSq() > 1e-6) {
+                            inputVec.normalize().multiplyScalar(PLAYER_SPEED);
+                            char.velocity.x = THREE.MathUtils.lerp(char.velocity.x, inputVec.x, 0.6);
+                            char.velocity.z = THREE.MathUtils.lerp(char.velocity.z, inputVec.z, 0.6);
+                        } else {
+                            char.velocity.x = THREE.MathUtils.lerp(char.velocity.x, 0, 0.3);
+                            char.velocity.z = THREE.MathUtils.lerp(char.velocity.z, 0, 0.3);
+                        }
+                    } else { calculateAIMovement(char); }
+            }
+            
+            char.velocity.y -= GRAVITY;
+            char.mesh.position.add(char.velocity);
+
+            if (char.currentPlatform && char.currentPlatform.isActive) {
+                char.mesh.position.x += char.currentPlatform.deltaX || 0;
+                char.mesh.position.y += char.currentPlatform.deltaY || 0;
+                char.mesh.position.z += char.currentPlatform.deltaZ || 0;
+            }
+
+            if (char.mesh.position.y < -40) {
+                awardKillCredit(char);
+                char.mesh.position.set((Math.random()-0.5)*15, 2, (Math.random()-0.5)*15);
+                char.velocity.set(0,0,0);
+                char.remainingJumps = char.maxJumps;
+                char.onGround = true;
+                char.currentPlatform = null;
+                return;
+            }
+
+            char.onGround = false;
+            char.currentPlatform = null;
+            platforms.forEach(b => {
+                if (!b.isActive) return;
+                if (char.mesh.position.x + char.radius > b.min.x && char.mesh.position.x - char.radius < b.max.x &&
+                    char.mesh.position.z + char.radius > b.min.z && char.mesh.position.z - char.radius < b.max.z) {
+                    
+                    let fallThreshold = Math.max(0.5, (b.deltaY || 0) + 0.5);
+                    if (char.mesh.position.y - char.height/2 <= b.max.y && char.mesh.position.y - char.height/2 > b.max.y - fallThreshold && char.velocity.y <= (b.deltaY || 0) + 0.1) {
+                        char.velocity.y = 0;
+                        char.mesh.position.y = b.max.y + char.height/2;
+                        char.onGround = true;
+                        char.currentPlatform = b;
+                        char.remainingJumps = char.maxJumps;
+                        char.canJumpAfterHit = true;
+                        if (b.isGoal && !isGameOver) { isGameOver = true; document.getElementById('game-status').innerText = `${char.name} GOAL!`; }
+                    }
+                }
+            });
+            char.velocity.x *= 0.9; char.velocity.z *= 0.9;
+        }
+
+        function handleCharacterCollisions() {
+            let all = [player, ...npcs];
+            for (let i = 0; i < all.length; i++) {
+                for (let j = i + 1; j < all.length; j++) {
+                    let c1 = all[i], c2 = all[j];
+                    let dist = c1.mesh.position.distanceTo(c2.mesh.position);
+                    if (dist < c1.radius + c2.radius && Math.abs(c1.mesh.position.y - c2.mesh.position.y) < 1.0) {
+                        let push = new THREE.Vector3().subVectors(c2.mesh.position, c1.mesh.position).normalize().multiplyScalar(0.05);
+                        c1.mesh.position.sub(push);
+                        c2.mesh.position.add(push);
+                    }
+                }
+            }
+        }
+
+        function updateOverheadLabels() {
+            const all = [player, ...npcs];
+            const tempV = new THREE.Vector3();
+            const now = performance.now();
+
+            all.forEach(char => {
+                if (!char.domLabel || !char.mesh) return;
+
+                tempV.copy(char.mesh.position);
+                tempV.y += char.height / 2 + 0.6; 
+                tempV.project(camera);
+
+                if (tempV.z > 1) {
+                    char.domLabel.style.opacity = 0;
+                    return;
+                }
+
+                char.domLabel.style.opacity = 1;
+                const x = (tempV.x * .5 + .5) * window.innerWidth;
+                const y = (tempV.y * -.5 + .5) * window.innerHeight;
+                char.domLabel.style.left = `${x}px`;
+                char.domLabel.style.top = `${y}px`;
+
+                char.domInfoText.innerHTML = `${char.name} <span style="color:#00e676;">[${char.remainingJumps}/${char.maxJumps}]</span>`;
+
+                if (isInSpawnSafeZone(char)) {
+                    char.domGaugeBar.style.width = '100%';
+                    char.domGaugeBar.style.backgroundColor = '#ffeb3b'; 
+                } else {
+                    let elapsed = now - char.lastPunchTime;
+                    if (elapsed < PUNCH_COOLDOWN) {
+                        let percent = Math.min(100, (elapsed / PUNCH_COOLDOWN) * 100);
+                        char.domGaugeBar.style.width = `${percent}%`;
+                        char.domGaugeBar.style.backgroundColor = '#ff5722';
+                    } else {
+                        char.domGaugeBar.style.width = '100%';
+                        char.domGaugeBar.style.backgroundColor = '#00e676';
+                    }
+                }
+            });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            updatePlatforms(); 
+
+            updateCharacterPhysics(player, false);
+            if (document.getElementById('settings-modal').style.display !== 'flex') {
+                if ((keyboard['Space'] || false) && !prevKeyboard['Space']) {
+                    tryJump(player);
+                }
+            }
+            npcs.forEach(n => updateCharacterPhysics(n, true));
+            handleCharacterCollisions();
+            
+            punchVisuals.forEach((v, i) => { if(performance.now() - v.time > 200) { scene.remove(v.mesh); punchVisuals.splice(i,1); } });
+            
+            camera.position.set(player.mesh.position.x, player.mesh.position.y + 10, player.mesh.position.z + 20);
+            camera.lookAt(player.mesh.position);
+            renderer.render(scene, camera);
+
+            updateOverheadLabels();
+
+            let now = performance.now();
+            let list = [player, ...npcs].sort((a,b) => b.mesh.position.y - a.mesh.position.y);
+            document.getElementById('rank-list').innerHTML = list.map((c, i) => `
+                <div class="${c.id==='player'?'rank-item player-row':'rank-item'}">
+                    <span>${i+1}. ${c.name} <span class="jump-count">[${c.remainingJumps}/${c.maxJumps}]</span></span>
+                    <span>${Math.max(0, Math.floor(c.mesh.position.y))}m</span>
+                </div>`).join('');
+                
+            document.getElementById('height-display').innerText = `Height: ${Math.max(0, Math.floor(player.mesh.position.y))}m`;
+            document.getElementById('jump-display').innerText = `Jumps: ${player.remainingJumps}/${player.maxJumps}`;
+            
+            if (isInSpawnSafeZone(player)) {
+                document.getElementById('punch-display').innerText = `PUNCH: SAFE ZONE (DISABLED)`;
+                document.getElementById('punch-display').style.color = '#ffeb3b';
+            } else {
+                let punchTimeDiff = now - player.lastPunchTime;
+                if (punchTimeDiff < PUNCH_COOLDOWN) {
+                    let remainingCd = ((PUNCH_COOLDOWN - punchTimeDiff) / 1000).toFixed(1);
+                    document.getElementById('punch-display').innerText = `PUNCH: RECHARGING (${remainingCd}s)`;
+                    document.getElementById('punch-display').style.color = '#ff5722';
+                } else {
+                    document.getElementById('punch-display').innerText = `PUNCH: READY (F Key)`;
+                    document.getElementById('punch-display').style.color = '#00e676';
+                }
+            }
+            prevKeyboard['Space'] = !!keyboard['Space'];
+        }
+
+        function toggleMode() { isAutoMode = !isAutoMode; document.getElementById('mode-toggle-btn').innerText = isAutoMode ? "MODE: AUTO" : "MODE: MANUAL"; }
+        
+        // --- 設定メニュー制御 ---
+        function openSettings() {
+            document.getElementById('input-NPC_COUNT').value = NPC_COUNT;
+            document.getElementById('input-TOTAL_TILES').value = TOTAL_TILES;
+            document.getElementById('input-PLAYER_SPEED').value = PLAYER_SPEED;
+            document.getElementById('input-JUMP_FORCE').value = JUMP_FORCE;
+            document.getElementById('input-GRAVITY').value = GRAVITY;
+            document.getElementById('input-PUNCH_COOLDOWN').value = PUNCH_COOLDOWN;
+            document.getElementById('input-PUNCH_RANGE').value = PUNCH_RANGE;
+            document.getElementById('input-KILL_WINDOW').value = KILL_WINDOW;
+            document.getElementById('settings-modal').style.display = 'flex';
+        }
+
+        function closeSettings() {
+            document.getElementById('settings-modal').style.display = 'none';
+        }
+
+        function resetSettings() {
+            localStorage.removeItem('climb_NPC_COUNT');
+            localStorage.removeItem('climb_TOTAL_TILES');
+            localStorage.removeItem('climb_PLAYER_SPEED');
+            localStorage.removeItem('climb_JUMP_FORCE');
+            localStorage.removeItem('climb_GRAVITY');
+            localStorage.removeItem('climb_PUNCH_COOLDOWN');
+            localStorage.removeItem('climb_PUNCH_RANGE');
+            localStorage.removeItem('climb_KILL_WINDOW');
+            location.reload();
+        }
+
+        function saveSettings() {
+            localStorage.setItem('climb_NPC_COUNT', document.getElementById('input-NPC_COUNT').value);
+            localStorage.setItem('climb_TOTAL_TILES', document.getElementById('input-TOTAL_TILES').value);
+            localStorage.setItem('climb_PLAYER_SPEED', document.getElementById('input-PLAYER_SPEED').value);
+            localStorage.setItem('climb_JUMP_FORCE', document.getElementById('input-JUMP_FORCE').value);
+            localStorage.setItem('climb_GRAVITY', document.getElementById('input-GRAVITY').value);
+            localStorage.setItem('climb_PUNCH_COOLDOWN', document.getElementById('input-PUNCH_COOLDOWN').value);
+            localStorage.setItem('climb_PUNCH_RANGE', document.getElementById('input-PUNCH_RANGE').value);
+            localStorage.setItem('climb_KILL_WINDOW', document.getElementById('input-KILL_WINDOW').value);
+            location.reload();
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
