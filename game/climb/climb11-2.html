@@ -23,19 +23,19 @@
         .rank-item.player-row { color: #ff4081; font-weight: bold; background-color: rgba(255,255,255,0.2); border-radius: 2px; padding: 1px 4px; }
         .jump-count { color: #00e676; margin-left: 5px; }
         
-        /* --- 頭上UI関連のスタイル拡張 --- */
+        /* --- 鬆ｭ荳涯I髢｢騾｣縺ｮ繧ｹ繧ｿ繧､繝ｫ諡｡蠑ｵ --- */
         .overhead-label { position: absolute; color: white; font-weight: bold; font-size: 11px; background: rgba(0,0,0,0.65); padding: 4px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.25); pointer-events: none; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; gap: 3px; z-index: 10; opacity: 0; white-space: nowrap; }
         .overhead-label.player-label { background: rgba(233, 30, 99, 0.8); border-color: #ff4081; font-size: 13px; padding: 5px 8px; }
         
-        /* パンチゲージの外枠 */
+        /* 繝代Φ繝√ご繝ｼ繧ｸ縺ｮ螟匁棧 */
         .gauge-container { width: 50px; height: 5px; background: rgba(255,255,255,0.2); border-radius: 2px; overflow: hidden; position: relative; margin-top: 1px; }
-        /* パンチゲージの中身（バー） */
+        /* 繝代Φ繝√ご繝ｼ繧ｸ縺ｮ荳ｭ霄ｫ・医ヰ繝ｼ・・*/
         .gauge-bar { width: 100%; height: 100%; background: #00e676; width: 100%; transition: background-color 0.1s; }
-        /* モバイル幅では順位表を非表示にする */
+        /* 繝｢繝舌う繝ｫ蟷・〒縺ｯ鬆・ｽ崎｡ｨ繧帝撼陦ｨ遉ｺ縺ｫ縺吶ｋ */
         @media (max-width: 768px) {
             #leaderboard { display: none; }
         }
-        /* タッチ領域とジョイスティック */
+        /* 繧ｿ繝・メ鬆伜沺縺ｨ繧ｸ繝ｧ繧､繧ｹ繝・ぅ繝・け */
         #joystick-zone { position: absolute; bottom: 20px; left: 20px; width: 150px; height: 150px; z-index: 12; }
         #jump-touch-zone { position: absolute; top: 0; right: 0; width: 50vw; height: 100vh; z-index: 8; }
         #punch-touch-zone { position: absolute; top: 0; left: 0; width: 50vw; height: 100vh; z-index: 8; }
@@ -51,11 +51,11 @@
         <div id="punch-display">PUNCH: READY</div>
         <div id="game-status"></div>
         <button id="mode-toggle-btn" onclick="toggleMode()">MODE: MANUAL</button>
-        <button id="settings-btn" onclick="openSettings()">⚙️ SETTINGS</button>
+        <button id="settings-btn" onclick="openSettings()">笞呻ｸ・SETTINGS</button>
     </div>
 
     <div id="leaderboard">
-        <h3>🏆 LEADERBOARD (JUMPS)</h3>
+        <h3>�醇 LEADERBOARD (JUMPS)</h3>
         <div id="rank-list"></div>
     </div>
     
@@ -66,7 +66,7 @@
     <div id="jump-touch-zone"></div>
     <div id="canvas-container"></div>
 
-    <!-- 設定モーダル -->
+    <!-- 險ｭ螳壹Δ繝ｼ繝繝ｫ -->
     <div id="settings-modal" style="display:none; position:absolute; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); z-index:100; justify-content:center; align-items:center; pointer-events:auto;">
         <div style="background:white; padding:20px; border-radius:10px; width:300px; max-height:90vh; overflow-y:auto; color:black; font-family:sans-serif;">
             <h2 style="margin-top:0;">Settings</h2>
@@ -104,12 +104,12 @@
     </div>
 
     <script>
-        // --- 設定 (localStorage対応) ---
-        function getConfig(key, defaultVal, isFloat) {
+        // --- 險ｭ螳・(localStorage蟇ｾ蠢・ ---
+        function getConfig(key, defaultVal, isFloat) { try {
             let val = localStorage.getItem('climb_' + key);
             if (val === null) return defaultVal;
             let num = isFloat ? parseFloat(val) : parseInt(val);
-            return isNaN(num) ? defaultVal : num;
+            return isNaN(num) ? defaultVal : num; } catch(e) { return defaultVal; }
         }
 
         const PLAYER_SPEED = getConfig('PLAYER_SPEED', 0.12, true);
@@ -581,7 +581,7 @@
 
         function toggleMode() { isAutoMode = !isAutoMode; document.getElementById('mode-toggle-btn').innerText = isAutoMode ? "MODE: AUTO" : "MODE: MANUAL"; }
         
-        // --- 設定メニュー制御 ---
+        // --- 險ｭ螳壹Γ繝九Η繝ｼ蛻ｶ蠕｡ ---
         function openSettings() {
             document.getElementById('input-NPC_COUNT').value = NPC_COUNT;
             document.getElementById('input-TOTAL_TILES').value = TOTAL_TILES;
@@ -599,26 +599,30 @@
         }
 
         function resetSettings() {
-            localStorage.removeItem('climb_NPC_COUNT');
-            localStorage.removeItem('climb_TOTAL_TILES');
-            localStorage.removeItem('climb_PLAYER_SPEED');
-            localStorage.removeItem('climb_JUMP_FORCE');
-            localStorage.removeItem('climb_GRAVITY');
-            localStorage.removeItem('climb_PUNCH_COOLDOWN');
-            localStorage.removeItem('climb_PUNCH_RANGE');
-            localStorage.removeItem('climb_KILL_WINDOW');
+            try {
+                localStorage.removeItem('climb_NPC_COUNT');
+                localStorage.removeItem('climb_TOTAL_TILES');
+                localStorage.removeItem('climb_PLAYER_SPEED');
+                localStorage.removeItem('climb_JUMP_FORCE');
+                localStorage.removeItem('climb_GRAVITY');
+                localStorage.removeItem('climb_PUNCH_COOLDOWN');
+                localStorage.removeItem('climb_PUNCH_RANGE');
+                localStorage.removeItem('climb_KILL_WINDOW');
+            } catch(e) {}
             location.reload();
         }
 
         function saveSettings() {
-            localStorage.setItem('climb_NPC_COUNT', document.getElementById('input-NPC_COUNT').value);
-            localStorage.setItem('climb_TOTAL_TILES', document.getElementById('input-TOTAL_TILES').value);
-            localStorage.setItem('climb_PLAYER_SPEED', document.getElementById('input-PLAYER_SPEED').value);
-            localStorage.setItem('climb_JUMP_FORCE', document.getElementById('input-JUMP_FORCE').value);
-            localStorage.setItem('climb_GRAVITY', document.getElementById('input-GRAVITY').value);
-            localStorage.setItem('climb_PUNCH_COOLDOWN', document.getElementById('input-PUNCH_COOLDOWN').value);
-            localStorage.setItem('climb_PUNCH_RANGE', document.getElementById('input-PUNCH_RANGE').value);
-            localStorage.setItem('climb_KILL_WINDOW', document.getElementById('input-KILL_WINDOW').value);
+            try {
+                localStorage.setItem('climb_NPC_COUNT', document.getElementById('input-NPC_COUNT').value);
+                localStorage.setItem('climb_TOTAL_TILES', document.getElementById('input-TOTAL_TILES').value);
+                localStorage.setItem('climb_PLAYER_SPEED', document.getElementById('input-PLAYER_SPEED').value);
+                localStorage.setItem('climb_JUMP_FORCE', document.getElementById('input-JUMP_FORCE').value);
+                localStorage.setItem('climb_GRAVITY', document.getElementById('input-GRAVITY').value);
+                localStorage.setItem('climb_PUNCH_COOLDOWN', document.getElementById('input-PUNCH_COOLDOWN').value);
+                localStorage.setItem('climb_PUNCH_RANGE', document.getElementById('input-PUNCH_RANGE').value);
+                localStorage.setItem('climb_KILL_WINDOW', document.getElementById('input-KILL_WINDOW').value);
+            } catch(e) {}
             location.reload();
         }
 
