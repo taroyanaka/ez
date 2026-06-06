@@ -390,6 +390,7 @@ function prevCard() {
 
 function shuffleCards() {
     if (playDeck.length <= 1) return;
+    if (!confirm('シャッフルしますか？\n現在の順番がリセットされます。')) return;
     for (let i = playDeck.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [playDeck[i], playDeck[j]] = [playDeck[j], playDeck[i]];
