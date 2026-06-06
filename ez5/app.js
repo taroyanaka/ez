@@ -103,6 +103,14 @@ async function loadImage(event) {
     const files = Array.from(event.target.files);
     if (!files.length) return;
 
+    // ログインチェック (createモードのみ必要)
+    if (!AUTH_USER_ID || !AUTH_PASSWORD) {
+        event.target.value = ''; // ファイル選択をリセット
+        checkAuth(); // 「ログイン必要」メッセージを点滅表示
+        alert('ファイルを選択するにはログインが必要です。');
+        return;
+    }
+
     if (currentEditingId !== null) {
         const wantsToSave = confirm(`現在「ID: ${currentEditingId}」を編集中です。現在の編集内容を上書き保存しますか？\n\n[OK] 保存してから新規画像を読み込む\n[キャンセル] 保存せずに破棄して新規画像を読み込む`);
         if (wantsToSave) {
