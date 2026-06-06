@@ -12,6 +12,12 @@ let isAutoPlaying = false;
 let autoPhase = 'question';
 let selectedMergeChunks = []; 
 
+// 3択モード状態
+let quizDeck = [];
+let quizIndex = 0;
+let quizScore = 0;
+let quizAnswered = false;
+
 
 const resource = 'flashcards';
 
@@ -264,9 +270,11 @@ async function saveData() {
 function switchTab(tab) {
     const playView = document.getElementById('player-view');
     const inputView = document.getElementById('input-view');
+    const quizView = document.getElementById('quiz-view');
     const editView = document.getElementById('editor-view');
     const playTab = document.getElementById('tab-play');
     const inputTab = document.getElementById('tab-input');
+    const quizTab = document.getElementById('tab-quiz');
     const editTab = document.getElementById('tab-edit');
     const actionButtons = document.getElementById('chunk-action-buttons');
 
@@ -274,10 +282,12 @@ function switchTab(tab) {
 
     playView.classList.remove('active');
     inputView.classList.remove('active');
+    if (quizView) quizView.classList.remove('active');
     editView.classList.remove('active');
 
     playTab.classList.remove('active');
     inputTab.classList.remove('active');
+    if (quizTab) quizTab.classList.remove('active');
     editTab.classList.remove('active');
 
     if (actionButtons) {
@@ -297,6 +307,10 @@ function switchTab(tab) {
         inputView.classList.add('active');
         inputTab.classList.add('active');
         updateInputPlayer();
+    } else if (tab === 'quiz') {
+        if (quizView) quizView.classList.add('active');
+        if (quizTab) quizTab.classList.add('active');
+        startQuiz();
     } else {
         editView.classList.add('active');
         editTab.classList.add('active');
@@ -316,6 +330,12 @@ function updateUI() {
     if (editTab && actionButtons) {
         const isEditActive = editTab.classList.contains('active');
         actionButtons.style.display = isEditActive ? 'flex' : 'none';
+    }
+
+    // 3択モードがアクティブなら再描画
+    const quizTab = document.getElementById('tab-quiz');
+    if (quizTab && quizTab.classList.contains('active')) {
+        startQuiz();
     }
 }
 
@@ -794,7 +814,155 @@ async function handleDelete() {
     }
 }
 
+// --- Quiz (3択) Logic ---
+
+function startQuiz() {
+    if (playDeck.length === 0) {
+        document.getElementById('quiz-empty-state').style.display = 'block';
+        document.getElementById('quiz-container').style.display = 'none';
+        return;
+    }
+    document.getElementById('quiz-empty-state').style.display = 'none';
+    document.getElementById('quiz-container').style.display = 'flex';
+
+    // デッキをシャッフルしてクイズ用デッキを構築
+    quizDeck = [...playDeck].sort(() => Math.random() - 0.5);
+    quizIndex = 0;
+    quizScore = 0;
+    quizAnswered = false;
+    updateQuizUI();
+}
+
+function updateQuizUI() {
+    const isSwapped = document.getElementById('swap-qa-toggle')
+        ? document.getElementById('swap-qa-toggle').checked : false;
+
+    const emptyState = document.getElementById('quiz-empty-state');
+    const container = document.getElementById('quiz-container');
+
+    if (quizDeck.length === 0) {
+        emptyState.style.display = 'block';
+        container.style.display = 'none';
+        return;
+    }
+
+    // 全問終了チェック
+    if (quizIndex >= quizDeck.length) {
+        showQuizResult();
+        return;
+    }
+
+    const card = quizDeck[quizIndex];
+    const question = isSwapped ? card.answer : card.question;
+    const correctAnswer = isSwapped ? card.question : card.answer;
+
+    document.getElementById('quiz-question-text').textContent = question;
+    document.getElementById('quiz-current-index').textContent = quizIndex + 1;
+    document.getElementById('quiz-total-count').textContent = quizDeck.length;
+    document.getElementById('quiz-score').textContent = quizScore;
+    document.getElementById('quiz-feedback').textContent = '';
+    document.getElementById('quiz-next-btn').style.display = 'none';
+    quizAnswered = false;
+
+    const progress = ((quizIndex) / quizDeck.length) * 100;
+    document.getElementById('quiz-progress-inner').style.width = `${progress}%`;
+
+    // 不正解の選択肢をランダムに2つ選ぶ
+    const allAnswers = playDeck
+        .map(c => isSwapped ? c.question : c.answer)
+        .filter(a => a !== correctAnswer);
+
+    // シャッフルして2つ取得
+    const wrongChoices = allAnswers
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 2);
+
+    // 3つの選択肢をシャッフル
+    const choices = [correctAnswer, ...wrongChoices].sort(() => Math.random() - 0.5);
+
+    const choicesEl = document.getElementById('quiz-choices');
+    choicesEl.innerHTML = '';
+    choices.forEach(choice => {
+        const btn = document.createElement('button');
+        btn.className = 'btn';
+        btn.textContent = choice;
+        btn.style.cssText = `
+            width: 100%; padding: 1rem; font-size: 1rem; text-align: left;
+            justify-content: flex-start; transition: background 0.2s, border-color 0.2s;
+            border-width: 2px;
+        `;
+        btn.onclick = () => selectQuizAnswer(choice, correctAnswer, btn, choicesEl);
+        choicesEl.appendChild(btn);
+    });
+}
+
+function selectQuizAnswer(selected, correct, clickedBtn, choicesEl) {
+    if (quizAnswered) return;
+    quizAnswered = true;
+
+    const isCorrect = selected === correct;
+    const feedbackEl = document.getElementById('quiz-feedback');
+
+    // 全ボタンを無効化し、正解/不正解を色で示す
+    Array.from(choicesEl.children).forEach(btn => {
+        btn.disabled = true;
+        if (btn.textContent === correct) {
+            btn.style.background = 'rgba(16, 185, 129, 0.25)';
+            btn.style.borderColor = 'var(--success)';
+            btn.style.color = 'var(--success)';
+        } else if (btn === clickedBtn && !isCorrect) {
+            btn.style.background = 'rgba(239, 68, 68, 0.25)';
+            btn.style.borderColor = 'var(--danger)';
+            btn.style.color = 'var(--danger)';
+        }
+    });
+
+    if (isCorrect) {
+        quizScore++;
+        document.getElementById('quiz-score').textContent = quizScore;
+        feedbackEl.textContent = '⭕ 正解！';
+        feedbackEl.style.color = 'var(--success)';
+    } else {
+        feedbackEl.textContent = `❌ 不正解。正解: ${correct}`;
+        feedbackEl.style.color = 'var(--danger)';
+    }
+
+    document.getElementById('quiz-next-btn').style.display = 'inline-flex';
+}
+
+function quizNextCard() {
+    quizIndex++;
+    updateQuizUI();
+}
+
+function showQuizResult() {
+    const container = document.getElementById('quiz-container');
+    const total = quizDeck.length;
+    const pct = Math.round((quizScore / total) * 100);
+
+    container.innerHTML = `
+        <div style="text-align: center; padding: 2rem;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">
+                ${pct >= 80 ? '🎉' : pct >= 50 ? '😊' : '😢'}
+            </div>
+            <h2 style="margin-bottom: 0.5rem;">クイズ終了！</h2>
+            <p style="font-size: 1.5rem; font-weight: bold; color: var(--accent-color); margin-bottom: 1rem;">
+                ${quizScore} / ${total} 問正解 (${pct}%)
+            </p>
+            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                <button class="btn btn-primary" onclick="startQuiz()" style="padding: 0.75rem 2rem;">
+                    <i class="fas fa-redo"></i> もう一度
+                </button>
+                <button class="btn" onclick="switchTab('play')" style="padding: 0.75rem 2rem;">
+                    <i class="fas fa-play"></i> 学習モードへ
+                </button>
+            </div>
+        </div>
+    `;
+}
+
 // --- Stack Logic ---
+
 
 function addToStack() {
     if (playDeck.length === 0) return;

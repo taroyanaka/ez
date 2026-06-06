@@ -32,6 +32,9 @@
             <button id="tab-input" class="tab-btn" onclick="switchTab('input')">
                 <i class="fas fa-keyboard"></i> 入力回答
             </button>
+            <button id="tab-quiz" class="tab-btn" onclick="switchTab('quiz')">
+                <i class="fas fa-list-ol"></i> 3択問題
+            </button>
             <button id="tab-edit" class="tab-btn" onclick="switchTab('edit')">
                 <i class="fas fa-pen-to-square"></i> 問題作成
             </button>
@@ -147,6 +150,49 @@
                     </div>
                     <div id="input-feedback" style="font-size: 1.25rem; font-weight: bold; min-height: 2rem;"></div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Quiz View (3択問題) -->
+        <div id="quiz-view" class="view">
+            <div id="quiz-empty-state" style="display: none; text-align: center; margin-top: 5rem;">
+                <i class="fas fa-box-open"
+                    style="font-size: 4rem; color: var(--text-secondary); margin-bottom: 1rem;"></i>
+                <h2>カードがありません</h2>
+                <p style="color: var(--text-secondary);">「問題作成」タブからカードを追加してください</p>
+            </div>
+
+            <div id="quiz-container"
+                style="display: flex; flex-direction: column; align-items: center; gap: 2rem; width: 100%;">
+                <div id="quiz-progress-bar"
+                    style="width: 100%; max-width: 500px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
+                    <div id="quiz-progress-inner"
+                        style="width: 0%; height: 100%; background: var(--primary-gradient); transition: width 0.3s ease;"></div>
+                </div>
+
+                <div style="font-size: 0.875rem; color: var(--text-secondary);">
+                    <span id="quiz-current-index">1</span> / <span id="quiz-total-count">0</span>
+                    &nbsp;|&nbsp; 正解: <span id="quiz-score" style="color: var(--success); font-weight: bold;">0</span>
+                </div>
+
+                <div class="card-container" style="cursor: default;">
+                    <div class="card" style="transform: none;">
+                        <div class="card-face card-front" data-label="Question" style="box-shadow: none;">
+                            <p id="quiz-question-text">Question appear here</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="quiz-choices"
+                    style="width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 0.75rem;"></div>
+
+                <div id="quiz-feedback"
+                    style="font-size: 1.25rem; font-weight: bold; min-height: 2rem; text-align: center;"></div>
+
+                <button id="quiz-next-btn" class="btn btn-primary" onclick="quizNextCard()"
+                    style="display: none; padding: 0.75rem 2rem; font-size: 1rem;">
+                    <i class="fas fa-arrow-right"></i> 次の問題
+                </button>
             </div>
         </div>
 

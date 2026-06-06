@@ -1,4 +1,5 @@
 let problems = [];
+let stack = [];
 const resource = 'fill_in_the_blank';
 
 let editingId = null;
@@ -391,6 +392,16 @@ window.checkAnswer = function (selectEl, correctAnswer, isAutoFill = false) {
   } else {
     // Incorrect! Show error animation
     selectEl.classList.add('error');
+
+    // Auto-add to stack logic
+    const autoAddCheckbox = document.getElementById('auto-add-stack');
+    if (autoAddCheckbox && autoAddCheckbox.checked) {
+      if (!stack.some(item => item.question === correctAnswer)) {
+        stack.push({ question: correctAnswer, answer: "" });
+        updateStackUI();
+      }
+    }
+
     setTimeout(() => {
       selectEl.classList.remove('error');
       // Reset after a moment? Or let them try again by keeping the incorrect value.
@@ -452,3 +463,83 @@ window.apiDelete = async function () {
     } catch (err) { alert(err); }
   }
 };
+
+// --- Stack Logic ---
+
+function addWordsToStack() {
+    const answerInput = document.getElementById('answer-input');
+    if (!answerInput) return;
+    
+    const words = answerInput.value.split('\n').map(w => w.trim()).filter(w => w !== '');
+    let addedCount = 0;
+    
+    words.forEach(word => {
+        if (!stack.some(item => item.question === word)) {
+            stack.push({ question: word, answer: "" });
+            addedCount++;
+        }
+    });
+    
+    if (addedCount > 0) {
+        updateStackUI();
+        alert(`${addedCount}個の単語をスタックに追加しました。`);
+    } else {
+        alert('追加できる新しい単語がありません（既にスタックにあるか、入力が空です）。');
+    }
+}
+
+function updateStackUI() {
+    const listEl = document.getElementById('stack-list');
+    const badgeEl = document.getElementById('stack-badge');
+    if (!listEl || !badgeEl) return;
+
+    listEl.innerHTML = stack.map((item, index) => `
+        <div class="stack-item" style="position: relative; padding-right: 2rem;">
+            <div class="item-q">${item.question}</div>
+            <div class="item-a">${item.answer}</div>
+            <button onclick="removeFromStack(${index})" title="このアイテムを削除" style="position: absolute; top: 50%; right: 0.4rem; transform: translateY(-50%); background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1rem; line-height: 1; padding: 0.2rem; opacity: 0.5;" onmouseover="this.style.opacity='1'; this.style.color='var(--error)'" onmouseout="this.style.opacity='0.5'; this.style.color='var(--text-secondary)'">&times;</button>
+        </div>
+    `).join('');
+
+    badgeEl.textContent = stack.length;
+    badgeEl.style.display = stack.length > 0 ? 'block' : 'none';
+}
+
+function toggleStack() {
+    const panel = document.getElementById('stack-panel');
+    if (panel) {
+        panel.classList.toggle('open');
+    }
+}
+
+function clearStack() {
+    if (stack.length === 0) return;
+    if (confirm('スタックをすべてクリアしますか？')) {
+        stack = [];
+        updateStackUI();
+    }
+}
+
+function removeFromStack(index) {
+    stack.splice(index, 1);
+    updateStackUI();
+}
+
+async function copyStackToClipboard(withEquals) {
+    if (stack.length === 0) {
+        alert('スタックが空です。');
+        return;
+    }
+    const text = stack.map(item => withEquals ? `${item.question}=` : `${item.question}`).join('\n');
+    try {
+        await navigator.clipboard.writeText(text);
+        alert('クリップボードにコピーしました！\n\n' + text);
+    } catch (err) {
+        alert('コピーに失敗しました。');
+    }
+}
+
+// Ensure UI is updated initially if stack has elements (though it starts empty)
+document.addEventListener('DOMContentLoaded', () => {
+    updateStackUI();
+});
