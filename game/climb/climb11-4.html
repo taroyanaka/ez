@@ -820,8 +820,7 @@
                 localStorage.setItem('climb_SAVE_INTERVAL', document.getElementById('input-SAVE_INTERVAL').value);
                 localStorage.setItem('climb_GOLD_PER_KILL', document.getElementById('input-GOLD_PER_KILL').value);
             } catch(e) {}
-            // GETパラメータを維持してリロードするか、消してリロードするか？
-            // 設定を保存した場合はベースのファイルに戻るのが自然
+            // 設定を保存した場合はベースのファイルに戻る
             window.location.href = window.location.pathname;
         }
 
