@@ -811,10 +811,11 @@ function updateStackUI() {
     const badgeEl = document.getElementById('stack-badge');
     if (!listEl || !badgeEl) return;
 
-    listEl.innerHTML = stack.map((item) => `
-        <div class="stack-item">
+    listEl.innerHTML = stack.map((item, index) => `
+        <div class="stack-item" style="position: relative; padding-right: 2rem;">
             <div class="item-q">${item.question}</div>
             <div class="item-a">${item.answer}</div>
+            <button onclick="removeFromStack(${index})" title="このアイテムを削除" style="position: absolute; top: 50%; right: 0.4rem; transform: translateY(-50%); background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1rem; line-height: 1; padding: 0.2rem; opacity: 0.5;" onmouseover="this.style.opacity='1'; this.style.color='var(--danger)'" onmouseout="this.style.opacity='0.5'; this.style.color='var(--text-secondary)'">&times;</button>
         </div>
     `).join('');
 
@@ -831,6 +832,11 @@ function toggleStack() {
 
 function clearStack() {
     stack = [];
+    updateStackUI();
+}
+
+function removeFromStack(index) {
+    stack.splice(index, 1);
     updateStackUI();
 }
 
