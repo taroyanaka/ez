@@ -825,8 +825,8 @@ function startQuiz() {
     document.getElementById('quiz-empty-state').style.display = 'none';
     document.getElementById('quiz-container').style.display = 'flex';
 
-    // デッキをシャッフルしてクイズ用デッキを構築
-    quizDeck = [...playDeck].sort(() => Math.random() - 0.5);
+    // 登録順を維持してクイズ用デッキを構築（シャッフルしない）
+    quizDeck = [...playDeck];
     quizIndex = 0;
     quizScore = 0;
     quizAnswered = false;
@@ -867,17 +867,28 @@ function updateQuizUI() {
     const progress = ((quizIndex) / quizDeck.length) * 100;
     document.getElementById('quiz-progress-inner').style.width = `${progress}%`;
 
-    // 不正解の選択肢をランダムに2つ選ぶ
-    const allAnswers = playDeck
+    // 不正解の選択肢をランダムに2つ選ぶ（重複なし）
+    const allAnswers = quizDeck
         .map(c => isSwapped ? c.question : c.answer)
         .filter(a => a !== correctAnswer);
 
-    // シャッフルして2つ取得
-    const wrongChoices = allAnswers
-        .sort(() => Math.random() - 0.5)
-        .slice(0, 2);
+    // シャッフルして重複なしで2つ取得
+    const shuffledWrong = allAnswers.slice();
+    for (let i = shuffledWrong.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledWrong[i], shuffledWrong[j]] = [shuffledWrong[j], shuffledWrong[i]];
+    }
+    const wrongChoices = [];
+    const seen = new Set();
+    for (const a of shuffledWrong) {
+        if (!seen.has(a)) {
+            seen.add(a);
+            wrongChoices.push(a);
+            if (wrongChoices.length === 2) break;
+        }
+    }
 
-    // 3つの選択肢をシャッフル
+    // 正解を必ず含む3つの選択肢をシャッフル
     const choices = [correctAnswer, ...wrongChoices].sort(() => Math.random() - 0.5);
 
     const choicesEl = document.getElementById('quiz-choices');
