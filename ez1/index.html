@@ -183,16 +183,17 @@
                     </div>
                 </div>
 
+                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 500px; min-height: 2.5rem;">
+                    <div id="quiz-feedback"
+                        style="font-size: 1.25rem; font-weight: bold; text-align: left;"></div>
+                    <button id="quiz-next-btn" class="btn btn-primary" onclick="quizNextCard()"
+                        style="display: none; padding: 0.75rem 2rem; font-size: 1rem;">
+                        <i class="fas fa-arrow-right"></i> 次の問題
+                    </button>
+                </div>
+
                 <div id="quiz-choices"
                     style="width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 0.75rem;"></div>
-
-                <div id="quiz-feedback"
-                    style="font-size: 1.25rem; font-weight: bold; min-height: 2rem; text-align: center;"></div>
-
-                <button id="quiz-next-btn" class="btn btn-primary" onclick="quizNextCard()"
-                    style="display: none; padding: 0.75rem 2rem; font-size: 1rem;">
-                    <i class="fas fa-arrow-right"></i> 次の問題
-                </button>
             </div>
         </div>
 

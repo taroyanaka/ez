@@ -934,7 +934,7 @@ function selectQuizAnswer(selected, correct, clickedBtn, choicesEl) {
         feedbackEl.textContent = '⭕ 正解！';
         feedbackEl.style.color = 'var(--success)';
     } else {
-        feedbackEl.textContent = `❌ 不正解。正解: ${correct}`;
+        feedbackEl.textContent = '❌ 不正解';
         feedbackEl.style.color = 'var(--danger)';
     }
 
