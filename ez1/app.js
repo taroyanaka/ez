@@ -649,12 +649,23 @@ function displayApiResult(data) {
             title.style.color = 'var(--text-primary)';
             listContainer.appendChild(title);
 
+            const filterContainer = document.getElementById('chunk-filter-container');
+            if (filterContainer) filterContainer.style.display = 'flex';
+
             groupIds.forEach(cid => {
                 const chunk = chunks.find(c => String(c.id) === String(cid));
                 const displayName = chunk ? chunk.name : `未定義の問題集 (ID: ${cid})`;
 
+                // Determine owner for filtering
+                let ownerId = chunk ? chunk.user_id : null;
+                if (!ownerId && groups[cid] && groups[cid].length > 0) {
+                    ownerId = groups[cid][0].user_id;
+                }
+                const isMine = (ownerId && String(ownerId) === String(AUTH_USER_ID));
+
                 const row = document.createElement('div');
-                row.className = 'list-item';
+                row.className = 'list-item chunk-list-item';
+                row.dataset.owner = isMine ? 'mine' : 'others';
                 row.style.padding = '0.75rem 1rem';
                 row.style.marginBottom = '0';
 
@@ -705,12 +716,27 @@ function displayApiResult(data) {
                 loadBtn.textContent = '読み込む';
                 loadBtn.onclick = () => selectChunkFromApi(cid);
 
+                const cloneBtn = document.createElement('button');
+                cloneBtn.className = 'btn';
+                cloneBtn.style.padding = '0.4rem 0.8rem';
+                cloneBtn.style.fontSize = '0.8rem';
+                cloneBtn.style.background = 'rgba(16, 185, 129, 0.1)';
+                cloneBtn.style.borderColor = 'var(--success)';
+                cloneBtn.style.color = 'var(--success)';
+                cloneBtn.innerHTML = '<i class="fas fa-clone"></i> クローン';
+                cloneBtn.onclick = () => handleCloneChunk(cid, displayName);
+
                 actions.appendChild(loadBtn);
+                actions.appendChild(cloneBtn);
 
                 row.appendChild(info);
                 row.appendChild(actions);
                 listContainer.appendChild(row);
             });
+            
+            // Re-apply filter if a radio button is already selected
+            setTimeout(applyChunkFilter, 0);
+
             resultEl.appendChild(listContainer);
             resultEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             return;
@@ -1168,6 +1194,66 @@ function addBulkToStack() {
         stack.push(...newItems);
         updateStackUI();
         alert(`${newItems.length}件のアイテムをスタックに追加しました。`);
+    }
+}
+
+// --- Chunk Filtering & Cloning ---
+
+function applyChunkFilter() {
+    const filterRadio = document.querySelector('input[name="chunk_filter"]:checked');
+    if (!filterRadio) return;
+    const filter = filterRadio.value;
+    const items = document.querySelectorAll('.chunk-list-item');
+    items.forEach(item => {
+        const owner = item.dataset.owner;
+        if (filter === 'all') {
+            item.style.display = '';
+        } else if (filter === 'mine') {
+            item.style.display = owner === 'mine' ? '' : 'none';
+        } else if (filter === 'others') {
+            item.style.display = owner === 'others' ? '' : 'none';
+        }
+    });
+}
+
+async function handleCloneChunk(sourceChunkId, chunkName) {
+    if (!checkAuth()) return;
+    
+    try {
+        const chunkResult = await createItem('chunks', { name: chunkName });
+        const newChunkId = chunkResult.id;
+
+        const response = await fetch(`${API_BASE_URL}/${resource}?chunk_id=${sourceChunkId}`);
+        const json = await response.json();
+        const items = json.data || json;
+        
+        let clonedItems = [];
+        if (Array.isArray(items)) {
+            clonedItems = items.map(({ id, created_at, user_id, ...rest }) => ({
+                ...rest,
+                chunk_id: newChunkId
+            }));
+        }
+
+        if (clonedItems.length > 0) {
+            await fetch(`${API_BASE_URL}/${resource}?chunk_id=${newChunkId}`, {
+                method: 'PUT',
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'user_id': AUTH_USER_ID, 
+                    'password': AUTH_PASSWORD 
+                },
+                body: JSON.stringify(clonedItems)
+            });
+        }
+
+        alert(`「${chunkName}」をクローンしました！`);
+        
+        await initChunks();
+        await handleGetAll();
+    } catch (error) {
+        console.error('Clone error:', error);
+        alert('クローン中にエラーが発生しました。');
     }
 }
 
