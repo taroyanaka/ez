@@ -294,10 +294,6 @@ function switchTab(tab) {
         actionButtons.style.display = (tab === 'edit') ? 'flex' : 'none';
     }
 
-    // 学習モードまたは入力回答を開始するたびにスタックをクリア
-    if (tab === 'play' || tab === 'input') {
-        clearStack();
-    }
 
     if (tab === 'play') {
         playView.classList.add('active');
@@ -817,6 +813,10 @@ async function handleDelete() {
 // --- Quiz (3択) Logic ---
 
 function startQuiz() {
+    // 結果画面が表示中なら隐す
+    const resultEl = document.getElementById('quiz-result');
+    if (resultEl) resultEl.style.display = 'none';
+
     if (playDeck.length === 0) {
         document.getElementById('quiz-empty-state').style.display = 'block';
         document.getElementById('quiz-container').style.display = 'none';
@@ -948,28 +948,48 @@ function quizNextCard() {
 
 function showQuizResult() {
     const container = document.getElementById('quiz-container');
+    const resultEl = document.getElementById('quiz-result');
     const total = quizDeck.length;
     const pct = Math.round((quizScore / total) * 100);
 
-    container.innerHTML = `
-        <div style="text-align: center; padding: 2rem;">
-            <div style="font-size: 3rem; margin-bottom: 1rem;">
-                ${pct >= 80 ? '🎉' : pct >= 50 ? '😊' : '😢'}
-            </div>
-            <h2 style="margin-bottom: 0.5rem;">クイズ終了！</h2>
-            <p style="font-size: 1.5rem; font-weight: bold; color: var(--accent-color); margin-bottom: 1rem;">
-                ${quizScore} / ${total} 問正解 (${pct}%)
-            </p>
-            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-                <button class="btn btn-primary" onclick="startQuiz()" style="padding: 0.75rem 2rem;">
-                    <i class="fas fa-redo"></i> もう一度
-                </button>
-                <button class="btn" onclick="switchTab('play')" style="padding: 0.75rem 2rem;">
-                    <i class="fas fa-play"></i> 学習モードへ
-                </button>
-            </div>
+    // quiz-containerはそのまま残し、別の結果要素を表示する
+    container.style.display = 'none';
+    resultEl.innerHTML = `
+        <div style="font-size: 3rem;">${pct >= 80 ? '🎉' : pct >= 50 ? '😊' : '😢'}</div>
+        <h2 style="margin-bottom: 0.5rem;">クイズ終了！</h2>
+        <p style="font-size: 1.5rem; font-weight: bold; color: var(--accent-color);">
+            ${quizScore} / ${total} 問正解 (${pct}%)
+        </p>
+        <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+            <button class="btn btn-primary" onclick="startQuiz()" style="padding: 0.75rem 2rem;">
+                <i class="fas fa-redo"></i> もう一度
+            </button>
+            <button class="btn" onclick="switchTab('play')" style="padding: 0.75rem 2rem;">
+                <i class="fas fa-play"></i> 学習モードへ
+            </button>
         </div>
     `;
+    resultEl.style.display = 'flex';
+}
+
+function shuffleAndRestartQuiz() {
+    if (playDeck.length <= 1) return;
+    if (!confirm('シャッフルしますか？\n現在の順番がリセットされます。')) return;
+    for (let i = playDeck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [playDeck[i], playDeck[j]] = [playDeck[j], playDeck[i]];
+    }
+    currentIndex = 0;
+    updatePlayer();
+    updateInputPlayer();
+    startQuiz();
+}
+
+function addQuizCardToStack() {
+    if (quizDeck.length === 0 || quizIndex >= quizDeck.length) return;
+    const card = quizDeck[quizIndex];
+    stack.push({ ...card });
+    updateStackUI();
 }
 
 // --- Stack Logic ---
