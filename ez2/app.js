@@ -3,6 +3,7 @@ let stack = [];
 const resource = 'fill_in_the_blank';
 
 let editingId = null;
+let currentLearningListIndex = 0;
 
 // DOM Elements
 const tabCreate = document.getElementById('tab-create');
@@ -99,29 +100,37 @@ function switchTab(tabId) {
 async function addProblem() {
   if (!checkAuth()) return;
   const questionInput = document.getElementById('question-input');
-  const answerInput = document.getElementById('answer-input');
 
   const question = questionInput.value.trim();
-  const answerRaw = answerInput.value.trim();
 
-  if (!question || !answerRaw) {
+  const answerInputs = document.querySelectorAll('.answer-input');
+  const answerGroups = [];
+  let tooShort = false;
+
+  answerInputs.forEach(input => {
+    const raw = input.value.trim();
+    if (raw) {
+      const answers = raw.split('\n').map(a => a.trim()).filter(a => a !== '');
+      if (answers.length > 0) {
+        if (answers.length < 3) {
+          tooShort = true;
+        }
+        answerGroups.push(answers.join('\n'));
+      }
+    }
+  });
+
+  if (!question || answerGroups.length === 0) {
     alert('Please enter both a sentence and the words to hide.');
     return;
   }
 
-  const answers = answerRaw.split('\n').map(a => a.trim()).filter(a => a !== '');
-
-  if (answers.length === 0) {
-    alert('Please enter at least one word to hide.');
-    return;
-  }
-
-  if (answers.length < 3) {
+  if (tooShort) {
     alert('バリデーションエラー: ダミーの選択肢を生成するため、単語リストには3つ以上の単語（改行区切り）を入力してください。');
     return;
   }
 
-  const finalAnswerStr = answers.join('\n');
+  const finalAnswerStr = answerGroups.join('|||');
 
   try {
     if (editingId) {
@@ -149,7 +158,7 @@ async function addProblem() {
 
     // Clear inputs
     questionInput.value = '';
-    answerInput.value = '';
+    if (typeof resetAnswerBoxes === 'function') resetAnswerBoxes(1);
   } catch (error) {
     console.error('Failed to save problem:', error);
     alert('Failed to save problem to the server.');
@@ -163,7 +172,15 @@ function editProblem(id_key) {
 
   editingId = id_key;
   document.getElementById('question-input').value = p.question;
-  document.getElementById('answer-input').value = p.answer;
+  
+  const lists = p.answer.split('|||');
+  if (typeof resetAnswerBoxes === 'function') {
+    resetAnswerBoxes(lists.length);
+    const inputs = document.querySelectorAll('.answer-input');
+    lists.forEach((list, idx) => {
+      if (inputs[idx]) inputs[idx].value = list;
+    });
+  }
 
   const btn = document.getElementById('add-problem-btn');
   btn.textContent = 'Update Problem';
@@ -183,7 +200,7 @@ async function deleteProblem(id_key) {
     editingId = null;
     document.getElementById('add-problem-btn').textContent = 'Add Problem';
     document.getElementById('question-input').value = '';
-    document.getElementById('answer-input').value = '';
+    if (typeof resetAnswerBoxes === 'function') resetAnswerBoxes(1);
   } catch (error) {
     console.error('Failed to delete problem:', error);
     alert('Failed to delete problem from the server: ' + error.message);
@@ -198,7 +215,8 @@ function renderProblemsList() {
   }
 
   problemsList.innerHTML = problems.map(p => {
-    const hiddenText = `Hidden: ${p.answer.replace(/\n/g, ', ')}`;
+    const lists = p.answer.split('|||');
+    const hiddenText = `Hidden: ${lists.map((l, i) => lists.length > 1 ? `[List ${i+1}] ` + l.replace(/\n/g, ', ') : l.replace(/\n/g, ', ')).join(' | ')}`;
     const id = p.id_key || p.id;
     return `
       <div class="problem-item">
@@ -274,8 +292,52 @@ function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 }
 
+// Answer Box Dynamic UI Helpers
+window.addAnswerBox = function() {
+  const container = document.getElementById('answers-container');
+  if (!container) return;
+  const div = document.createElement('div');
+  div.className = 'answer-box';
+  div.innerHTML = `<textarea class="answer-input" rows="3" placeholder="apple\nbanana"></textarea>
+                   <button type="button" class="remove-btn" onclick="removeAnswerBox(this)" title="Remove list">&times;</button>`;
+  container.appendChild(div);
+  updateRemoveButtons();
+};
+
+window.removeAnswerBox = function(btn) {
+  btn.closest('.answer-box').remove();
+  updateRemoveButtons();
+};
+
+window.resetAnswerBoxes = function(count = 1) {
+  const container = document.getElementById('answers-container');
+  if (!container) return;
+  container.innerHTML = '';
+  for (let i = 0; i < count; i++) {
+    const div = document.createElement('div');
+    div.className = 'answer-box';
+    div.innerHTML = `<textarea class="answer-input" rows="3" placeholder="apple\nbanana"></textarea>
+                     <button type="button" class="remove-btn" onclick="removeAnswerBox(this)" title="Remove list">&times;</button>`;
+    container.appendChild(div);
+  }
+  updateRemoveButtons();
+};
+
+function updateRemoveButtons() {
+  const boxes = document.querySelectorAll('.answer-box');
+  boxes.forEach((box) => {
+    const btn = box.querySelector('.remove-btn');
+    if (btn) {
+      btn.style.display = boxes.length > 1 ? 'flex' : 'none';
+    }
+  });
+}
+
 // Render Learning Mode
-function renderLearningMode() {
+function renderLearningMode(preserveListIndex = false) {
+  if (!preserveListIndex) {
+    currentLearningListIndex = 0;
+  }
   const selector = document.getElementById('learning-problem-select');
   if (!selector) return;
 
@@ -307,7 +369,9 @@ function renderLearningMode() {
   learningContainer.innerHTML = '';
 
   let questionHtml = p.question;
-  const targets = p.answer.split('\n').map(w => w.trim()).filter(w => w);
+  const lists = p.answer.split('|||');
+  if (currentLearningListIndex >= lists.length) currentLearningListIndex = 0;
+  const targets = lists[currentLearningListIndex].split('\n').map(w => w.trim()).filter(w => w);
 
   targets.sort((a, b) => b.length - a.length);
 
@@ -356,6 +420,22 @@ function renderLearningMode() {
   problemDiv.className = 'learning-item';
   problemDiv.style.marginBottom = '0'; // Only one item displayed
   problemDiv.innerHTML = questionHtml;
+
+  if (lists.length > 1) {
+    const tabsContainer = document.createElement('div');
+    tabsContainer.className = 'learning-tabs';
+    lists.forEach((_, idx) => {
+      const btn = document.createElement('button');
+      btn.className = `learning-tab-btn ${idx === currentLearningListIndex ? 'active' : ''}`;
+      btn.textContent = `List ${idx + 1}`;
+      btn.onclick = () => {
+        currentLearningListIndex = idx;
+        renderLearningMode(true);
+      };
+      tabsContainer.appendChild(btn);
+    });
+    problemDiv.appendChild(tabsContainer);
+  }
 
   learningContainer.appendChild(problemDiv);
 }
@@ -467,17 +547,19 @@ window.apiDelete = async function () {
 // --- Stack Logic ---
 
 function addWordsToStack() {
-    const answerInput = document.getElementById('answer-input');
-    if (!answerInput) return;
+    const answerInputs = document.querySelectorAll('.answer-input');
+    if (answerInputs.length === 0) return;
     
-    const words = answerInput.value.split('\n').map(w => w.trim()).filter(w => w !== '');
     let addedCount = 0;
     
-    words.forEach(word => {
-        if (!stack.some(item => item.question === word)) {
-            stack.push({ question: word, answer: "" });
-            addedCount++;
-        }
+    answerInputs.forEach(input => {
+      const words = input.value.split('\n').map(w => w.trim()).filter(w => w !== '');
+      words.forEach(word => {
+          if (!stack.some(item => item.question === word)) {
+              stack.push({ question: word, answer: "" });
+              addedCount++;
+          }
+      });
     });
     
     if (addedCount > 0) {

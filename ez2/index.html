@@ -35,10 +35,16 @@
             <textarea id="question-input" rows="3" placeholder="e.g. My favorite fruit is apple and banana."></textarea>
           </div>
           <div class="form-group">
-            <label for="answer-input">Words to hide (one per line)</label>
-            <textarea id="answer-input" rows="3" placeholder="apple&#10;banana"></textarea>
-            <small class="help-text">These words will be replaced by dropdown choices.</small>
-            <button id="add-stack-btn" type="button" class="secondary-btn" onclick="event.preventDefault(); addWordsToStack()" style="margin-top: 0.5rem; width: 100%;">スタックに追加</button>
+            <label>Words to hide (one per line)</label>
+            <div id="answers-container">
+              <div class="answer-box">
+                <textarea class="answer-input" rows="3" placeholder="apple&#10;banana"></textarea>
+                <button type="button" class="remove-btn" onclick="removeAnswerBox(this)" style="display: none;" title="Remove list">&times;</button>
+              </div>
+            </div>
+            <button type="button" class="secondary-btn add-list-btn" onclick="addAnswerBox()" style="margin-top: 0.5rem; width: 100%; border-style: dashed; background: rgba(255,255,255,0.02);">+ リストを追加</button>
+            <small class="help-text" style="display: block; margin-top: 0.5rem;">These words will be replaced by dropdown choices. You can create multiple word lists for the same sentence.</small>
+            <button id="add-stack-btn" type="button" class="secondary-btn" onclick="event.preventDefault(); addWordsToStack()" style="margin-top: 0.5rem; width: 100%;">すべてのリストをスタックに追加</button>
           </div>
           <button id="add-problem-btn" type="button" class="primary-btn" onclick="event.preventDefault(); addProblem()">Add Problem</button>
         </div>

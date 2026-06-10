@@ -267,7 +267,9 @@
             btnLogout.addEventListener('click', () => {
                 userIdInput.value = '';
                 passwordInput.value = '';
-                showMessage('ログアウトしました（ローカルデータは保持されています）。');
+                localStorage.removeItem('user_id');
+                localStorage.removeItem('password');
+                showMessage('ログアウトしました（ローカルデータは削除されました）。');
             });
 
             // クリップボードにコピー

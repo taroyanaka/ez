@@ -510,3 +510,76 @@ select.error {
         right: -100%;
     }
 }
+
+/* Multi-list UI Styles */
+#answers-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.answer-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  position: relative;
+}
+
+.answer-box .answer-input {
+  flex: 1;
+}
+
+.remove-btn {
+  background: transparent;
+  color: var(--error);
+  border: 1px solid var(--error);
+  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: var(--transition);
+  opacity: 0.7;
+}
+
+.remove-btn:hover {
+  background: var(--error);
+  color: white;
+  opacity: 1;
+}
+
+.learning-tabs {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+.learning-tab-btn {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  border: 1px solid var(--card-border);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.learning-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-color);
+}
+
+.learning-tab-btn.active {
+  background: var(--primary);
+  color: var(--bg-color);
+  border-color: var(--primary);
+}
