@@ -24,10 +24,10 @@ const resource = 'flashcards';
 // --- API Client Functions ---
 
 
-const getAllItems = (resource) => {
+const getAllItems = (resource, ignoreToggle = false) => {
     let url = `${API_BASE_URL}/${resource}`;
     const myDataOnlyToggle = document.getElementById('my-data-only-toggle');
-    if (myDataOnlyToggle && myDataOnlyToggle.checked && AUTH_USER_ID) {
+    if (!ignoreToggle && myDataOnlyToggle && myDataOnlyToggle.checked && AUTH_USER_ID) {
         url = `${API_BASE_URL}/${resource}/user/${AUTH_USER_ID}`;
     }
     console.log(`Fetching all items for resource: ${resource} from ${url}`);
@@ -604,9 +604,11 @@ function displayApiResult(data) {
             return acc;
         }, {});
 
+        const chunksToUse = data.allChunks || chunks;
+
         // アイテム数が0のチャンクもリストに表示するために追加
-        if (chunks && Array.isArray(chunks)) {
-            chunks.forEach(chunk => {
+        if (chunksToUse && Array.isArray(chunksToUse)) {
+            chunksToUse.forEach(chunk => {
                 const cid = String(chunk.id);
                 if (!groups[cid]) {
                     groups[cid] = [];
@@ -653,7 +655,7 @@ function displayApiResult(data) {
             if (filterContainer) filterContainer.style.display = 'flex';
 
             groupIds.forEach(cid => {
-                const chunk = chunks.find(c => String(c.id) === String(cid));
+                const chunk = chunksToUse.find(c => String(c.id) === String(cid));
                 const displayName = chunk ? chunk.name : `未定義の問題集 (ID: ${cid})`;
 
                 // Determine owner for filtering
@@ -781,9 +783,10 @@ async function handleGetAll() {
     selectedMergeChunks = []; // Reset selection when fetching new list
     try {
         console.log('handleGetAll: Fetching items...');
-        const data = await getAllItems(resource);
+        const allChunks = await getAllItems('chunks', true);
+        const data = await getAllItems(resource, true);
         console.log('handleGetAll: Success', data);
-        displayApiResult({ action: 'getAll', status: 'success', data: data });
+        displayApiResult({ action: 'getAll', status: 'success', data: data, allChunks: allChunks });
         console.log('handleGetAll: Results displayed');
     } catch (error) {
         console.error('handleGetAll: Error', error);
