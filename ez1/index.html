@@ -44,6 +44,9 @@
     <!-- Chunk Selection Area -->
     <div class="chunk-selector-container" style="max-width: 800px; margin: 1rem auto; padding: 0 1rem;">
         <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <button class="btn btn-primary" onclick="handleDelete()" style="background: var(--danger); padding: 0.5rem 1rem;">
+                <i class="fas fa-trash"></i> 削除
+            </button>
             <label for="chunk-select" style="font-size: 0.875rem; color: var(--text-secondary);">問題集を選択:</label>
             <select id="chunk-select" onchange="handleChunkChange()" style="flex: 1; min-width: 200px;"></select>
             <div id="chunk-action-buttons" style="display: none; align-items: center; gap: 1rem;">
@@ -279,9 +282,6 @@
                 <div class="api-buttons" style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
                     <button class="btn" onclick="handleGetAll()">
                         <i class="fas fa-list"></i> Get All
-                    </button>
-                    <button class="btn btn-primary" onclick="handleDelete()" style="background: var(--danger);">
-                        <i class="fas fa-trash"></i> 削除
                     </button>
                     <div id="chunk-filter-container" style="display: none; align-items: center; gap: 1rem; margin-left: 1rem; font-size: 0.875rem;">
                         <label style="cursor: pointer; color: var(--text-secondary);"><input type="radio" name="chunk_filter" value="all" checked onchange="applyChunkFilter()"> 全員</label>
