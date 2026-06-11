@@ -122,6 +122,12 @@ async function loadImage(event) {
             // 破棄する場合は編集状態をクリアするだけ
             currentEditingId = null;
             document.querySelectorAll('[id^="btn-update-"]').forEach(btn => btn.disabled = true);
+            const editContainer = document.getElementById('edit-target-container');
+            const editTextArea = document.getElementById('edit-target-textarea');
+            const bulkImportTargets = document.getElementById('bulk-import-targets');
+            if (editContainer) editContainer.style.display = 'none';
+            if (editTextArea) editTextArea.value = '';
+            if (bulkImportTargets) bulkImportTargets.style.display = 'block';
         }
     } else {
         // 新規作成から別の新規作成へ移る場合も念のためクリア
@@ -594,6 +600,7 @@ async function loadData() {
             id: item.id,
             original: item.original,
             mask: item.mask,
+            target: item.target || '',
             timestamp: new Date().toLocaleTimeString() // DBからロードした時刻として表示
         }));
         
@@ -675,6 +682,12 @@ async function handleBulkImport(event) {
             // 破棄する場合は編集状態をクリアするだけ
             currentEditingId = null;
             document.querySelectorAll('[id^="btn-update-"]').forEach(btn => btn.disabled = true);
+            const editContainer = document.getElementById('edit-target-container');
+            const editTextArea = document.getElementById('edit-target-textarea');
+            const bulkImportTargets = document.getElementById('bulk-import-targets');
+            if (editContainer) editContainer.style.display = 'none';
+            if (editTextArea) editTextArea.value = '';
+            if (bulkImportTargets) bulkImportTargets.style.display = 'block';
         }
     }
 
@@ -800,6 +813,12 @@ async function handleBulkImportOriginals(event) {
             } else {
                 currentEditingId = null;
                 document.querySelectorAll('[id^="btn-update-"]').forEach(btn => btn.disabled = true);
+                const editContainer = document.getElementById('edit-target-container');
+                const editTextArea = document.getElementById('edit-target-textarea');
+                const bulkImportTargets = document.getElementById('bulk-import-targets');
+                if (editContainer) editContainer.style.display = 'none';
+                if (editTextArea) editTextArea.value = '';
+                if (bulkImportTargets) bulkImportTargets.style.display = 'block';
             }
         }
 
@@ -1118,6 +1137,17 @@ function editRecord(id) {
     const updateBtn = document.getElementById(`btn-update-${id}`);
     if (updateBtn) updateBtn.disabled = false;
     
+    const editContainer = document.getElementById('edit-target-container');
+    const editTextArea = document.getElementById('edit-target-textarea');
+    const bulkImportTargets = document.getElementById('bulk-import-targets');
+    if (editContainer && editTextArea) {
+        editContainer.style.display = 'block';
+        editTextArea.value = record.target || '';
+    }
+    if (bulkImportTargets) {
+        bulkImportTargets.style.display = 'none';
+    }
+    
     const origImg = new Image();
     origImg.crossOrigin = "anonymous";
     origImg.onload = () => {
@@ -1186,6 +1216,11 @@ async function updateRecord(id, btn) {
         const formData = new FormData();
         formData.append('mask', maskBlob, 'mask.png');
         
+        const editTextArea = document.getElementById('edit-target-textarea');
+        if (editTextArea && editTextArea.value !== undefined) {
+            formData.append('target', editTextArea.value.trim());
+        }
+        
         const response = await fetch(`${API_BASE_URL}/fill_image/${id}`, {
             method: 'PUT',
             headers: {
@@ -1202,6 +1237,7 @@ async function updateRecord(id, btn) {
             const idx = savedRecords.findIndex(r => r.id === id);
             if (idx !== -1) {
                 savedRecords[idx].mask = result.item.mask;
+                savedRecords[idx].target = result.item.target !== undefined ? result.item.target : (document.getElementById('edit-target-textarea') ? document.getElementById('edit-target-textarea').value.trim() : '');
                 savedRecords[idx].timestamp = new Date().toLocaleTimeString();
             }
             
@@ -1211,6 +1247,13 @@ async function updateRecord(id, btn) {
             document.getElementById('create-controls').style.display = 'none';
             document.getElementById('create-canvas-container').style.display = 'none';
             currentEditingId = null;
+            
+            const editContainer = document.getElementById('edit-target-container');
+            const editTextArea = document.getElementById('edit-target-textarea');
+            const bulkImportTargets = document.getElementById('bulk-import-targets');
+            if (editContainer) editContainer.style.display = 'none';
+            if (editTextArea) editTextArea.value = '';
+            if (bulkImportTargets) bulkImportTargets.style.display = 'block';
             
             renderDbList();
             renderPlayList();

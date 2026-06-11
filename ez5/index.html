@@ -93,6 +93,11 @@
                 </button>
             </div>
 
+            <div id="edit-target-container" style="display: none; margin-bottom: 1rem; padding: 1rem; background: var(--card-bg); border-radius: 8px; border: 1px solid var(--glass-border);">
+                <label style="font-size: 0.8rem; font-weight: bold; margin-bottom: 0.5rem; display: block;">ターゲット文字列 (編集):</label>
+                <textarea id="edit-target-textarea" placeholder="ターゲット文字列を入力（改行区切り可）" style="width: 100%; height: 60px; font-size: 0.8rem; padding: 0.5rem; border: 1px solid var(--glass-border); border-radius: 4px; background: var(--bg-color); color: var(--text-color);"></textarea>
+            </div>
+
             <div class="canvas-container" id="create-canvas-container" style="display: none;">
                 <img id="create-bg-img" style="display:none; position: absolute; top:0; left:0; width:100%; height:100%; object-fit:contain; z-index: 1;">
                 <canvas id="create-canvas" style="position: relative; z-index: 2; cursor: crosshair;"></canvas>
