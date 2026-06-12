@@ -796,11 +796,19 @@ function setupAudioChoices(step) {
                     updateStackUI();
                 }
                 
-                if (!window.speechSynthesis.speaking) {
+                const skipCb = document.getElementById('audio-skip-wrong');
+                const skipWrong = skipCb ? skipCb.checked : true;
+                
+                if (skipWrong) {
+                    window.speechSynthesis.cancel();
                     proceedToAnswerReveal(step.targetWord);
                 } else {
-                    if (currentUtterance) {
-                        currentUtterance.onend = () => proceedToAnswerReveal(step.targetWord);
+                    if (!window.speechSynthesis.speaking) {
+                        proceedToAnswerReveal(step.targetWord);
+                    } else {
+                        if (currentUtterance) {
+                            currentUtterance.onend = () => proceedToAnswerReveal(step.targetWord);
+                        }
                     }
                 }
             }
@@ -828,11 +836,19 @@ function setupAudioChoices(step) {
             updateStackUI();
         }
         
-        if (!window.speechSynthesis.speaking) {
+        const skipCb = document.getElementById('audio-skip-wrong');
+        const skipWrong = skipCb ? skipCb.checked : true;
+        
+        if (skipWrong) {
+            window.speechSynthesis.cancel();
             proceedToAnswerReveal(step.targetWord);
         } else {
-            if (currentUtterance) {
-                currentUtterance.onend = () => proceedToAnswerReveal(step.targetWord);
+            if (!window.speechSynthesis.speaking) {
+                proceedToAnswerReveal(step.targetWord);
+            } else {
+                if (currentUtterance) {
+                    currentUtterance.onend = () => proceedToAnswerReveal(step.targetWord);
+                }
             }
         }
     }, waitTime * 1000);
