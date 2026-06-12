@@ -345,7 +345,10 @@ function renderPlayList() {
                     <textarea id="play-target-${record.id}" style="width: 100%; height: 40px; font-size: 0.8rem; padding: 0.5rem; border: 1px solid var(--glass-border); border-radius: 4px; background: var(--bg-color); color: var(--text-color); margin-bottom: 0.5rem;">${record.target || ''}</textarea>
                     <label style="font-size: 0.8rem; font-weight: bold; margin-bottom: 0.25rem; display: block;">Content:</label>
                     <textarea id="play-content-text-${record.id}" style="width: 100%; height: 40px; font-size: 0.8rem; padding: 0.5rem; border: 1px solid var(--glass-border); border-radius: 4px; background: var(--bg-color); color: var(--text-color); margin-bottom: 0.5rem;">${record.content || ''}</textarea>
-                    <div style="text-align: right;">
+                    <div style="text-align: right; display: flex; gap: 0.5rem; justify-content: flex-end;">
+                        <button class="btn btn-primary" onclick="saveToEz2(${record.id}, this)" style="padding: 0.3rem 0.8rem; font-size: 0.8rem; background: #8b5cf6; border-color: #8b5cf6;">
+                            <i class="fas fa-file-import"></i> ez2へ保存
+                        </button>
                         <button class="btn btn-primary" onclick="savePlayTargetContent(${record.id}, this)" style="padding: 0.3rem 0.8rem; font-size: 0.8rem; background: #10b981; border-color: #10b981;">
                             <i class="fas fa-save"></i> テキスト保存
                         </button>
@@ -619,6 +622,50 @@ async function savePlayTargetContent(id, btn) {
     } catch (e) {
         console.error('Update error:', e);
         alert('保存に失敗しました。');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+async function saveToEz2(id, btn) {
+    if (!checkAuth()) return;
+    
+    const targetVal = document.getElementById(`play-target-${id}`).value.trim();
+    const contentVal = document.getElementById(`play-content-text-${id}`).value.trim();
+    
+    if (!contentVal || !targetVal) {
+        alert("ez2に保存するには、Content(Sentence)とTarget(Words to hide)の両方を入力してください。");
+        return;
+    }
+
+    btn.disabled = true;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ez2保存中...';
+    
+    try {
+        const payload = {
+            id: Date.now().toString(),
+            question: contentVal,
+            answer: targetVal
+        };
+        
+        const response = await fetch(`${API_BASE_URL}/fill_in_the_blank`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'user_id': AUTH_USER_ID,
+                'password': AUTH_PASSWORD
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        if (!response.ok) throw new Error('ez2 upload failed');
+        
+        alert('ez2へのデータ保存に成功しました！');
+    } catch (e) {
+        console.error('ez2 Update error:', e);
+        alert('ez2への保存に失敗しました。');
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;
