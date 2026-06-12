@@ -609,15 +609,20 @@ window.startAudioSequence = function() {
     
     sortedTargets.forEach(targetWord => {
         let newParts = [];
+        let replacedThisWord = false;
         qParts.forEach(part => {
             if (typeof part === 'string') {
-                const pieces = part.split(targetWord);
-                for (let i = 0; i < pieces.length; i++) {
-                    newParts.push(pieces[i]);
-                    if (i < pieces.length - 1) {
-                        newParts.push({ isTarget: true, word: targetWord });
-                        if (!foundTargets.includes(targetWord)) foundTargets.push(targetWord);
-                    }
+                if (!replacedThisWord && part.includes(targetWord)) {
+                    const index = part.indexOf(targetWord);
+                    const before = part.substring(0, index);
+                    const after = part.substring(index + targetWord.length);
+                    if (before) newParts.push(before);
+                    newParts.push({ isTarget: true, word: targetWord });
+                    if (after) newParts.push(after);
+                    replacedThisWord = true;
+                    if (!foundTargets.includes(targetWord)) foundTargets.push(targetWord);
+                } else {
+                    newParts.push(part);
                 }
             } else {
                 newParts.push(part);
