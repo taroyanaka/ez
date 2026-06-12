@@ -124,10 +124,14 @@ async function loadImage(event) {
             document.querySelectorAll('[id^="btn-update-"]').forEach(btn => btn.disabled = true);
             const editContainer = document.getElementById('edit-target-container');
             const editTextArea = document.getElementById('edit-target-textarea');
+            const editContentArea = document.getElementById('edit-content-textarea');
             const bulkImportTargets = document.getElementById('bulk-import-targets');
+            const bulkImportContents = document.getElementById('bulk-import-contents');
             if (editContainer) editContainer.style.display = 'none';
             if (editTextArea) editTextArea.value = '';
+            if (editContentArea) editContentArea.value = '';
             if (bulkImportTargets) bulkImportTargets.style.display = 'block';
+            if (bulkImportContents) bulkImportContents.style.display = 'block';
         }
     } else {
         // 新規作成から別の新規作成へ移る場合も念のためクリア
@@ -336,6 +340,17 @@ function renderPlayList() {
                 <p style="text-align: center; font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">
                     画像をタップして、その箇所の黒塗りの表示/非表示を切り替え
                 </p>
+                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--glass-border);">
+                    <label style="font-size: 0.8rem; font-weight: bold; margin-bottom: 0.25rem; display: block;">Target:</label>
+                    <textarea id="play-target-${record.id}" style="width: 100%; height: 40px; font-size: 0.8rem; padding: 0.5rem; border: 1px solid var(--glass-border); border-radius: 4px; background: var(--bg-color); color: var(--text-color); margin-bottom: 0.5rem;">${record.target || ''}</textarea>
+                    <label style="font-size: 0.8rem; font-weight: bold; margin-bottom: 0.25rem; display: block;">Content:</label>
+                    <textarea id="play-content-text-${record.id}" style="width: 100%; height: 40px; font-size: 0.8rem; padding: 0.5rem; border: 1px solid var(--glass-border); border-radius: 4px; background: var(--bg-color); color: var(--text-color); margin-bottom: 0.5rem;">${record.content || ''}</textarea>
+                    <div style="text-align: right;">
+                        <button class="btn btn-primary" onclick="savePlayTargetContent(${record.id}, this)" style="padding: 0.3rem 0.8rem; font-size: 0.8rem; background: #10b981; border-color: #10b981;">
+                            <i class="fas fa-save"></i> テキスト保存
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     `).join('');
@@ -567,6 +582,49 @@ function toggleAllMasks(id, btn) {
     }
 }
 
+async function savePlayTargetContent(id, btn) {
+    if (!checkAuth()) return;
+    
+    const targetVal = document.getElementById(`play-target-${id}`).value.trim();
+    const contentVal = document.getElementById(`play-content-text-${id}`).value.trim();
+    
+    btn.disabled = true;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 保存中...';
+    
+    try {
+        const formData = new FormData();
+        formData.append('target', targetVal);
+        formData.append('content', contentVal);
+        
+        const response = await fetch(`${API_BASE_URL}/fill_image/${id}`, {
+            method: 'PUT',
+            headers: {
+                'user_id': AUTH_USER_ID,
+                'password': AUTH_PASSWORD
+            },
+            body: formData
+        });
+        
+        if (!response.ok) throw new Error('Update failed');
+        const result = await response.json();
+        
+        const idx = savedRecords.findIndex(r => r.id === id);
+        if (idx !== -1) {
+            savedRecords[idx].target = result.item && result.item.target !== undefined ? result.item.target : targetVal;
+            savedRecords[idx].content = result.item && result.item.content !== undefined ? result.item.content : contentVal;
+        }
+        
+        alert('テキストを保存しました！');
+    } catch (e) {
+        console.error('Update error:', e);
+        alert('保存に失敗しました。');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
 // --- List Save Logic ---
 
 function dataURLtoBlob(dataurl) {
@@ -601,6 +659,7 @@ async function loadData() {
             original: item.original,
             mask: item.mask,
             target: item.target || '',
+            content: item.content || '',
             timestamp: new Date().toLocaleTimeString() // DBからロードした時刻として表示
         }));
         
@@ -684,10 +743,14 @@ async function handleBulkImport(event) {
             document.querySelectorAll('[id^="btn-update-"]').forEach(btn => btn.disabled = true);
             const editContainer = document.getElementById('edit-target-container');
             const editTextArea = document.getElementById('edit-target-textarea');
+            const editContentArea = document.getElementById('edit-content-textarea');
             const bulkImportTargets = document.getElementById('bulk-import-targets');
+            const bulkImportContents = document.getElementById('bulk-import-contents');
             if (editContainer) editContainer.style.display = 'none';
             if (editTextArea) editTextArea.value = '';
+            if (editContentArea) editContentArea.value = '';
             if (bulkImportTargets) bulkImportTargets.style.display = 'block';
+            if (bulkImportContents) bulkImportContents.style.display = 'block';
         }
     }
 
@@ -815,10 +878,14 @@ async function handleBulkImportOriginals(event) {
                 document.querySelectorAll('[id^="btn-update-"]').forEach(btn => btn.disabled = true);
                 const editContainer = document.getElementById('edit-target-container');
                 const editTextArea = document.getElementById('edit-target-textarea');
+                const editContentArea = document.getElementById('edit-content-textarea');
                 const bulkImportTargets = document.getElementById('bulk-import-targets');
+                const bulkImportContents = document.getElementById('bulk-import-contents');
                 if (editContainer) editContainer.style.display = 'none';
                 if (editTextArea) editTextArea.value = '';
+                if (editContentArea) editContentArea.value = '';
                 if (bulkImportTargets) bulkImportTargets.style.display = 'block';
+                if (bulkImportContents) bulkImportContents.style.display = 'block';
             }
         }
 
@@ -930,6 +997,10 @@ async function uploadTempRecord(tempId, buttonEl, skipRender = false) {
             const targetTextarea = document.getElementById('bulk-import-targets');
             if (targetTextarea && targetTextarea.value.trim() !== '') {
                 formData.append('target', targetTextarea.value.trim());
+            }
+            const contentTextarea = document.getElementById('bulk-import-contents');
+            if (contentTextarea && contentTextarea.value.trim() !== '') {
+                formData.append('content', contentTextarea.value.trim());
             }
         }
         
@@ -1139,13 +1210,19 @@ function editRecord(id) {
     
     const editContainer = document.getElementById('edit-target-container');
     const editTextArea = document.getElementById('edit-target-textarea');
+    const editContentArea = document.getElementById('edit-content-textarea');
     const bulkImportTargets = document.getElementById('bulk-import-targets');
-    if (editContainer && editTextArea) {
+    const bulkImportContents = document.getElementById('bulk-import-contents');
+    if (editContainer && editTextArea && editContentArea) {
         editContainer.style.display = 'block';
         editTextArea.value = record.target || '';
+        editContentArea.value = record.content || '';
     }
     if (bulkImportTargets) {
         bulkImportTargets.style.display = 'none';
+    }
+    if (bulkImportContents) {
+        bulkImportContents.style.display = 'none';
     }
     
     const origImg = new Image();
@@ -1220,6 +1297,10 @@ async function updateRecord(id, btn) {
         if (editTextArea && editTextArea.value !== undefined) {
             formData.append('target', editTextArea.value.trim());
         }
+        const editContentArea = document.getElementById('edit-content-textarea');
+        if (editContentArea && editContentArea.value !== undefined) {
+            formData.append('content', editContentArea.value.trim());
+        }
         
         const response = await fetch(`${API_BASE_URL}/fill_image/${id}`, {
             method: 'PUT',
@@ -1238,6 +1319,7 @@ async function updateRecord(id, btn) {
             if (idx !== -1) {
                 savedRecords[idx].mask = result.item.mask;
                 savedRecords[idx].target = result.item.target !== undefined ? result.item.target : (document.getElementById('edit-target-textarea') ? document.getElementById('edit-target-textarea').value.trim() : '');
+                savedRecords[idx].content = result.item.content !== undefined ? result.item.content : (document.getElementById('edit-content-textarea') ? document.getElementById('edit-content-textarea').value.trim() : '');
                 savedRecords[idx].timestamp = new Date().toLocaleTimeString();
             }
             
@@ -1250,10 +1332,14 @@ async function updateRecord(id, btn) {
             
             const editContainer = document.getElementById('edit-target-container');
             const editTextArea = document.getElementById('edit-target-textarea');
+            const editContentArea = document.getElementById('edit-content-textarea');
             const bulkImportTargets = document.getElementById('bulk-import-targets');
+            const bulkImportContents = document.getElementById('bulk-import-contents');
             if (editContainer) editContainer.style.display = 'none';
             if (editTextArea) editTextArea.value = '';
+            if (editContentArea) editContentArea.value = '';
             if (bulkImportTargets) bulkImportTargets.style.display = 'block';
+            if (bulkImportContents) bulkImportContents.style.display = 'block';
             
             renderDbList();
             renderPlayList();
