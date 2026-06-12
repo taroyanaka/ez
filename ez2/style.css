@@ -583,3 +583,48 @@ select.error {
   color: var(--bg-color);
   border-color: var(--primary);
 }
+
+/* Audio Learning Styles */
+.speaking-highlight {
+  background: rgba(255, 215, 0, 0.3);
+  color: #fff;
+  border-radius: 4px;
+  padding: 0 4px;
+  transition: background 0.2s ease;
+}
+
+.audio-choice-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid var(--card-border);
+  color: var(--text-color);
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  min-width: 150px;
+}
+
+.audio-choice-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.audio-choice-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.audio-choice-btn.correct {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.audio-choice-btn.incorrect {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: var(--error);
+  color: var(--error);
+}

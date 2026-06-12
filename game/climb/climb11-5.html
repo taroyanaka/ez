@@ -75,6 +75,12 @@
                 <button id="tab-btn-test" onclick="switchTab('test')" style="flex:1; padding:10px; border:none; background:#fff; cursor:pointer;">Test Launcher</button>
             </div>
             
+            <div style="display:flex; justify-content:space-between; gap:5px; flex-shrink:0; margin-bottom:15px;">
+                <button onclick="closeSettings()" style="flex:1; padding:10px; background:#ccc; border:none; border-radius:5px; cursor:pointer;">Cancel</button>
+                <button onclick="resetSettings()" style="flex:1; padding:10px; background:#ff9800; color:white; border:none; border-radius:5px; cursor:pointer;">Default</button>
+                <button onclick="saveSettings()" style="flex:1.5; padding:10px; background:#e91e63; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Save & Restart</button>
+            </div>
+            
             <div id="tab-content-settings" style="overflow-y:auto; flex-grow:1; margin-bottom:15px; padding-right:5px; display:block;">
                 <label>NPC Count:</label><br>
                 <input type="number" id="input-NPC_COUNT" min="0" step="1" style="width:100%; margin-bottom:10px; padding:5px; box-sizing:border-box;"><br>
@@ -125,12 +131,6 @@
                         <li>読み込み中...</li>
                     </ul>
                 </div>
-            </div>
-            
-            <div style="display:flex; justify-content:space-between; gap:5px; flex-shrink:0;">
-                <button onclick="closeSettings()" style="flex:1; padding:10px; background:#ccc; border:none; border-radius:5px; cursor:pointer;">Cancel</button>
-                <button onclick="resetSettings()" style="flex:1; padding:10px; background:#ff9800; color:white; border:none; border-radius:5px; cursor:pointer;">Default</button>
-                <button onclick="saveSettings()" style="flex:1.5; padding:10px; background:#e91e63; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Save & Restart</button>
             </div>
         </div>
     </div>

@@ -8,8 +8,10 @@ let currentLearningListIndex = 0;
 // DOM Elements
 const tabCreate = document.getElementById('tab-create');
 const tabLearn = document.getElementById('tab-learn');
+const tabAudioLearn = document.getElementById('tab-audio-learn');
 const sectionCreate = document.getElementById('section-create');
 const sectionLearn = document.getElementById('section-learn');
+const sectionAudioLearn = document.getElementById('section-audio-learn');
 const problemsList = document.getElementById('problems-list');
 const learningContainer = document.getElementById('learning-container');
 
@@ -80,17 +82,24 @@ async function loadProblems() {
 
 // Tab Switching
 function switchTab(tabId) {
+  tabCreate.classList.remove('active');
+  tabLearn.classList.remove('active');
+  if (tabAudioLearn) tabAudioLearn.classList.remove('active');
+  sectionCreate.classList.remove('active');
+  sectionLearn.classList.remove('active');
+  if (sectionAudioLearn) sectionAudioLearn.classList.remove('active');
+
   if (tabId === 'create') {
     tabCreate.classList.add('active');
-    tabLearn.classList.remove('active');
     sectionCreate.classList.add('active');
-    sectionLearn.classList.remove('active');
-  } else {
-    tabCreate.classList.remove('active');
+  } else if (tabId === 'learn') {
     tabLearn.classList.add('active');
-    sectionCreate.classList.remove('active');
     sectionLearn.classList.add('active');
     renderLearningMode();
+  } else if (tabId === 'audio-learn') {
+    if (tabAudioLearn) tabAudioLearn.classList.add('active');
+    if (sectionAudioLearn) sectionAudioLearn.classList.add('active');
+    initAudioLearning();
   }
 }
 
@@ -543,6 +552,305 @@ window.apiDelete = async function () {
     } catch (err) { alert(err); }
   }
 };
+
+// --- Audio Learning Mode Logic ---
+let audioSequence = [];
+let currentAudioIndex = 0;
+let currentUtterance = null;
+let audioTimer = null;
+
+window.initAudioLearning = function() {
+    window.stopAudioSequence(); // Stop any playing audio
+    const selector = document.getElementById('audio-problem-select');
+    if (!selector) return;
+
+    if (selector.options.length !== problems.length) {
+        const currentSelection = selector.value;
+        selector.innerHTML = problems.map((p, index) => {
+            const title = p.question.trim().substring(0, 10).replace(/\n/g, ' ') + (p.question.length > 10 ? '...' : '');
+            return `<option value="${index}">${index + 1}. ${title}</option>`;
+        }).join('');
+        if (currentSelection !== "" && parseInt(currentSelection) < problems.length) {
+            selector.value = currentSelection;
+        } else if (problems.length > 0) {
+            selector.value = "0";
+        }
+    }
+    
+    document.getElementById('audio-learning-container').style.display = 'none';
+    document.getElementById('audio-error-msg').style.display = 'none';
+};
+
+window.startAudioSequence = function() {
+    window.stopAudioSequence();
+    
+    const selector = document.getElementById('audio-problem-select');
+    if (!selector) return;
+    const selectedIndex = parseInt(selector.value);
+    if (isNaN(selectedIndex)) return;
+    
+    const p = problems[selectedIndex];
+    if (!p) return;
+    
+    const lists = p.answer.split('|||');
+    const targets = lists[0].split('\n').map(w => w.trim()).filter(w => w);
+    
+    if (targets.length < 3) {
+        const errorEl = document.getElementById('audio-error-msg');
+        errorEl.textContent = 'エラー: ダミー生成のため、リストには3つ以上の単語が必要です。問題作成画面で修正してください。';
+        errorEl.style.display = 'block';
+        return;
+    }
+    
+    const sortedTargets = [...targets].sort((a, b) => b.length - a.length);
+    
+    let qParts = [p.question];
+    let foundTargets = [];
+    
+    sortedTargets.forEach(targetWord => {
+        let newParts = [];
+        qParts.forEach(part => {
+            if (typeof part === 'string') {
+                const pieces = part.split(targetWord);
+                for (let i = 0; i < pieces.length; i++) {
+                    newParts.push(pieces[i]);
+                    if (i < pieces.length - 1) {
+                        newParts.push({ isTarget: true, word: targetWord });
+                        if (!foundTargets.includes(targetWord)) foundTargets.push(targetWord);
+                    }
+                }
+            } else {
+                newParts.push(part);
+            }
+        });
+        qParts = newParts;
+    });
+    
+    if (foundTargets.length < 3) {
+        const errorEl = document.getElementById('audio-error-msg');
+        errorEl.textContent = 'エラー: 文章の中に適用できる単語が3つ以上見つかりません。';
+        errorEl.style.display = 'block';
+        return;
+    }
+    
+    audioSequence = [];
+    let currentText = "";
+    
+    qParts.forEach(part => {
+        if (typeof part === 'string') {
+            currentText += part;
+        } else if (part.isTarget) {
+            audioSequence.push({
+                textBlock: currentText,
+                targetWord: part.word,
+                allTargets: foundTargets
+            });
+            currentText = "";
+        }
+    });
+    if (currentText) {
+        audioSequence.push({ textBlock: currentText, targetWord: null });
+    }
+    
+    document.getElementById('audio-error-msg').style.display = 'none';
+    document.getElementById('audio-learning-container').style.display = 'flex';
+    document.getElementById('audio-play-btn').style.display = 'none';
+    document.getElementById('audio-stop-btn').style.display = 'inline-block';
+    
+    currentAudioIndex = 0;
+    renderAudioUI();
+    playCurrentAudioStep();
+};
+
+window.stopAudioSequence = function() {
+    window.speechSynthesis.cancel();
+    clearTimeout(audioTimer);
+    
+    const playBtn = document.getElementById('audio-play-btn');
+    const stopBtn = document.getElementById('audio-stop-btn');
+    if (playBtn) playBtn.style.display = 'inline-block';
+    if (stopBtn) stopBtn.style.display = 'none';
+    
+    const timerBar = document.getElementById('audio-timer-bar');
+    if (timerBar) {
+        timerBar.style.transition = 'none';
+        timerBar.style.width = '0%';
+    }
+};
+
+function renderAudioUI() {
+    const textDisplay = document.getElementById('audio-text-display');
+    if (!textDisplay) return;
+    let html = "";
+    
+    audioSequence.forEach((step, index) => {
+        if (index === currentAudioIndex) {
+            html += `<span class="speaking-highlight" id="audio-hl-${index}">${step.textBlock}</span>`;
+            if (step.targetWord) {
+                html += `<span id="audio-blank-${index}" style="color: var(--primary);"> [___] </span>`;
+            }
+        } else if (index < currentAudioIndex) {
+            html += `<span>${step.textBlock}</span>`;
+            if (step.targetWord) {
+                html += `<span class="solved-word" style="color: var(--success); border-bottom-color: var(--success);">${step.targetWord}</span>`;
+            }
+        } else {
+            html += `<span style="opacity: 0.5;">${step.textBlock}</span>`;
+            if (step.targetWord) {
+                html += `<span style="opacity: 0.5;"> [___] </span>`;
+            }
+        }
+    });
+    textDisplay.innerHTML = html;
+}
+
+function playCurrentAudioStep() {
+    if (currentAudioIndex >= audioSequence.length) {
+        window.stopAudioSequence();
+        return;
+    }
+    
+    renderAudioUI();
+    
+    const step = audioSequence[currentAudioIndex];
+    const lang = document.getElementById('audio-lang').value;
+    const speed = parseFloat(document.getElementById('audio-speed').value);
+    
+    if (step.textBlock.trim()) {
+        currentUtterance = new SpeechSynthesisUtterance(step.textBlock);
+        currentUtterance.lang = lang;
+        currentUtterance.rate = speed;
+        
+        currentUtterance.onend = () => {
+            if (!step.targetWord) {
+                currentAudioIndex++;
+                playCurrentAudioStep();
+            }
+        };
+        window.speechSynthesis.speak(currentUtterance);
+    } else if (!step.targetWord) {
+        currentAudioIndex++;
+        playCurrentAudioStep();
+        return;
+    }
+    
+    if (step.targetWord) {
+        setupAudioChoices(step);
+    } else {
+        document.getElementById('audio-choices-container').innerHTML = '';
+    }
+}
+
+function setupAudioChoices(step) {
+    const choicesContainer = document.getElementById('audio-choices-container');
+    const waitTime = parseFloat(document.getElementById('audio-wait').value) || 3;
+    
+    const validDistractors = step.allTargets.filter(w => w !== step.targetWord);
+    for (let i = validDistractors.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [validDistractors[i], validDistractors[j]] = [validDistractors[j], validDistractors[i]];
+    }
+    const chosenDistractors = validDistractors.slice(0, 2);
+    const options = [step.targetWord, ...chosenDistractors];
+    for (let i = options.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [options[i], options[j]] = [options[j], options[i]];
+    }
+    
+    let isAnswered = false;
+    let timerExpired = false;
+    
+    choicesContainer.innerHTML = options.map(opt => `
+        <button class="audio-choice-btn" data-val="${opt.replace(/"/g, "&quot;")}">
+            ${opt}
+        </button>
+    `).join('');
+    
+    const btns = choicesContainer.querySelectorAll('.audio-choice-btn');
+    btns.forEach(btn => {
+        btn.onclick = () => {
+            if (isAnswered || timerExpired) return;
+            isAnswered = true;
+            
+            clearTimeout(audioTimer);
+            const val = btn.getAttribute('data-val');
+            
+            btns.forEach(b => b.disabled = true);
+            
+            if (val === step.targetWord) {
+                btn.classList.add('correct');
+                window.speechSynthesis.cancel();
+                proceedToAnswerReveal(step.targetWord);
+            } else {
+                btn.classList.add('incorrect');
+                const correctBtn = Array.from(btns).find(b => b.getAttribute('data-val') === step.targetWord);
+                if (correctBtn) correctBtn.classList.add('correct');
+                
+                if (!stack.some(item => item.question === step.targetWord)) {
+                    stack.push({ question: step.targetWord, answer: "" });
+                    updateStackUI();
+                }
+                
+                if (!window.speechSynthesis.speaking) {
+                    proceedToAnswerReveal(step.targetWord);
+                } else {
+                    if (currentUtterance) {
+                        currentUtterance.onend = () => proceedToAnswerReveal(step.targetWord);
+                    }
+                }
+            }
+        };
+    });
+    
+    const timerBar = document.getElementById('audio-timer-bar');
+    timerBar.style.transition = 'none';
+    timerBar.style.width = '100%';
+    void timerBar.offsetWidth; // reflow
+    
+    timerBar.style.transition = `width ${waitTime}s linear`;
+    timerBar.style.width = '0%';
+    
+    audioTimer = setTimeout(() => {
+        if (isAnswered) return;
+        timerExpired = true;
+        btns.forEach(b => b.disabled = true);
+        
+        const correctBtn = Array.from(btns).find(b => b.getAttribute('data-val') === step.targetWord);
+        if (correctBtn) correctBtn.classList.add('correct');
+        
+        if (!stack.some(item => item.question === step.targetWord)) {
+            stack.push({ question: step.targetWord, answer: "" });
+            updateStackUI();
+        }
+        
+        if (!window.speechSynthesis.speaking) {
+            proceedToAnswerReveal(step.targetWord);
+        } else {
+            if (currentUtterance) {
+                currentUtterance.onend = () => proceedToAnswerReveal(step.targetWord);
+            }
+        }
+    }, waitTime * 1000);
+}
+
+function proceedToAnswerReveal(targetWord) {
+    const blankEl = document.getElementById(`audio-blank-${currentAudioIndex}`);
+    if (blankEl) {
+        blankEl.innerHTML = `<span class="solved-word">${targetWord}</span>`;
+    }
+    
+    const lang = document.getElementById('audio-lang').value;
+    const speed = parseFloat(document.getElementById('audio-speed').value);
+    
+    const ansUtterance = new SpeechSynthesisUtterance(targetWord);
+    ansUtterance.lang = lang;
+    ansUtterance.rate = speed;
+    ansUtterance.onend = () => {
+        currentAudioIndex++;
+        setTimeout(playCurrentAudioStep, 300);
+    };
+    window.speechSynthesis.speak(ansUtterance);
+}
 
 // --- Stack Logic ---
 

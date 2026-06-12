@@ -2,23 +2,32 @@
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Fetch Stats from LocalStorage
     function getStats() {
-        const defaultStats = {
-            play: { duration: 0, taps: 0 },
-            edit: { duration: 0, taps: 0 }
-        };
         try {
             const raw = localStorage.getItem('ez_activity_logs');
             if (raw) {
-                const parsed = JSON.parse(raw);
-                return {
-                    play: { ...defaultStats.play, ...parsed.play },
-                    edit: { ...defaultStats.edit, ...parsed.edit }
-                };
+                let parsed = JSON.parse(raw);
+                if (parsed.play && typeof parsed.play.duration === 'number') {
+                    parsed = { global: parsed };
+                    localStorage.setItem('ez_activity_logs', JSON.stringify(parsed));
+                }
+                return parsed;
             }
         } catch (e) {
             console.error('Error reading logs:', e);
         }
-        return defaultStats;
+        return {};
+    }
+
+    function getStatsForService(serviceKey) {
+        const stats = getStats();
+        const defaultServiceStats = { play: { duration: 0, taps: 0 }, edit: { duration: 0, taps: 0 } };
+        if (stats[serviceKey]) {
+            return {
+                play: { ...defaultServiceStats.play, ...stats[serviceKey].play },
+                edit: { ...defaultServiceStats.edit, ...stats[serviceKey].edit }
+            };
+        }
+        return defaultServiceStats;
     }
 
     // 2. Formatting Helpers
@@ -42,8 +51,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let timeChartInstance = null;
     let tapsChartInstance = null;
 
-    function renderDashboard() {
-        const stats = getStats();
+    function renderDashboard(serviceKey = 'global') {
+        const stats = getStatsForService(serviceKey);
 
         // 3.1. Compute Cards
         const totalDuration = stats.play.duration + stats.edit.duration;
@@ -232,14 +241,25 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-reset').addEventListener('click', () => {
         if (confirm('すべてのログデータを完全に削除しますか？\n（この操作は元に戻せません）')) {
             const clearedStats = {
-                play: { duration: 0, taps: 0 },
-                edit: { duration: 0, taps: 0 }
+                global: { play: { duration: 0, taps: 0 }, edit: { duration: 0, taps: 0 } }
             };
             localStorage.setItem('ez_activity_logs', JSON.stringify(clearedStats));
-            renderDashboard();
+            const activeService = document.getElementById('service-selector') ? document.getElementById('service-selector').value : 'global';
+            renderDashboard(activeService);
         }
     });
 
+    const serviceSelector = document.getElementById('service-selector');
+    if (serviceSelector) {
+        serviceSelector.addEventListener('change', (e) => {
+            renderDashboard(e.target.value);
+        });
+    }
+
     // 6. Initial Render
-    renderDashboard();
+    if (serviceSelector) {
+        renderDashboard(serviceSelector.value);
+    } else {
+        renderDashboard('global');
+    }
 });

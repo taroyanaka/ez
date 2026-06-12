@@ -12,21 +12,19 @@ let AUTH_PASSWORD = localStorage.getItem('password') || '';
     const STORAGE_KEY = 'ez_activity_logs';
 
     function getStats() {
-        const defaultStats = {
-            play: { duration: 0, taps: 0 },
-            edit: { duration: 0, taps: 0 }
-        };
         try {
             const raw = localStorage.getItem(STORAGE_KEY);
             if (raw) {
-                const parsed = JSON.parse(raw);
-                return {
-                    play: { ...defaultStats.play, ...parsed.play },
-                    edit: { ...defaultStats.edit, ...parsed.edit }
-                };
+                let parsed = JSON.parse(raw);
+                if (parsed.play && typeof parsed.play.duration === 'number') {
+                    // Migrate legacy format
+                    parsed = { global: parsed };
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+                }
+                return parsed;
             }
         } catch (e) {}
-        return defaultStats;
+        return { global: { play: { duration: 0, taps: 0 }, edit: { duration: 0, taps: 0 } } };
     }
 
     function saveStats(stats) {
@@ -78,21 +76,56 @@ let AUTH_PASSWORD = localStorage.getItem('password') || '';
         return 'play';
     }
 
+    function getCurrentService() {
+        const path = window.location.pathname.toLowerCase();
+        const match = path.match(/\/(ez\d+|game)\//);
+        if (match) return match[1];
+        
+        const segments = path.split('/').filter(s => s && s !== 'index.html' && s !== 'ez');
+        if (segments.length > 0 && segments[0].startsWith('ez')) {
+            return segments[0];
+        }
+        return 'global'; // fallback
+    }
+
     let currentMode = getCurrentMode();
     let modeStartTime = Date.now();
 
+    function initServiceStats(stats, service) {
+        if (!stats[service]) {
+            stats[service] = { play: { duration: 0, taps: 0 }, edit: { duration: 0, taps: 0 } };
+        }
+    }
+
     function recordTap() {
         const mode = getCurrentMode();
+        const service = getCurrentService();
         const stats = getStats();
-        stats[mode].taps = (stats[mode].taps || 0) + 1;
+        
+        initServiceStats(stats, 'global');
+        initServiceStats(stats, service);
+
+        stats['global'][mode].taps = (stats['global'][mode].taps || 0) + 1;
+        if (service !== 'global') {
+            stats[service][mode].taps = (stats[service][mode].taps || 0) + 1;
+        }
         saveStats(stats);
     }
 
     function flushDuration() {
         const durationMs = Date.now() - modeStartTime;
         if (durationMs > 200) { // minimum threshold of 0.2s
+            const durationSec = Math.round(durationMs / 1000);
+            const service = getCurrentService();
             const stats = getStats();
-            stats[currentMode].duration = (stats[currentMode].duration || 0) + Math.round(durationMs / 1000);
+            
+            initServiceStats(stats, 'global');
+            initServiceStats(stats, service);
+
+            stats['global'][currentMode].duration = (stats['global'][currentMode].duration || 0) + durationSec;
+            if (service !== 'global') {
+                stats[service][currentMode].duration = (stats[service][currentMode].duration || 0) + durationSec;
+            }
             saveStats(stats);
         }
         modeStartTime = Date.now();

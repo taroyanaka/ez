@@ -22,6 +22,7 @@
       <nav class="tabs">
         <button id="tab-create" type="button" class="tab-btn active" onclick="event.preventDefault(); switchTab('create')">Problem Creation</button>
         <button id="tab-learn" type="button" class="tab-btn" onclick="event.preventDefault(); switchTab('learn')">Learning Mode</button>
+        <button id="tab-audio-learn" type="button" class="tab-btn" onclick="event.preventDefault(); switchTab('audio-learn')">Audio Learning</button>
       </nav>
     </header>
 
@@ -102,6 +103,49 @@
           <div id="learning-container">
 
             <!-- Learning interface injected here -->
+          </div>
+        </div>
+      </section>
+
+      <!-- AUDIO LEARNING MODE TAB -->
+      <section id="section-audio-learn" class="tab-content">
+        <div class="card learn-card">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+            <h2 style="margin: 0;">Audio Learning Mode</h2>
+            <div class="audio-settings" style="display: flex; gap: 1rem; flex-wrap: wrap; background: rgba(0,0,0,0.2); padding: 0.75rem; border-radius: 8px;">
+              <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary);">
+                言語:
+                <select id="audio-lang" style="padding: 0.3rem; border-radius: 4px; background: rgba(255,255,255,0.1); color: #fff; border: 1px solid var(--glass-border);">
+                  <option value="ja-JP">日本語 (ja)</option>
+                  <option value="en-US">English (en)</option>
+                </select>
+              </label>
+              <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary);">
+                速度:
+                <input type="range" id="audio-speed" min="0.5" max="2.0" step="0.1" value="1.0" style="width: 80px;" oninput="document.getElementById('audio-speed-val').textContent = this.value + 'x'">
+                <span id="audio-speed-val">1.0x</span>
+              </label>
+              <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary);">
+                待機(秒):
+                <input type="number" id="audio-wait" min="1" max="10" value="3" style="width: 50px; padding: 0.3rem; border-radius: 4px; background: rgba(255,255,255,0.1); color: #fff; border: 1px solid var(--glass-border);">
+              </label>
+            </div>
+          </div>
+          
+          <div id="audio-problem-selector-container" style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem; background: rgba(255,255,255,0.05); padding: 0.75rem; border-radius: 12px; border: 1px solid var(--glass-border);">
+            <label for="audio-problem-select" style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">問題を選択:</label>
+            <select id="audio-problem-select" onchange="initAudioLearning()" style="flex: 1; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--card-border); background: rgba(0,0,0,0.3); color: var(--text-color); cursor: pointer; outline: none;">
+            </select>
+            <button class="primary-btn" id="audio-play-btn" onclick="startAudioSequence()" style="padding: 0.5rem 1.5rem;">Play</button>
+            <button class="secondary-btn" id="audio-stop-btn" onclick="stopAudioSequence()" style="padding: 0.5rem 1rem; display: none; background: rgba(239, 68, 68, 0.2); color: #fca5a5;">Stop</button>
+          </div>
+
+          <div id="audio-error-msg" style="color: #ef4444; font-size: 0.9rem; margin-bottom: 1rem; display: none; padding: 1rem; background: rgba(239, 68, 68, 0.1); border-radius: 8px;"></div>
+
+          <div id="audio-learning-container" style="display: none; flex-direction: column; gap: 1.5rem;">
+             <div id="audio-text-display" class="learning-item" style="font-size: 1.1rem; line-height: 2.2; text-align: left;"></div>
+             <div id="audio-timer-bar" style="height: 4px; background: var(--primary); width: 0%; transition: width 0.1s linear; border-radius: 2px;"></div>
+             <div id="audio-choices-container" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;"></div>
           </div>
         </div>
       </section>
