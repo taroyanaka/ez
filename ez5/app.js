@@ -646,7 +646,7 @@ async function saveToEz2(id, btn) {
     try {
         const payload = {
             id: Date.now().toString(),
-            question: contentVal,
+            question: contentVal.replace(/[\r\n]+/g, ''),
             answer: targetVal
         };
         
