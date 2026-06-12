@@ -815,15 +815,11 @@ function setupAudioChoices(step) {
         };
     });
     
-    const timerBar = document.getElementById('audio-timer-bar');
-    timerBar.style.transition = 'none';
-    timerBar.style.width = '100%';
-    void timerBar.offsetWidth; // reflow
-    
-    timerBar.style.transition = `width ${waitTime}s linear`;
-    timerBar.style.width = '0%';
-    
-    audioTimer = setTimeout(() => {
+    const waitCharsInput = document.getElementById('audio-wait-chars');
+    const waitChars = waitCharsInput ? (parseInt(waitCharsInput.value, 10) || 3) : 3;
+    const isShortText = step.textBlock.length <= waitChars;
+
+    const timeoutLogic = () => {
         if (isAnswered) return;
         timerExpired = true;
         btns.forEach(b => b.disabled = true);
@@ -851,7 +847,26 @@ function setupAudioChoices(step) {
                 }
             }
         }
-    }, waitTime * 1000);
+    };
+
+    const timerBar = document.getElementById('audio-timer-bar');
+    timerBar.style.transition = 'none';
+    timerBar.style.width = '100%';
+    void timerBar.offsetWidth; // reflow
+
+    if (isShortText) {
+        timerBar.style.transition = `width ${waitTime}s linear`;
+        timerBar.style.width = '0%';
+        audioTimer = setTimeout(timeoutLogic, waitTime * 1000);
+    } else {
+        if (currentUtterance) {
+            currentUtterance.onend = () => {
+                timeoutLogic();
+            };
+        } else {
+            timeoutLogic();
+        }
+    }
 }
 
 function proceedToAnswerReveal(targetWord) {
