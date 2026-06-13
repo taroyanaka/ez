@@ -72,8 +72,12 @@ function switchTab(tab) {
     
     if (tab === 'play') {
         renderPlayList();
+        toggleFixedUI(false);
     } else if (tab === 'create') {
         renderDbList();
+        if (document.getElementById('create-canvas-container').style.display === 'block') {
+            toggleFixedUI(true);
+        }
     }
 }
 
@@ -164,6 +168,8 @@ function loadSingleImage(file) {
 function setupCreateCanvas() {
     document.getElementById('create-controls').style.display = 'flex';
     document.getElementById('create-canvas-container').style.display = 'block';
+    toggleFixedUI(true);
+    initCamera();
     
     // キャンバスのサイズを元画像と全く同じピクセル数に設定
     createCanvas.width = createOriginalImg.width;
@@ -1283,6 +1289,8 @@ function editRecord(id) {
         
         document.getElementById('create-controls').style.display = 'flex';
         document.getElementById('create-canvas-container').style.display = 'block';
+        toggleFixedUI(true);
+        initCamera();
         
         createCanvas.width = origImg.width;
         createCanvas.height = origImg.height;
@@ -1375,6 +1383,7 @@ async function updateRecord(id, btn) {
             // 編集用キャンバスとコントロールを非表示にする
             document.getElementById('create-controls').style.display = 'none';
             document.getElementById('create-canvas-container').style.display = 'none';
+            toggleFixedUI(false);
             currentEditingId = null;
             
             const editContainer = document.getElementById('edit-target-container');
@@ -1401,3 +1410,176 @@ async function updateRecord(id, btn) {
         }
     }
 }
+
+// ==========================================
+// 固定UIによる全方位スクロール・ズームシステム
+// ==========================================
+
+const createWorld = document.getElementById('create-world');
+const joystickZone = document.getElementById('joystick-zone');
+const joystickKnob = document.getElementById('joystick-knob');
+const zoomSlider = document.getElementById('zoom-slider');
+const btnZoomIn = document.getElementById('btn-zoom-in');
+const btnZoomOut = document.getElementById('btn-zoom-out');
+
+let camScale = 1.0;
+let camPosX = 0;
+let camPosY = 0;
+let isJoyDragging = false;
+let joyX = 0;
+let joyY = 0;
+const joyMaxRadius = 35;
+let joyTouchId = null;
+
+function toggleFixedUI(show) {
+    if (joystickZone) joystickZone.style.display = show ? 'block' : 'none';
+    if (zoomSlider) document.getElementById('zoom-ui').style.display = show ? 'flex' : 'none';
+}
+
+function updateCameraTransform() {
+    if (createWorld) {
+        createWorld.style.transform = `translate(${camPosX}px, ${camPosY}px) scale(${camScale})`;
+    }
+}
+
+function initCamera() {
+    camScale = 1.0;
+    if (zoomSlider) zoomSlider.value = camScale;
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+    // 初期状態では少し余白をもたせるか、左上に配置するか。
+    // キャンバスが大きい場合、中央に置くため初期位置を調整
+    if (createCanvas && createCanvas.width > 0) {
+        camPosX = cx - (createCanvas.width / 2) * camScale;
+        camPosY = cy - (createCanvas.height / 2) * camScale;
+    } else {
+        camPosX = 0;
+        camPosY = 0;
+    }
+    updateCameraTransform();
+}
+
+window.addEventListener('resize', () => {
+    if (document.getElementById('create-canvas-container').style.display === 'block') {
+        // initCamera(); // リサイズ時にリセットすると編集中に鬱陶しい場合はコメントアウト
+    }
+});
+
+function setZoom(newScale) {
+    newScale = Math.max(0.1, Math.min(10.0, newScale)); // 倍率範囲拡張
+    if (newScale === camScale) return;
+
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+
+    const worldCx = (cx - camPosX) / camScale;
+    const worldCy = (cy - camPosY) / camScale;
+
+    camScale = newScale;
+    
+    camPosX = cx - worldCx * camScale;
+    camPosY = cy - worldCy * camScale;
+    
+    if (zoomSlider) zoomSlider.value = camScale;
+    updateCameraTransform();
+}
+
+if (zoomSlider) {
+    zoomSlider.addEventListener('input', (e) => setZoom(parseFloat(e.target.value)));
+    btnZoomIn.addEventListener('click', () => setZoom(camScale + 0.5));
+    btnZoomOut.addEventListener('click', () => setZoom(camScale - 0.5));
+}
+
+function handleJoyStart(e) {
+    e.preventDefault();
+    if (isJoyDragging) return;
+    const touch = e.changedTouches ? e.changedTouches[0] : e;
+    isJoyDragging = true;
+    joyTouchId = touch.identifier;
+    joystickKnob.style.transition = 'none';
+    updateJoyPos(touch.clientX, touch.clientY);
+}
+
+function handleJoyMove(e) {
+    if (!isJoyDragging) return;
+    e.preventDefault();
+    let touch;
+    if (e.changedTouches) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === joyTouchId) {
+                touch = e.changedTouches[i];
+                break;
+            }
+        }
+        if (!touch) return;
+    } else {
+        touch = e;
+    }
+    updateJoyPos(touch.clientX, touch.clientY);
+}
+
+function handleJoyEnd(e) {
+    if (!isJoyDragging) return;
+    e.preventDefault();
+    if (e.changedTouches) {
+        let found = false;
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === joyTouchId) {
+                found = true; break;
+            }
+        }
+        if (!found) return;
+    }
+    
+    isJoyDragging = false;
+    joyTouchId = null;
+    joyX = 0;
+    joyY = 0;
+    
+    joystickKnob.style.transition = 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+    joystickKnob.style.transform = `translate(-50%, -50%)`;
+}
+
+function updateJoyPos(clientX, clientY) {
+    const rect = joystickZone.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    let dx = clientX - centerX;
+    let dy = clientY - centerY;
+    
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    if (distance > joyMaxRadius) {
+        const angle = Math.atan2(dy, dx);
+        dx = Math.cos(angle) * joyMaxRadius;
+        dy = Math.sin(angle) * joyMaxRadius;
+    }
+    
+    joystickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+    
+    joyX = dx / joyMaxRadius;
+    joyY = dy / joyMaxRadius;
+}
+
+if (joystickZone) {
+    joystickZone.addEventListener('touchstart', handleJoyStart, {passive: false});
+    window.addEventListener('touchmove', handleJoyMove, {passive: false});
+    window.addEventListener('touchend', handleJoyEnd, {passive: false});
+    window.addEventListener('touchcancel', handleJoyEnd, {passive: false});
+
+    joystickZone.addEventListener('mousedown', handleJoyStart);
+    window.addEventListener('mousemove', handleJoyMove);
+    window.addEventListener('mouseup', handleJoyEnd);
+}
+
+const baseSpeed = 15;
+function animateCamera() {
+    if (isJoyDragging && (joyX !== 0 || joyY !== 0)) {
+        camPosX -= joyX * baseSpeed;
+        camPosY -= joyY * baseSpeed;
+        updateCameraTransform();
+    }
+    requestAnimationFrame(animateCamera);
+}
+animateCamera();

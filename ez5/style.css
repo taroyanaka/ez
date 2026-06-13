@@ -125,7 +125,7 @@ h2 { margin-bottom: 0.5rem; }
 
 .floating-toolbar {
     position: fixed;
-    bottom: 20px;
+    top: 80px;
     left: 50%;
     transform: translateX(-50%);
     background: rgba(15, 23, 42, 0.85);
@@ -195,8 +195,83 @@ h2 { margin-bottom: 0.5rem; }
     overflow: hidden;
     background: #000;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    /* Removed touch-action: none to allow multi-touch zoom and pan */
+    touch-action: none;
+    overscroll-behavior: none;
 }
+
+/* 画面下部の固定UIコンテナ */
+.fixed-ui {
+    position: fixed;
+    bottom: 30px;
+    z-index: 1000;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(8px);
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* 左下：ジョイスティック UI */
+#joystick-zone {
+    left: 30px;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+}
+
+#joystick-knob {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 50px;
+    height: 50px;
+    background: #1e293b;
+    border: 2px solid var(--accent-color);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: inset 0 2px 5px rgba(255,255,255,0.1), 0 4px 10px rgba(0,0,0,0.4);
+    pointer-events: none; /* タッチイベントは外枠で拾う */
+}
+
+/* 右下：ズームスライダー UI */
+#zoom-ui {
+    right: 30px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 15px;
+    border-radius: 30px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+}
+
+#zoom-ui button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: var(--accent-color);
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    touch-action: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+#zoom-ui button:active {
+    transform: scale(0.95);
+}
+
+#zoom-ui input[type="range"] {
+    width: 120px;
+    accent-color: var(--accent-color);
+}
+
 
 @media (max-width: 600px) {
     nav {
@@ -238,7 +313,8 @@ h2 { margin-bottom: 0.5rem; }
         flex-wrap: wrap !important;
         justify-content: center;
         align-items: center;
-        bottom: 10px;
+        top: 130px;
+        bottom: auto;
         padding: 8px 12px;
         gap: 0.25rem;
         border-radius: 12px;

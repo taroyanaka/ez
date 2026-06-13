@@ -102,8 +102,10 @@
             </div>
 
             <div class="canvas-container" id="create-canvas-container" style="display: none;">
-                <img id="create-bg-img" style="display:none; position: absolute; top:0; left:0; width:100%; height:100%; object-fit:contain; z-index: 1;">
-                <canvas id="create-canvas" style="position: relative; z-index: 2; cursor: crosshair;"></canvas>
+                <div id="create-world" style="position: relative; width: 100%; height: 100%; transform-origin: 0 0;">
+                    <img id="create-bg-img" style="display:none; position: absolute; top:0; left:0; width:100%; height:100%; object-fit:contain; z-index: 1;">
+                    <canvas id="create-canvas" style="position: relative; z-index: 2; cursor: crosshair;"></canvas>
+                </div>
             </div>
 
             <div id="saved-list-container" style="margin-top: 2rem;">
@@ -120,6 +122,17 @@
                 <div id="db-list" style="display: flex; flex-direction: column; gap: 1rem;">
                     <!-- DB records will appear here -->
                 </div>
+            </div>
+
+            <!-- Fixed UI for Pan and Zoom -->
+            <div id="joystick-zone" class="fixed-ui" style="display: none;">
+                <div id="joystick-knob"></div>
+            </div>
+
+            <div id="zoom-ui" class="fixed-ui" style="display: none;">
+                <button id="btn-zoom-out">−</button>
+                <input type="range" id="zoom-slider" min="1" max="5" step="0.1" value="1">
+                <button id="btn-zoom-in">+</button>
             </div>
         </div>
     </main>
