@@ -1445,17 +1445,11 @@ function updateCameraTransform() {
 function initCamera() {
     camScale = 1.0;
     if (zoomSlider) zoomSlider.value = camScale;
-    const cx = window.innerWidth / 2;
-    const cy = window.innerHeight / 2;
-    // 初期状態では少し余白をもたせるか、左上に配置するか。
-    // キャンバスが大きい場合、中央に置くため初期位置を調整
-    if (createCanvas && createCanvas.width > 0) {
-        camPosX = cx - (createCanvas.width / 2) * camScale;
-        camPosY = cy - (createCanvas.height / 2) * camScale;
-    } else {
-        camPosX = 0;
-        camPosY = 0;
-    }
+    
+    // 初期状態はコンテナの左上ピッタリ（以前と同じ表示状態）にする
+    camPosX = 0;
+    camPosY = 0;
+    
     updateCameraTransform();
 }
 
@@ -1466,11 +1460,14 @@ window.addEventListener('resize', () => {
 });
 
 function setZoom(newScale) {
-    newScale = Math.max(0.1, Math.min(10.0, newScale)); // 倍率範囲拡張
+    newScale = Math.max(1.0, Math.min(10.0, newScale)); // 倍率の下限を1.0に固定（コンテナより小さくならないように）
     if (newScale === camScale) return;
 
-    const cx = window.innerWidth / 2;
-    const cy = window.innerHeight / 2;
+    // ズームの中心をキャンバスコンテナの中心にする
+    const container = document.getElementById('create-canvas-container');
+    const rect = container.getBoundingClientRect();
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
 
     const worldCx = (cx - camPosX) / camScale;
     const worldCy = (cy - camPosY) / camScale;
@@ -1479,6 +1476,12 @@ function setZoom(newScale) {
     
     camPosX = cx - worldCx * camScale;
     camPosY = cy - worldCy * camScale;
+    
+    // スケールが1.0の時は位置を0,0にリセットしてピッタリ収める
+    if (camScale === 1.0) {
+        camPosX = 0;
+        camPosY = 0;
+    }
     
     if (zoomSlider) zoomSlider.value = camScale;
     updateCameraTransform();
