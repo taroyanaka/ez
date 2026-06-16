@@ -1173,6 +1173,61 @@ async function deleteRecord(id) {
     }
 }
 
+let dbSelectAllState = false;
+
+function toggleAllDbRecords() {
+    dbSelectAllState = !dbSelectAllState;
+    const checkboxes = document.querySelectorAll('.db-record-checkbox');
+    checkboxes.forEach(cb => cb.checked = dbSelectAllState);
+}
+
+async function deleteSelectedDbRecords() {
+    if (!checkAuth()) return;
+
+    const checkboxes = document.querySelectorAll('.db-record-checkbox:checked');
+    if (checkboxes.length === 0) {
+        alert('削除するアイテムを選択してください。');
+        return;
+    }
+
+    if (!confirm(`${checkboxes.length}件のデータを本当に一括削除しますか？\n(CDNからも削除されます)`)) return;
+
+    // UI上で即時反映
+    const idsToDelete = Array.from(checkboxes).map(cb => parseInt(cb.value, 10));
+    const originalRecords = [...savedRecords];
+    savedRecords = savedRecords.filter(r => !idsToDelete.includes(r.id));
+    renderSavedList();
+    renderDbList();
+    renderPlayList();
+    
+    let errorCount = 0;
+    
+    // DBとCDNから削除 (1ペア削除のAPIを順次呼び出し)
+    for (const id of idsToDelete) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/fill_image/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'user_id': AUTH_USER_ID,
+                    'password': AUTH_PASSWORD
+                }
+            });
+            
+            if (!response.ok) {
+                errorCount++;
+            }
+        } catch (e) {
+            console.error(`Delete error for ID ${id}:`, e);
+            errorCount++;
+        }
+    }
+    
+    if (errorCount > 0) {
+        alert(`${errorCount}件の削除に失敗しました。リストを再読み込みします。`);
+        loadData();
+    }
+}
+
 function renderDbList() {
     const listEl = document.getElementById('db-list');
     if (!listEl) return;
@@ -1193,6 +1248,7 @@ function renderDbList() {
     
     listEl.innerHTML = savedRecords.map((record, index) => `
         <div style="display: flex; align-items: center; gap: 1rem; background: var(--card-bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--glass-border);">
+            <input type="checkbox" class="db-record-checkbox" value="${record.id}" style="width: 20px; height: 20px; cursor: pointer; flex-shrink: 0;">
             <div style="font-weight: bold; font-size: 1.2rem; color: var(--accent-color); width: 30px;">#${index + 1}</div>
             
             <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; overflow: hidden;">
