@@ -15,6 +15,13 @@ let createOrigImgQueue = []; // 連続編集の待機キュー
 let drawHistory = [];
 let historyStep = -1;
 
+// Navigation / async control
+let saveInProgress = false;
+let operationSeq = 0; // シーケンス番号
+const prefetchControllers = new Map(); // id -> AbortController
+const playPrefetchCache = new Map(); // id -> { origUrl, maskUrl }
+
+
 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -62,7 +69,82 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { passive: false });
     
     window.addEventListener('touchend', stopDrawing);
+
+    // Create mode nav buttons
+    const createPrevBtn = document.getElementById('create-prev-btn');
+    const createNextBtn = document.getElementById('create-next-btn');
+    if (createPrevBtn) createPrevBtn.addEventListener('click', () => createNavigatePrev());
+    if (createNextBtn) createNextBtn.addEventListener('click', () => createNavigateNext());
+
+    // Keyboard navigation
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') {
+            const active = document.querySelector('.view.active');
+            if (active && active.id === 'create-view') createNavigatePrev();
+            if (active && active.id === 'play-view') playNavigatePrevActive();
+        } else if (e.key === 'ArrowRight') {
+            const active = document.querySelector('.view.active');
+            if (active && active.id === 'create-view') createNavigateNext();
+            if (active && active.id === 'play-view') playNavigateNextActive();
+        }
+    });
 });
+
+function showTransientError(elId, msg) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.textContent = msg;
+    setTimeout(() => { el.textContent = ''; }, 3000);
+}
+
+function blobFromDataUrl(dataUrl) {
+    const arr = dataUrl.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) u8arr[n] = bstr.charCodeAt(n);
+    return new Blob([u8arr], { type: mime });
+}
+
+async function autoSaveWithData(id, maskDataUrl, targetText, contentText) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    try {
+        const maskBlob = blobFromDataUrl(maskDataUrl);
+        const formData = new FormData();
+        formData.append('mask', maskBlob, 'mask.png');
+        if (targetText !== undefined) formData.append('target', targetText);
+        if (contentText !== undefined) formData.append('content', contentText);
+
+        const resp = await fetch(`${API_BASE_URL}/fill_image/${id}`, {
+            method: 'PUT',
+            headers: {
+                'user_id': AUTH_USER_ID,
+                'password': AUTH_PASSWORD
+            },
+            body: formData,
+            signal: controller.signal
+        });
+        clearTimeout(timeout);
+        if (!resp.ok) throw new Error('auto save failed');
+        const result = await resp.json();
+        // 更新が返ってきたらlocal savedRecords を更新
+        if (result.item && result.item.mask) {
+            const idx = savedRecords.findIndex(r => r.id === id);
+            if (idx !== -1) {
+                savedRecords[idx].mask = result.item.mask;
+                savedRecords[idx].target = result.item.target !== undefined ? result.item.target : targetText || savedRecords[idx].target;
+                savedRecords[idx].content = result.item.content !== undefined ? result.item.content : contentText || savedRecords[idx].content;
+                savedRecords[idx].timestamp = new Date().toLocaleTimeString();
+            }
+        }
+        return true;
+    } catch (e) {
+        console.error('Auto-save error for id', id, e);
+        return false;
+    }
+}
 
 function switchTab(tab) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -343,6 +425,11 @@ function renderPlayList() {
                     <img id="play-orig-${record.id}" crossorigin="anonymous" style="display: block; width: 100%; height: auto; object-fit: contain;">
                     <canvas id="play-mask-${record.id}" style="position: absolute; top:0; left:0; width: 100%; height: 100%; cursor: pointer;"></canvas>
                 </div>
+                <div style="display:flex; justify-content:center; align-items:center; gap:1rem; margin-top:0.5rem;">
+                    <button class="btn" id="play-prev-${record.id}" onclick="playNavigatePrev(${record.id})">← 前へ</button>
+                    <div id="play-nav-error-${record.id}" style="color:#ef4444; font-weight:bold; min-width:200px; text-align:center;" aria-live="polite"></div>
+                    <button class="btn" id="play-next-${record.id}" onclick="playNavigateNext(${record.id})">次へ →</button>
+                </div>
                 <p style="text-align: center; font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">
                     画像をタップして、その箇所の黒塗りの表示/非表示を切り替え
                 </p>
@@ -371,9 +458,10 @@ function renderPlayList() {
 function loadPlayImage(id, btn) {
     const record = savedRecords.find(r => r.id === id);
     if (!record) return;
-    
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 読込中...';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 読込中...';
+    }
     
     const contentDiv = document.getElementById(`play-content-${id}`);
     const origImg = document.getElementById(`play-orig-${id}`);
@@ -403,8 +491,161 @@ function loadPlayImage(id, btn) {
     }
     
     // 実際に画像のダウンロードを開始
-    origImg.src = record.original;
-    maskImg.src = record.mask;
+    // もしプリフェッチ済みならそれを使う
+    const cached = playPrefetchCache.get(id);
+    if (cached) {
+        origImg.src = cached.origUrl;
+        maskImg.src = cached.maskUrl;
+    } else {
+        origImg.src = record.original;
+        maskImg.src = record.mask;
+    }
+
+    // 起動後に次をプリフェッチ
+    const idx = savedRecords.findIndex(r => r.id === id);
+    if (idx !== -1) {
+        prefetchPlayAtIndex(idx + 1);
+    }
+}
+
+function prefetchPlayAtIndex(index) {
+    if (index < 0 || index >= savedRecords.length) return;
+    const rec = savedRecords[index];
+    const id = rec.id;
+
+    // 既存のコントローラがあればキャンセル
+    if (prefetchControllers.has(id)) {
+        try { prefetchControllers.get(id).abort(); } catch (e) {}
+        prefetchControllers.delete(id);
+    }
+
+    const controller = new AbortController();
+    prefetchControllers.set(id, controller);
+
+    // 3秒タイムアウト
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+    (async () => {
+        try {
+            const [origResp, maskResp] = await Promise.all([
+                fetch(rec.original, { signal: controller.signal }),
+                fetch(rec.mask, { signal: controller.signal })
+            ]);
+            if (!origResp.ok || !maskResp.ok) throw new Error('prefetch failed');
+            const origBlob = await origResp.blob();
+            const maskBlob = await maskResp.blob();
+            const origUrl = URL.createObjectURL(origBlob);
+            const maskUrl = URL.createObjectURL(maskBlob);
+            playPrefetchCache.set(id, { origUrl, maskUrl });
+        } catch (e) {
+            console.warn('Prefetch failed for id', id, e);
+        } finally {
+            clearTimeout(timeoutId);
+            prefetchControllers.delete(id);
+        }
+    })();
+}
+
+function getSavedIndexById(id) {
+    return savedRecords.findIndex(r => r.id === id);
+}
+
+async function createNavigateNext() {
+    if (currentEditingId === null) return;
+    const idx = getSavedIndexById(currentEditingId);
+    if (idx === -1) return;
+    const nextIdx = idx + 1;
+    if (nextIdx >= savedRecords.length) return;
+
+    const prevId = currentEditingId;
+    const prevTarget = document.getElementById('edit-target-textarea') ? document.getElementById('edit-target-textarea').value.trim() : '';
+    const prevContent = document.getElementById('edit-content-textarea') ? document.getElementById('edit-content-textarea').value.trim() : '';
+    const prevMaskData = createCanvas.toDataURL('image/png');
+
+    // グレーアウトして二重押下を防止
+    const prevBtn = document.getElementById('create-prev-btn');
+    const nextBtn = document.getElementById('create-next-btn');
+    if (prevBtn) prevBtn.disabled = true;
+    if (nextBtn) nextBtn.disabled = true;
+
+    // 先に次の編集画面を即座に表示
+    const nextId = savedRecords[nextIdx].id;
+    editRecord(nextId);
+
+    // バックグラウンドで保存
+    const ok = await autoSaveWithData(prevId, prevMaskData, prevTarget, prevContent);
+    if (!ok) showTransientError('create-nav-error', '保存に失敗しました');
+
+    if (prevBtn) prevBtn.disabled = false;
+    if (nextBtn) nextBtn.disabled = false;
+}
+
+async function createNavigatePrev() {
+    if (currentEditingId === null) return;
+    const idx = getSavedIndexById(currentEditingId);
+    if (idx === -1) return;
+    const prevIdx = idx - 1;
+    if (prevIdx < 0) return;
+
+    const prevId = currentEditingId;
+    const prevTarget = document.getElementById('edit-target-textarea') ? document.getElementById('edit-target-textarea').value.trim() : '';
+    const prevContent = document.getElementById('edit-content-textarea') ? document.getElementById('edit-content-textarea').value.trim() : '';
+    const prevMaskData = createCanvas.toDataURL('image/png');
+
+    const prevBtn = document.getElementById('create-prev-btn');
+    const nextBtn = document.getElementById('create-next-btn');
+    if (prevBtn) prevBtn.disabled = true;
+    if (nextBtn) nextBtn.disabled = true;
+
+    const targetId = savedRecords[prevIdx].id;
+    editRecord(targetId);
+
+    const ok = await autoSaveWithData(prevId, prevMaskData, prevTarget, prevContent);
+    if (!ok) showTransientError('create-nav-error', '保存に失敗しました');
+
+    if (prevBtn) prevBtn.disabled = false;
+    if (nextBtn) nextBtn.disabled = false;
+}
+
+function playNavigateNext(id) {
+    const idx = getSavedIndexById(id);
+    if (idx === -1) return;
+    const nextIdx = idx + 1;
+    if (nextIdx >= savedRecords.length) return;
+    const nextId = savedRecords[nextIdx].id;
+    // Cancel prefetch for this id if any
+    if (prefetchControllers.has(id)) {
+        try { prefetchControllers.get(id).abort(); } catch(e){}
+        prefetchControllers.delete(id);
+    }
+    loadPlayImage(nextId, document.getElementById(`btn-load-${nextId}`));
+}
+
+function playNavigatePrev(id) {
+    const idx = getSavedIndexById(id);
+    if (idx === -1) return;
+    const prevIdx = idx - 1;
+    if (prevIdx < 0) return;
+    const prevId = savedRecords[prevIdx].id;
+    loadPlayImage(prevId, document.getElementById(`btn-load-${prevId}`));
+}
+
+function playNavigateNextActive() {
+    const nodes = document.querySelectorAll('[id^="play-content-"]');
+    let visible = null;
+    nodes.forEach(n => { if (n.style && n.style.display === 'block') visible = n; });
+    if (!visible) return;
+    const id = parseInt(visible.id.replace('play-content-', ''), 10);
+    playNavigateNext(id);
+}
+
+function playNavigatePrevActive() {
+    const nodes = document.querySelectorAll('[id^="play-content-"]');
+    let visible = null;
+    nodes.forEach(n => { if (n.style && n.style.display === 'block') visible = n; });
+    if (!visible) return;
+    const id = parseInt(visible.id.replace('play-content-', ''), 10);
+    playNavigatePrev(id);
 }
 
 function drawPlayCanvas(record, origImg, maskImg, canvas) {
