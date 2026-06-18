@@ -75,6 +75,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const createNextBtn = document.getElementById('create-next-btn');
     if (createPrevBtn) createPrevBtn.addEventListener('click', () => createNavigatePrev());
     if (createNextBtn) createNextBtn.addEventListener('click', () => createNavigateNext());
+    const createOpenPlayBtn = document.getElementById('create-open-play-btn');
+    if (createOpenPlayBtn) createOpenPlayBtn.addEventListener('click', () => createOpenInPlay());
 
     // Keyboard navigation
     window.addEventListener('keydown', (e) => {
@@ -416,9 +418,12 @@ function renderPlayList() {
             </div>
             
             <div id="play-content-${record.id}" style="display: none;">
-                <div style="display: flex; justify-content: flex-end; margin-bottom: 0.5rem;">
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 0.5rem; gap:0.5rem;">
                     <button class="btn btn-primary" onclick="toggleAllMasks(${record.id}, this)" style="padding: 0.2rem 0.8rem; font-size: 0.8rem;">
                         <i class="fas fa-eye-slash"></i> 全て非表示
+                    </button>
+                    <button class="btn btn-primary" onclick="switchTab('create'); editRecord(${record.id}, {suppressPopup:true})" style="padding: 0.2rem 0.8rem; font-size: 0.8rem; background:#f97316; border-color:#f97316;">
+                        <i class="fas fa-edit"></i> 編集へ
                     </button>
                 </div>
                 <div class="play-canvas-wrapper" style="position: relative; width: 100%; border-radius: 4px; overflow: hidden; background: #000; user-select: none;">
@@ -474,12 +479,12 @@ function loadPlayImage(id, btn) {
         if (maskImg.complete && maskImg.naturalWidth > 0) {
             drawPlayCanvas(record, origImg, maskImg, canvas);
             contentDiv.style.display = 'block';
-            btn.style.display = 'none';
+            if (btn) btn.style.display = 'none';
         } else {
             maskImg.onload = () => {
                 drawPlayCanvas(record, origImg, maskImg, canvas);
                 contentDiv.style.display = 'block';
-                btn.style.display = 'none';
+                if (btn) btn.style.display = 'none';
             };
         }
     };
@@ -570,7 +575,7 @@ async function createNavigateNext() {
 
     // 先に次の編集画面を即座に表示
     const nextId = savedRecords[nextIdx].id;
-    editRecord(nextId);
+    editRecord(nextId, {suppressPopup:true});
 
     // バックグラウンドで保存
     const ok = await autoSaveWithData(prevId, prevMaskData, prevTarget, prevContent);
@@ -598,7 +603,7 @@ async function createNavigatePrev() {
     if (nextBtn) nextBtn.disabled = true;
 
     const targetId = savedRecords[prevIdx].id;
-    editRecord(targetId);
+    editRecord(targetId, {suppressPopup:true});
 
     const ok = await autoSaveWithData(prevId, prevMaskData, prevTarget, prevContent);
     if (!ok) showTransientError('create-nav-error', '保存に失敗しました');
@@ -618,6 +623,9 @@ function playNavigateNext(id) {
         try { prefetchControllers.get(id).abort(); } catch(e){}
         prefetchControllers.delete(id);
     }
+    // Scroll to the target play card/content
+    const targetContent = document.getElementById(`play-content-${nextId}`) || document.getElementById(`btn-load-${nextId}`);
+    if (targetContent && targetContent.scrollIntoView) targetContent.scrollIntoView({ behavior: 'smooth', block: 'center' });
     loadPlayImage(nextId, document.getElementById(`btn-load-${nextId}`));
 }
 
@@ -627,6 +635,8 @@ function playNavigatePrev(id) {
     const prevIdx = idx - 1;
     if (prevIdx < 0) return;
     const prevId = savedRecords[prevIdx].id;
+    const targetContent = document.getElementById(`play-content-${prevId}`) || document.getElementById(`btn-load-${prevId}`);
+    if (targetContent && targetContent.scrollIntoView) targetContent.scrollIntoView({ behavior: 'smooth', block: 'center' });
     loadPlayImage(prevId, document.getElementById(`btn-load-${prevId}`));
 }
 
@@ -646,6 +656,17 @@ function playNavigatePrevActive() {
     if (!visible) return;
     const id = parseInt(visible.id.replace('play-content-', ''), 10);
     playNavigatePrev(id);
+}
+
+function createOpenInPlay() {
+    if (currentEditingId === null) return;
+    const id = currentEditingId;
+    // 移動前にcreateを閉じる/切替してplayリストを描画
+    switchTab('play');
+    // renderPlayList は switchTab('play') 内で呼ばれるため、ここでボタンを取得してロードを呼ぶ
+    const btn = document.getElementById(`btn-load-${id}`);
+    // ボタンが見つからない場合でも loadPlayImage は btn をオプションで受け取れるように保護済み
+    loadPlayImage(id, btn);
 }
 
 function drawPlayCanvas(record, origImg, maskImg, canvas) {
@@ -1546,18 +1567,18 @@ function showPreview(id, btn) {
     }
 }
 
-function editRecord(id) {
+function editRecord(id, options) {
     if (!checkAuth()) return;
-    
+
     const record = savedRecords.find(r => r.id === id);
     if (!record) return;
-    
+
     currentEditingId = id;
-    
+
     document.querySelectorAll('[id^="btn-update-"]').forEach(btn => btn.disabled = true);
     const updateBtn = document.getElementById(`btn-update-${id}`);
     if (updateBtn) updateBtn.disabled = false;
-    
+
     const editContainer = document.getElementById('edit-target-container');
     const editTextArea = document.getElementById('edit-target-textarea');
     const editContentArea = document.getElementById('edit-content-textarea');
@@ -1574,41 +1595,43 @@ function editRecord(id) {
     if (bulkImportContents) {
         bulkImportContents.style.display = 'none';
     }
-    
+
     const origImg = new Image();
     origImg.crossOrigin = "anonymous";
     origImg.onload = () => {
         createOriginalImg = origImg;
-        
+
         const bgImg = document.getElementById('create-bg-img');
         bgImg.src = origImg.src;
         bgImg.style.display = 'block';
-        
+
         document.getElementById('create-controls').style.display = 'flex';
         document.getElementById('create-canvas-container').style.display = 'block';
         toggleFixedUI(true);
         initCamera();
-        
+
         createCanvas.width = origImg.width;
         createCanvas.height = origImg.height;
-        
+
         if (record.mask) {
             const maskImg = new Image();
             maskImg.crossOrigin = "anonymous";
             maskImg.onload = () => {
                 createCtx.clearRect(0, 0, createCanvas.width, createCanvas.height);
                 createCtx.drawImage(maskImg, 0, 0, createCanvas.width, createCanvas.height);
-                
+
                 drawHistory = [];
                 historyStep = -1;
                 saveState();
-                
+
                 document.getElementById('create-canvas-container').scrollIntoView({ behavior: 'smooth', block: 'center' });
-                
-                // スクロールを阻害しないように少し遅延させてアラートを表示
-                setTimeout(() => {
-                    alert(`編集モードに入りました（ID: ${id}）。\n修正後は該当リストアイテムの「上書き保存」、または上部のフロート保存ボタンを押してください。`);
-                }, 300);
+
+                // ポップアップ抑制フラグがない場合のみ表示
+                if (!options || !options.suppressPopup) {
+                    setTimeout(() => {
+                        alert(`編集モードに入りました（ID: ${id}）。\n修正後は該当リストアイテムの「上書き保存」、または上部のフロート保存ボタンを押してください。`);
+                    }, 300);
+                }
             };
             maskImg.src = record.mask;
         } else {
@@ -1616,12 +1639,14 @@ function editRecord(id) {
             drawHistory = [];
             historyStep = -1;
             saveState();
-            
+
             document.getElementById('create-canvas-container').scrollIntoView({ behavior: 'smooth', block: 'center' });
-            
-            setTimeout(() => {
-                alert(`新規マスク作成モードに入りました（ID: ${id}）。\n黒く塗りつぶした後、「上書き保存」を押してください。`);
-            }, 300);
+
+            if (!options || !options.suppressPopup) {
+                setTimeout(() => {
+                    alert(`新規マスク作成モードに入りました（ID: ${id}）。\n黒く塗りつぶした後、「上書き保存」を押してください。`);
+                }, 300);
+            }
         }
     };
     origImg.src = record.original;
