@@ -98,30 +98,6 @@ async function loadData() {
   try {
     const data = await getAllItems(resource);
     currentData = Array.isArray(data) ? data : [];
-    if (currentData.length === 0) {
-      // Default example dummy if API is empty (optional, but keep it for first run)
-      currentData = [
-        {
-          id: generateId(),
-          title: "動物の数問題",
-          passage: "犬が2匹と猫が3匹と男の人が5人と女の人が4人います",
-          questions: [
-            {
-              id: generateId(),
-              questionText: "人間は何人いますか?",
-              choices: ["9", "5", "3"],
-              correctIndex: 0
-            },
-            {
-              id: generateId(),
-              questionText: "動物は何匹いますか?",
-              choices: ["5", "3", "2"],
-              correctIndex: 0
-            }
-          ]
-        }
-      ];
-    }
     updateExecutionSelect();
   } catch (e) {
     console.error('Failed to load data from API:', e);
