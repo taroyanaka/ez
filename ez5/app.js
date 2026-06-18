@@ -480,11 +480,20 @@ function loadPlayImage(id, btn) {
             drawPlayCanvas(record, origImg, maskImg, canvas);
             contentDiv.style.display = 'block';
             if (btn) btn.style.display = 'none';
+            // clear loading indicator
+            const navErr = document.getElementById(`play-nav-error-${id}`);
+            if (navErr) navErr.textContent = '';
         } else {
             maskImg.onload = () => {
                 drawPlayCanvas(record, origImg, maskImg, canvas);
                 contentDiv.style.display = 'block';
                 if (btn) btn.style.display = 'none';
+                const navErr = document.getElementById(`play-nav-error-${id}`);
+                if (navErr) navErr.textContent = '';
+            };
+            maskImg.onerror = () => {
+                showTransientError(`play-nav-error-${id}`, '画像ロードに失敗しました');
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-download"></i> 画像を読み込む'; }
             };
         }
     };
@@ -505,6 +514,11 @@ function loadPlayImage(id, btn) {
         origImg.src = record.original;
         maskImg.src = record.mask;
     }
+
+    origImg.onerror = () => {
+        showTransientError(`play-nav-error-${id}`, '画像ロードに失敗しました');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-download"></i> 画像を読み込む'; }
+    };
 
     // 起動後に次をプリフェッチ
     const idx = savedRecords.findIndex(r => r.id === id);
@@ -625,6 +639,8 @@ function playNavigateNext(id) {
     }
     // Scroll to the target play card/content
     const targetContent = document.getElementById(`play-content-${nextId}`) || document.getElementById(`btn-load-${nextId}`);
+    const navErr = document.getElementById(`play-nav-error-${nextId}`);
+    if (navErr) navErr.textContent = '画像ロード中...';
     if (targetContent && targetContent.scrollIntoView) targetContent.scrollIntoView({ behavior: 'smooth', block: 'center' });
     loadPlayImage(nextId, document.getElementById(`btn-load-${nextId}`));
 }
@@ -636,6 +652,8 @@ function playNavigatePrev(id) {
     if (prevIdx < 0) return;
     const prevId = savedRecords[prevIdx].id;
     const targetContent = document.getElementById(`play-content-${prevId}`) || document.getElementById(`btn-load-${prevId}`);
+    const navErr = document.getElementById(`play-nav-error-${prevId}`);
+    if (navErr) navErr.textContent = '画像ロード中...';
     if (targetContent && targetContent.scrollIntoView) targetContent.scrollIntoView({ behavior: 'smooth', block: 'center' });
     loadPlayImage(prevId, document.getElementById(`btn-load-${prevId}`));
 }
