@@ -321,6 +321,10 @@ h2 { margin-bottom: 0.5rem; }
         width: 95vw;
         max-width: 100%;
     }
+    
+    #joystick-zone {
+        bottom: 120px;
+    }
 }
 
 
