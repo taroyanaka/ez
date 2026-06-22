@@ -149,7 +149,12 @@ async function autoSaveWithData(id, maskDataUrl, targetText, contentText) {
 }
 
 async function switchTab(tab) {
+    let wasEditing = false;
+    let editingId = null;
+
     if (tab === 'play' && document.getElementById('create-view').classList.contains('active') && currentEditingId !== null && document.getElementById('create-canvas-container').style.display === 'block') {
+        wasEditing = true;
+        editingId = currentEditingId;
         const prevId = currentEditingId;
         const prevTarget = document.getElementById('edit-target-textarea') ? document.getElementById('edit-target-textarea').value.trim() : '';
         const prevContent = document.getElementById('edit-content-textarea') ? document.getElementById('edit-content-textarea').value.trim() : '';
@@ -169,6 +174,16 @@ async function switchTab(tab) {
     if (tab === 'play') {
         renderPlayList();
         toggleFixedUI(false);
+        if (wasEditing && editingId !== null) {
+            setTimeout(() => {
+                const btn = document.getElementById(`btn-load-${editingId}`);
+                loadPlayImage(editingId, btn);
+                const card = document.getElementById(`play-card-${editingId}`);
+                if (card) {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 50);
+        }
     } else if (tab === 'create') {
         renderDbList();
         if (document.getElementById('create-canvas-container').style.display === 'block') {
@@ -698,15 +713,11 @@ function playNavigatePrevActive() {
     playNavigatePrev(id);
 }
 
-function createOpenInPlay() {
+async function createOpenInPlay() {
     if (currentEditingId === null) return;
-    const id = currentEditingId;
     // 移動前にcreateを閉じる/切替してplayリストを描画
-    switchTab('play');
-    // renderPlayList は switchTab('play') 内で呼ばれるため、ここでボタンを取得してロードを呼ぶ
-    const btn = document.getElementById(`btn-load-${id}`);
-    // ボタンが見つからない場合でも loadPlayImage は btn をオプションで受け取れるように保護済み
-    loadPlayImage(id, btn);
+    // switchTab 側で自動的に該当画像の読み込みとスクロールが行われます
+    await switchTab('play');
 }
 
 function drawPlayCanvas(record, origImg, maskImg, canvas) {
