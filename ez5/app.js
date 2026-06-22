@@ -148,7 +148,19 @@ async function autoSaveWithData(id, maskDataUrl, targetText, contentText) {
     }
 }
 
-function switchTab(tab) {
+async function switchTab(tab) {
+    if (tab === 'play' && document.getElementById('create-view').classList.contains('active') && currentEditingId !== null && document.getElementById('create-canvas-container').style.display === 'block') {
+        const prevId = currentEditingId;
+        const prevTarget = document.getElementById('edit-target-textarea') ? document.getElementById('edit-target-textarea').value.trim() : '';
+        const prevContent = document.getElementById('edit-content-textarea') ? document.getElementById('edit-content-textarea').value.trim() : '';
+        const prevMaskData = createCanvas.toDataURL('image/png');
+        
+        const navErr = document.getElementById('create-nav-error');
+        if (navErr) navErr.textContent = '保存中...';
+        await autoSaveWithData(prevId, prevMaskData, prevTarget, prevContent);
+        if (navErr) navErr.textContent = '';
+    }
+
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(tab + '-view').classList.add('active');
@@ -406,7 +418,7 @@ function renderPlayList() {
     };
     
     playListEl.innerHTML = validRecords.map((record, index) => `
-        <div class="play-card" style="background: var(--card-bg); border-radius: 8px; border: 1px solid var(--glass-border); padding: 1rem;">
+        <div id="play-card-${record.id}" class="play-card" style="background: var(--card-bg); border-radius: 8px; border: 1px solid var(--glass-border); padding: 1rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                 <div>
                     <div style="font-weight: bold; color: var(--accent-color);">Question #${index + 1}</div>
@@ -415,6 +427,11 @@ function renderPlayList() {
                 <button class="btn btn-primary" id="btn-load-${record.id}" onclick="loadPlayImage(${record.id}, this)" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; background: #3b82f6; border-color: #3b82f6;">
                     <i class="fas fa-download"></i> 画像を読み込む
                 </button>
+            </div>
+            
+            <div id="play-loading-${record.id}" style="display: none; text-align: center; padding: 3rem 1rem; color: var(--accent-color); font-weight: bold;">
+                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                <div style="margin-top: 1rem;">画像ロード中...</div>
             </div>
             
             <div id="play-content-${record.id}" style="display: none;">
@@ -469,8 +486,13 @@ function loadPlayImage(id, btn) {
     }
     
     const contentDiv = document.getElementById(`play-content-${id}`);
+    const loadingDiv = document.getElementById(`play-loading-${id}`);
     const origImg = document.getElementById(`play-orig-${id}`);
     const canvas = document.getElementById(`play-mask-${id}`);
+    
+    if (loadingDiv && contentDiv.style.display === 'none') {
+        loadingDiv.style.display = 'block';
+    }
     
     const maskImg = new Image();
     maskImg.crossOrigin = "anonymous";
@@ -478,6 +500,7 @@ function loadPlayImage(id, btn) {
     const setup = () => {
         if (maskImg.complete && maskImg.naturalWidth > 0) {
             drawPlayCanvas(record, origImg, maskImg, canvas);
+            if (loadingDiv) loadingDiv.style.display = 'none';
             contentDiv.style.display = 'block';
             if (btn) btn.style.display = 'none';
             // clear loading indicator
@@ -486,12 +509,14 @@ function loadPlayImage(id, btn) {
         } else {
             maskImg.onload = () => {
                 drawPlayCanvas(record, origImg, maskImg, canvas);
+                if (loadingDiv) loadingDiv.style.display = 'none';
                 contentDiv.style.display = 'block';
                 if (btn) btn.style.display = 'none';
                 const navErr = document.getElementById(`play-nav-error-${id}`);
                 if (navErr) navErr.textContent = '';
             };
             maskImg.onerror = () => {
+                if (loadingDiv) loadingDiv.style.display = 'none';
                 showTransientError(`play-nav-error-${id}`, '画像ロードに失敗しました');
                 if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-download"></i> 画像を読み込む'; }
             };
@@ -516,6 +541,7 @@ function loadPlayImage(id, btn) {
     }
 
     origImg.onerror = () => {
+        if (loadingDiv) loadingDiv.style.display = 'none';
         showTransientError(`play-nav-error-${id}`, '画像ロードに失敗しました');
         if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-download"></i> 画像を読み込む'; }
     };
@@ -638,9 +664,7 @@ function playNavigateNext(id) {
         prefetchControllers.delete(id);
     }
     // Scroll to the target play card/content
-    const targetContent = document.getElementById(`play-content-${nextId}`) || document.getElementById(`btn-load-${nextId}`);
-    const navErr = document.getElementById(`play-nav-error-${nextId}`);
-    if (navErr) navErr.textContent = '画像ロード中...';
+    const targetContent = document.getElementById(`play-card-${nextId}`);
     if (targetContent && targetContent.scrollIntoView) targetContent.scrollIntoView({ behavior: 'smooth', block: 'center' });
     loadPlayImage(nextId, document.getElementById(`btn-load-${nextId}`));
 }
@@ -651,9 +675,7 @@ function playNavigatePrev(id) {
     const prevIdx = idx - 1;
     if (prevIdx < 0) return;
     const prevId = savedRecords[prevIdx].id;
-    const targetContent = document.getElementById(`play-content-${prevId}`) || document.getElementById(`btn-load-${prevId}`);
-    const navErr = document.getElementById(`play-nav-error-${prevId}`);
-    if (navErr) navErr.textContent = '画像ロード中...';
+    const targetContent = document.getElementById(`play-card-${prevId}`);
     if (targetContent && targetContent.scrollIntoView) targetContent.scrollIntoView({ behavior: 'smooth', block: 'center' });
     loadPlayImage(prevId, document.getElementById(`btn-load-${prevId}`));
 }
@@ -1527,7 +1549,7 @@ function renderDbList() {
     };
     
     listEl.innerHTML = savedRecords.map((record, index) => `
-        <div style="display: flex; align-items: center; gap: 1rem; background: var(--card-bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--glass-border);">
+        <div id="db-record-${record.id}" style="display: flex; align-items: center; gap: 1rem; background: var(--card-bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--glass-border);">
             <input type="checkbox" class="db-record-checkbox" value="${record.id}" style="width: 20px; height: 20px; cursor: pointer; flex-shrink: 0;">
             <div style="font-weight: bold; font-size: 1.2rem; color: var(--accent-color); width: 30px;">#${index + 1}</div>
             
@@ -1592,6 +1614,16 @@ function editRecord(id, options) {
     if (!record) return;
 
     currentEditingId = id;
+
+    // 自動スクロール処理
+    const listEl = document.getElementById('db-list');
+    const recordEl = document.getElementById(`db-record-${id}`);
+    if (listEl && recordEl) {
+        listEl.scrollTo({
+            top: recordEl.offsetTop,
+            behavior: 'smooth'
+        });
+    }
 
     document.querySelectorAll('[id^="btn-update-"]').forEach(btn => btn.disabled = true);
     const updateBtn = document.getElementById(`btn-update-${id}`);
@@ -1720,7 +1752,8 @@ async function updateRecord(id, btn) {
             
             alert('上書き保存が完了しました！');
             
-            // 編集用キャンバスとコントロールを非表示にする
+            // 編集画面を閉じずにそのまま継続できるようにするため、非表示処理をコメントアウト
+            /*
             document.getElementById('create-controls').style.display = 'none';
             document.getElementById('create-canvas-container').style.display = 'none';
             toggleFixedUI(false);
@@ -1736,6 +1769,7 @@ async function updateRecord(id, btn) {
             if (editContentArea) editContentArea.value = '';
             if (bulkImportTargets) bulkImportTargets.style.display = 'block';
             if (bulkImportContents) bulkImportContents.style.display = 'block';
+            */
             
             renderDbList();
             renderPlayList();
