@@ -1582,6 +1582,36 @@ function renderDbList() {
     `).join('');
 }
 
+// 画像データをプレビューと編集モードで共有するためのヘルパー
+function loadSharedImage(record, type) {
+    return new Promise((resolve) => {
+        const cacheKey = type === 'original' ? '_loadedOrigImg' : '_loadedMaskImg';
+        const url = type === 'original' ? record.original : record.mask;
+
+        if (!url) {
+            resolve(null);
+            return;
+        }
+
+        if (record[cacheKey] && record[cacheKey].complete && record[cacheKey].naturalWidth > 0) {
+            resolve(record[cacheKey]);
+            return;
+        }
+
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+            record[cacheKey] = img;
+            resolve(img);
+        };
+        img.onerror = () => {
+            console.error("Image load error:", url);
+            resolve(null);
+        };
+        img.src = url;
+    });
+}
+
 function showPreview(id, btn) {
     const record = savedRecords.find(r => r.id === id);
     if (!record) return;
@@ -1592,13 +1622,21 @@ function showPreview(id, btn) {
     if (container.style.display === 'none') {
         const origImg = document.getElementById(`preview-orig-${id}`);
         const maskImg = document.getElementById(`preview-mask-${id}`);
-        origImg.src = record.original;
-        if (record.mask) {
-            maskImg.src = record.mask;
-            maskImg.style.display = 'block';
-        } else {
-            maskImg.style.display = 'none';
-        }
+        
+        loadSharedImage(record, 'original').then(loadedOrig => {
+            if (loadedOrig) origImg.src = loadedOrig.src;
+            if (record.mask) {
+                loadSharedImage(record, 'mask').then(loadedMask => {
+                    if (loadedMask) {
+                        maskImg.src = loadedMask.src;
+                        maskImg.style.display = 'block';
+                    }
+                });
+            } else {
+                maskImg.style.display = 'none';
+            }
+        });
+
         container.style.display = 'block';
         btn.innerHTML = '<i class="fas fa-image"></i> プレビュー非表示';
     } else {
@@ -1646,9 +1684,9 @@ function editRecord(id, options) {
         bulkImportContents.style.display = 'none';
     }
 
-    const origImg = new Image();
-    origImg.crossOrigin = "anonymous";
-    origImg.onload = () => {
+    loadSharedImage(record, 'original').then(origImg => {
+        if (!origImg) return;
+
         createOriginalImg = origImg;
 
         const bgImg = document.getElementById('create-bg-img');
@@ -1664,9 +1702,9 @@ function editRecord(id, options) {
         createCanvas.height = origImg.height;
 
         if (record.mask) {
-            const maskImg = new Image();
-            maskImg.crossOrigin = "anonymous";
-            maskImg.onload = () => {
+            loadSharedImage(record, 'mask').then(maskImg => {
+                if (!maskImg) return;
+                
                 createCtx.clearRect(0, 0, createCanvas.width, createCanvas.height);
                 createCtx.drawImage(maskImg, 0, 0, createCanvas.width, createCanvas.height);
 
@@ -1682,8 +1720,7 @@ function editRecord(id, options) {
                         alert(`編集モードに入りました（ID: ${id}）。\n修正後は該当リストアイテムの「上書き保存」、または上部のフロート保存ボタンを押してください。`);
                     }, 300);
                 }
-            };
-            maskImg.src = record.mask;
+            });
         } else {
             createCtx.clearRect(0, 0, createCanvas.width, createCanvas.height);
             drawHistory = [];
@@ -1698,8 +1735,7 @@ function editRecord(id, options) {
                 }, 300);
             }
         }
-    };
-    origImg.src = record.original;
+    });
 }
 
 async function updateRecord(id, btn) {
