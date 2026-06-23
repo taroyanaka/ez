@@ -139,6 +139,9 @@ async function autoSaveWithData(id, maskDataUrl, targetText, contentText) {
                 savedRecords[idx].target = result.item.target !== undefined ? result.item.target : targetText || savedRecords[idx].target;
                 savedRecords[idx].content = result.item.content !== undefined ? result.item.content : contentText || savedRecords[idx].content;
                 savedRecords[idx].timestamp = new Date().toLocaleTimeString();
+                
+                // サーバーで更新された最新の画像を再取得するため、メモリ上のキャッシュを破棄する
+                delete savedRecords[idx]._loadedMaskImg;
             }
         }
         return true;
@@ -1576,7 +1579,7 @@ function renderDbList() {
             </div>
             
             <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                <button class="btn btn-primary" onclick="showPreview(${record.id}, this)" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; background: #8b5cf6; border-color: #8b5cf6;">
+                <button id="btn-preview-${record.id}" class="btn btn-primary" onclick="showPreview(${record.id}, this)" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; background: #8b5cf6; border-color: #8b5cf6;">
                     <i class="fas fa-image"></i> プレビュー
                 </button>
                 <button class="btn btn-primary" onclick="editRecord(${record.id})" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; background: #3b82f6; border-color: #3b82f6;">
@@ -1672,6 +1675,13 @@ function editRecord(id, options) {
             top: recordEl.offsetTop,
             behavior: 'smooth'
         });
+    }
+
+    // プレビューが非表示の場合は自動的に展開して画像を読み込む
+    const previewBtn = document.getElementById(`btn-preview-${id}`);
+    const previewContainer = document.getElementById(`preview-container-${id}`);
+    if (previewContainer && previewContainer.style.display === 'none' && previewBtn) {
+        showPreview(id, previewBtn);
     }
 
     document.querySelectorAll('[id^="btn-update-"]').forEach(btn => btn.disabled = true);
@@ -1795,6 +1805,9 @@ async function updateRecord(id, btn) {
                 savedRecords[idx].target = result.item.target !== undefined ? result.item.target : (document.getElementById('edit-target-textarea') ? document.getElementById('edit-target-textarea').value.trim() : '');
                 savedRecords[idx].content = result.item.content !== undefined ? result.item.content : (document.getElementById('edit-content-textarea') ? document.getElementById('edit-content-textarea').value.trim() : '');
                 savedRecords[idx].timestamp = new Date().toLocaleTimeString();
+                
+                // キャッシュを破棄して次回のプレビュー・編集時に最新の画像を読み込むようにする
+                delete savedRecords[idx]._loadedMaskImg;
             }
             
             alert('上書き保存が完了しました！');
