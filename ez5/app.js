@@ -195,6 +195,16 @@ async function switchTab(tab) {
             }, 50);
         }
     } else if (tab === 'create') {
+        // ブラウザ自体のピンチズームをリセットする
+        const viewportMeta = document.querySelector('meta[name="viewport"]');
+        if (viewportMeta) {
+            const originalContent = viewportMeta.getAttribute('content');
+            viewportMeta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+            setTimeout(() => {
+                viewportMeta.setAttribute('content', originalContent);
+            }, 300);
+        }
+
         renderDbList();
         if (document.getElementById('create-canvas-container').style.display === 'block') {
             toggleFixedUI(true);
