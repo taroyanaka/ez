@@ -2000,8 +2000,8 @@ if (joystickZone) {
 const baseSpeed = 15;
 function animateCamera() {
     if (isJoyDragging && (joyX !== 0 || joyY !== 0)) {
-        camPosX -= joyX * baseSpeed * camScale;
-        camPosY -= joyY * baseSpeed * camScale;
+        camPosX -= joyX * baseSpeed / camScale;
+        camPosY -= joyY * baseSpeed / camScale;
         updateCameraTransform();
     }
     requestAnimationFrame(animateCamera);
