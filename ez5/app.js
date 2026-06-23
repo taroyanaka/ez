@@ -1009,13 +1009,20 @@ function dataURLtoBlob(dataurl) {
 }
 
 async function loadData() {
-    if (!AUTH_USER_ID) return;
     try {
         const myDataOnlyToggle = document.getElementById('my-data-only-toggle');
         const isMyDataOnly = myDataOnlyToggle ? myDataOnlyToggle.checked : true;
         
         let url = `${API_BASE_URL}/fill_image`;
         if (isMyDataOnly) {
+            if (!AUTH_USER_ID) {
+                // 未ログイン時にマイデータのみを表示しようとした場合はリストを空にして終了
+                savedRecords = [];
+                renderSavedList();
+                renderPlayList();
+                renderDbList();
+                return;
+            }
             url = `${API_BASE_URL}/fill_image/user/${AUTH_USER_ID}`;
         }
         
