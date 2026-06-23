@@ -142,6 +142,13 @@ async function autoSaveWithData(id, maskDataUrl, targetText, contentText) {
                 
                 // サーバーで更新された最新の画像を再取得するため、メモリ上のキャッシュを破棄する
                 delete savedRecords[idx]._loadedMaskImg;
+                
+                if (typeof playPrefetchCache !== 'undefined' && playPrefetchCache.has(id)) {
+                    const cached = playPrefetchCache.get(id);
+                    URL.revokeObjectURL(cached.origUrl);
+                    URL.revokeObjectURL(cached.maskUrl);
+                    playPrefetchCache.delete(id);
+                }
             }
         }
         return true;
@@ -225,12 +232,12 @@ async function loadImage(event) {
     if (!AUTH_USER_ID || !AUTH_PASSWORD) {
         event.target.value = ''; // ファイル選択をリセット
         checkAuth(); // 「ログイン必要」メッセージを点滅表示
-        alert('ファイルを選択するにはログインが必要です。');
+        showToast('ファイルを選択するにはログインが必要です。', 'error');
         return;
     }
 
     if (currentEditingId !== null) {
-        const wantsToSave = confirm(`現在「ID: ${currentEditingId}」を編集中です。現在の編集内容を上書き保存しますか？\n\n[OK] 保存してから新規画像を読み込む\n[キャンセル] 保存せずに破棄して新規画像を読み込む`);
+        const wantsToSave = await showConfirmToast(`現在「ID: ${currentEditingId}」を編集中です。現在の編集内容を上書き保存しますか？\n\n[OK] 保存してから新規画像を読み込む\n[キャンセル] 保存せずに破棄して新規画像を読み込む`);
         if (wantsToSave) {
             const btn = document.getElementById(`btn-update-${currentEditingId}`);
             if (btn) {
@@ -940,10 +947,10 @@ async function savePlayTargetContent(id, btn) {
             savedRecords[idx].content = result.item && result.item.content !== undefined ? result.item.content : contentVal;
         }
         
-        alert('テキストを保存しました！');
+        showToast('テキストを保存しました！', 'success');
     } catch (e) {
         console.error('Update error:', e);
-        alert('保存に失敗しました。');
+        showToast('保存に失敗しました。', 'error');
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;
@@ -957,7 +964,7 @@ async function saveToEz2(id, btn) {
     const contentVal = document.getElementById(`play-content-text-${id}`).value.trim();
     
     if (!contentVal || !targetVal) {
-        alert("ez2に保存するには、Content(Sentence)とTarget(Words to hide)の両方を入力してください。");
+        showToast('ez2に保存するには、Content(Sentence)とTarget(Words to hide)の両方を入力してください。', 'error');
         return;
     }
 
@@ -984,10 +991,10 @@ async function saveToEz2(id, btn) {
         
         if (!response.ok) throw new Error('ez2 upload failed');
         
-        alert('ez2へのデータ保存に成功しました！');
+        showToast('ez2へのデータ保存に成功しました！', 'success');
     } catch (e) {
         console.error('ez2 Update error:', e);
-        alert('ez2への保存に失敗しました。');
+        showToast('ez2への保存に失敗しました。', 'error');
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;
@@ -1059,13 +1066,13 @@ async function saveRecord() {
             updateRecord(currentEditingId, btn);
         } else {
             // fallback if button not found for some reason
-            alert('上書き保存ボタンが見つかりません。');
+            showToast('上書き保存ボタンが見つかりません。', 'error');
         }
         return;
     }
 
     if (!createOriginalImg || !createOriginalFile) {
-        alert('元画像がありません。');
+        showToast('元画像がありません。', 'error');
         return;
     }
     
@@ -1089,10 +1096,10 @@ async function saveRecord() {
     
     if (createOrigImgQueue.length > 0) {
         const nextFile = createOrigImgQueue.shift();
-        alert(`リスト（一時保存）に追加しました。\n続いてキューの次の画像（${nextFile.name}）を読み込みます。`);
+        showToast(`リスト（一時保存）に追加しました。\n続いてキューの次の画像（${nextFile.name}）を読み込みます。`, 'success');
         loadSingleImage(nextFile);
     } else {
-        alert('リスト（一時保存）に追加しました！');
+        showToast('リスト（一時保存）に追加しました！', 'success');
     }
 }
 
@@ -1101,13 +1108,13 @@ async function handleBulkImport(event) {
     if (!files.length) return;
     
     if (!AUTH_USER_ID || !AUTH_PASSWORD) {
-        alert('インポートにはログインが必要です。');
+        showToast('インポートにはログインが必要です。', 'error');
         event.target.value = '';
         return;
     }
 
     if (currentEditingId !== null) {
-        const wantsToSave = confirm(`現在「ID: ${currentEditingId}」を編集中です。現在の編集内容を上書き保存しますか？\n\n[OK] 保存してから一括インポートへ進む\n[キャンセル] 保存せずに破棄して一括インポートへ進む`);
+        const wantsToSave = await showConfirmToast(`現在「ID: ${currentEditingId}」を編集中です。現在の編集内容を上書き保存しますか？\n\n[OK] 保存してから一括インポートへ進む\n[キャンセル] 保存せずに破棄して一括インポートへ進む`);
         if (wantsToSave) {
             const btn = document.getElementById(`btn-update-${currentEditingId}`);
             if (btn) {
@@ -1144,7 +1151,7 @@ async function handleBulkImport(event) {
             originalMap.set(origMatch[1], file);
         } else if (maskMatch) {
             if (file.type !== 'image/png') {
-                alert(`エラー: マスク画像(${name})はPNG形式である必要があります。`);
+                showToast(`エラー: マスク画像(${name})はPNG形式である必要があります。`, 'error');
                 event.target.value = '';
                 return;
             }
@@ -1162,7 +1169,7 @@ async function handleBulkImport(event) {
     }
     
     if (validPairs.length === 0) {
-        alert('有効なペア（「○○-original.拡張子」と「○○-mask.png」）が見つかりませんでした。');
+        showToast('有効なペア（「○○-original.拡張子」と「○○-mask.png」）が見つかりませんでした。', 'error');
         event.target.value = '';
         return;
     }
@@ -1191,19 +1198,19 @@ async function handleBulkImport(event) {
             const maskDims = await getImageDims(pair.maskFile);
             
             if (origDims.width !== maskDims.width || origDims.height !== maskDims.height) {
-                alert(`エラー: ペア「${pair.baseName}」の画像サイズが一致しません。\nOriginal: ${origDims.width}x${origDims.height}\nMask: ${maskDims.width}x${maskDims.height}`);
+                showToast(`エラー: ペア「${pair.baseName}」の画像サイズが一致しません。\nOriginal: ${origDims.width}x${origDims.height}\nMask: ${maskDims.width}x${maskDims.height}`, 'error');
                 event.target.value = '';
                 return; 
             }
             passedPairs.push(pair);
         } catch (err) {
-            alert(err.message);
+            showToast(err.message, 'error');
             event.target.value = '';
             return;
         }
     }
     
-    if (!confirm(`${passedPairs.length}ペア（計${passedPairs.length * 2}ファイル）の画像をインポートしますか？\n※アップロードには少し時間がかかる場合があります。`)) {
+    if (!await showConfirmToast(`${passedPairs.length}ペア（計${passedPairs.length * 2}ファイル）の画像をインポートしますか？\n※アップロードには少し時間がかかる場合があります。`)) {
         event.target.value = '';
         return;
     }
@@ -1227,7 +1234,7 @@ async function handleBulkImport(event) {
     }
     
     renderSavedList();
-    alert(`${passedPairs.length}ペアを一時保存リストに追加しました。\n「全てアップロード」または「個別アップロード」でサーバーへ保存してください。`);
+    showToast(`${passedPairs.length}ペアを一時保存リストに追加しました。\n「全てアップロード」または「個別アップロード」でサーバーへ保存してください。`, 'success');
     event.target.value = '';
 }
 
@@ -1237,13 +1244,13 @@ async function handleBulkImportOriginals(event) {
         if (!files.length) return;
         
         if (!AUTH_USER_ID || !AUTH_PASSWORD) {
-            alert('追加にはログインが必要です。');
+            showToast('追加にはログインが必要です。', 'error');
             event.target.value = '';
             return;
         }
 
         if (currentEditingId !== null) {
-            const wantsToSave = confirm(`現在「ID: ${currentEditingId}」を編集中です。現在の編集内容を上書き保存しますか？\n\n[OK] 保存してから一括追加へ進む\n[キャンセル] 保存せずに破棄して一括追加へ進む`);
+            const wantsToSave = await showConfirmToast(`現在「ID: ${currentEditingId}」を編集中です。現在の編集内容を上書き保存しますか？\n\n[OK] 保存してから一括追加へ進む\n[キャンセル] 保存せずに破棄して一括追加へ進む`);
             if (wantsToSave) {
                 const btn = document.getElementById(`btn-update-${currentEditingId}`);
                 if (btn) {
@@ -1265,7 +1272,7 @@ async function handleBulkImportOriginals(event) {
             }
         }
 
-        if (!confirm(`${files.length}件の画像をインポートしますか？\n※アップロードには少し時間がかかる場合があります。`)) {
+        if (!await showConfirmToast(`${files.length}件の画像をインポートしますか？\n※アップロードには少し時間がかかる場合があります。`)) {
             event.target.value = '';
             return;
         }
@@ -1286,11 +1293,11 @@ async function handleBulkImportOriginals(event) {
         }
         
         renderSavedList();
-        alert(`${files.length}件を一時保存リストに追加しました。\n「全てアップロード」または「個別アップロード」でサーバーへ保存してください。`);
+        showToast(`${files.length}件を一時保存リストに追加しました。\n「全てアップロード」または「個別アップロード」でサーバーへ保存してください。`, 'success');
         event.target.value = '';
     } catch (error) {
         console.error("オリジナル画像一括追加エラー:", error);
-        alert("画像の追加中にエラーが発生しました。");
+        showToast('画像の追加中にエラーが発生しました。', 'error');
         event.target.value = '';
     }
 }
@@ -1347,7 +1354,7 @@ function deleteTempRecord(tempId) {
 
 async function uploadTempRecord(tempId, buttonEl, skipRender = false) {
     if (!AUTH_USER_ID || !AUTH_PASSWORD) {
-        alert('サーバー保存にはログインが必要です。');
+        showToast('サーバー保存にはログインが必要です。', 'error');
         return false;
     }
     const idx = tempRecords.findIndex(r => r.id === tempId);
@@ -1423,14 +1430,14 @@ async function uploadTempRecord(tempId, buttonEl, skipRender = false) {
             buttonEl.disabled = false;
             buttonEl.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> アップロード';
         }
-        alert('アップロードに失敗しました。');
+        showToast('アップロードに失敗しました。', 'error');
         return false;
     }
 }
 
 async function uploadAllTempRecords() {
     if (!AUTH_USER_ID || !AUTH_PASSWORD) {
-        alert('サーバー保存にはログインが必要です。');
+        showToast('サーバー保存にはログインが必要です。', 'error');
         return;
     }
     if (tempRecords.length === 0) return;
@@ -1457,14 +1464,14 @@ async function uploadAllTempRecords() {
     }
     
     if (successCount > 0) {
-        alert(`${successCount}/${tempIds.length} ペアのサーバー保存が完了しました。`);
+        showToast(`${successCount}/${tempIds.length} ペアのサーバー保存が完了しました。`, 'success');
     }
 }
 
 async function deleteRecord(id) {
     if (!checkAuth()) return;
 
-    if (!confirm('本当に削除しますか？')) return;
+    if (!await showConfirmToast('本当に削除しますか？')) return;
 
     // UI上で即時反映
     const originalRecords = [...savedRecords];
@@ -1487,7 +1494,7 @@ async function deleteRecord(id) {
         }
     } catch (e) {
         console.error('Delete error:', e);
-        alert('削除に失敗しました。');
+        showToast('削除に失敗しました。', 'error');
         // 失敗した場合はリストを元に戻す
         savedRecords = originalRecords;
         renderSavedList();
@@ -1509,11 +1516,11 @@ async function deleteSelectedDbRecords() {
 
     const checkboxes = document.querySelectorAll('.db-record-checkbox:checked');
     if (checkboxes.length === 0) {
-        alert('削除するアイテムを選択してください。');
+        showToast('削除するアイテムを選択してください。', 'error');
         return;
     }
 
-    if (!confirm(`${checkboxes.length}件のデータを本当に一括削除しますか？\n(CDNからも削除されます)`)) return;
+    if (!await showConfirmToast(`${checkboxes.length}件のデータを本当に一括削除しますか？\n(CDNからも削除されます)`)) return;
 
     // UI上で即時反映
     const idsToDelete = Array.from(checkboxes).map(cb => parseInt(cb.value, 10));
@@ -1546,7 +1553,7 @@ async function deleteSelectedDbRecords() {
     }
     
     if (errorCount > 0) {
-        alert(`${errorCount}件の削除に失敗しました。リストを再読み込みします。`);
+        showToast(`${errorCount}件の削除に失敗しました。リストを再読み込みします。`, 'error');
         loadData();
     }
 }
@@ -1745,7 +1752,7 @@ function editRecord(id, options) {
                 // ポップアップ抑制フラグがない場合のみ表示
                 if (!options || !options.suppressPopup) {
                     setTimeout(() => {
-                        alert(`編集モードに入りました（ID: ${id}）。\n修正後は該当リストアイテムの「上書き保存」、または上部のフロート保存ボタンを押してください。`);
+                        showToast(`編集モードに入りました（ID: ${id}）。\n修正後は該当リストアイテムの「上書き保存」、または上部のフロート保存ボタンを押してください。`, 'info');
                     }, 300);
                 }
             });
@@ -1759,7 +1766,7 @@ function editRecord(id, options) {
 
             if (!options || !options.suppressPopup) {
                 setTimeout(() => {
-                    alert(`新規マスク作成モードに入りました（ID: ${id}）。\n黒く塗りつぶした後、「上書き保存」を押してください。`);
+                    showToast(`新規マスク作成モードに入りました（ID: ${id}）。\n黒く塗りつぶした後、「上書き保存」を押してください。`, 'info');
                 }, 300);
             }
         }
@@ -1769,7 +1776,7 @@ function editRecord(id, options) {
 async function updateRecord(id, btn) {
     if (!checkAuth()) return;
     if (currentEditingId !== id) {
-        alert('このデータは現在編集状態ではありません。「編集」ボタンを押してから操作してください。');
+        showToast('このデータは現在編集状態ではありません。「編集」ボタンを押してから操作してください。', 'error');
         return;
     }
     
@@ -1815,9 +1822,16 @@ async function updateRecord(id, btn) {
                 
                 // キャッシュを破棄して次回のプレビュー・編集時に最新の画像を読み込むようにする
                 delete savedRecords[idx]._loadedMaskImg;
+                
+                if (typeof playPrefetchCache !== 'undefined' && playPrefetchCache.has(id)) {
+                    const cached = playPrefetchCache.get(id);
+                    URL.revokeObjectURL(cached.origUrl);
+                    URL.revokeObjectURL(cached.maskUrl);
+                    playPrefetchCache.delete(id);
+                }
             }
             
-            alert('上書き保存が完了しました！');
+            showToast('上書き保存が完了しました！', 'success');
             
             // 編集画面を閉じずにそのまま継続できるようにするため、非表示処理をコメントアウト
             /*
@@ -1843,7 +1857,7 @@ async function updateRecord(id, btn) {
         }
     } catch (e) {
         console.error('Update error:', e);
-        alert('上書き保存に失敗しました。');
+        showToast('上書き保存に失敗しました。', 'error');
     } finally {
         if (btn) {
             btn.disabled = false;
@@ -2027,3 +2041,51 @@ function animateCamera() {
     requestAnimationFrame(animateCamera);
 }
 animateCamera();
+
+// --- Toast Notifications ---
+function showToast(message, type = 'info', duration = 3000) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'toast-message';
+    msgDiv.textContent = message;
+    toast.appendChild(msgDiv);
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.classList.add('toast-fadeOut');
+        toast.addEventListener('animationend', () => { toast.remove(); });
+    }, duration);
+}
+
+function showConfirmToast(message) {
+    return new Promise((resolve) => {
+        const container = document.getElementById('toast-container');
+        if (!container) { resolve(confirm(message)); return; }
+        const toast = document.createElement('div');
+        toast.className = 'toast toast-confirm';
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'toast-message';
+        msgDiv.textContent = message;
+        toast.appendChild(msgDiv);
+        const btnContainer = document.createElement('div');
+        btnContainer.className = 'toast-buttons';
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'toast-btn toast-btn-cancel';
+        cancelBtn.textContent = 'キャンセル';
+        cancelBtn.onclick = () => { closeToast(); resolve(false); };
+        const okBtn = document.createElement('button');
+        okBtn.className = 'toast-btn toast-btn-ok';
+        okBtn.textContent = 'OK';
+        okBtn.onclick = () => { closeToast(); resolve(true); };
+        btnContainer.appendChild(cancelBtn);
+        btnContainer.appendChild(okBtn);
+        toast.appendChild(btnContainer);
+        container.appendChild(toast);
+        function closeToast() {
+            toast.classList.add('toast-fadeOut');
+            toast.addEventListener('animationend', () => { toast.remove(); });
+        }
+    });
+}
