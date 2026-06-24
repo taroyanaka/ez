@@ -97,17 +97,35 @@ let AUTH_PASSWORD = localStorage.getItem('password') || '';
         }
     }
 
+    function getDailyDateKey() {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+
+    function initDailyStats(stats, dateKey, service) {
+        if (!stats.daily) stats.daily = {};
+        if (!stats.daily[dateKey]) stats.daily[dateKey] = {};
+        if (!stats.daily[dateKey][service]) {
+            stats.daily[dateKey][service] = { play: { duration: 0, taps: 0 }, edit: { duration: 0, taps: 0 } };
+        }
+    }
+
     function recordTap() {
         const mode = getCurrentMode();
         const service = getCurrentService();
         const stats = getStats();
+        const dateKey = getDailyDateKey();
         
         initServiceStats(stats, 'global');
         initServiceStats(stats, service);
+        initDailyStats(stats, dateKey, 'global');
+        initDailyStats(stats, dateKey, service);
 
         stats['global'][mode].taps = (stats['global'][mode].taps || 0) + 1;
+        stats.daily[dateKey]['global'][mode].taps = (stats.daily[dateKey]['global'][mode].taps || 0) + 1;
         if (service !== 'global') {
             stats[service][mode].taps = (stats[service][mode].taps || 0) + 1;
+            stats.daily[dateKey][service][mode].taps = (stats.daily[dateKey][service][mode].taps || 0) + 1;
         }
         saveStats(stats);
     }
@@ -118,13 +136,18 @@ let AUTH_PASSWORD = localStorage.getItem('password') || '';
             const durationSec = Math.round(durationMs / 1000);
             const service = getCurrentService();
             const stats = getStats();
+            const dateKey = getDailyDateKey();
             
             initServiceStats(stats, 'global');
             initServiceStats(stats, service);
+            initDailyStats(stats, dateKey, 'global');
+            initDailyStats(stats, dateKey, service);
 
             stats['global'][currentMode].duration = (stats['global'][currentMode].duration || 0) + durationSec;
+            stats.daily[dateKey]['global'][currentMode].duration = (stats.daily[dateKey]['global'][currentMode].duration || 0) + durationSec;
             if (service !== 'global') {
                 stats[service][currentMode].duration = (stats[service][currentMode].duration || 0) + durationSec;
+                stats.daily[dateKey][service][currentMode].duration = (stats.daily[dateKey][service][currentMode].duration || 0) + durationSec;
             }
             saveStats(stats);
         }

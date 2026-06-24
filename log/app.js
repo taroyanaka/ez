@@ -21,13 +21,21 @@ document.addEventListener('DOMContentLoaded', () => {
     function getStatsForService(serviceKey) {
         const stats = getStats();
         const defaultServiceStats = { play: { duration: 0, taps: 0 }, edit: { duration: 0, taps: 0 } };
+        let result = { play: { ...defaultServiceStats.play }, edit: { ...defaultServiceStats.edit }, daily: {} };
         if (stats[serviceKey]) {
-            return {
-                play: { ...defaultServiceStats.play, ...stats[serviceKey].play },
-                edit: { ...defaultServiceStats.edit, ...stats[serviceKey].edit }
-            };
+            result.play = { ...defaultServiceStats.play, ...stats[serviceKey].play };
+            result.edit = { ...defaultServiceStats.edit, ...stats[serviceKey].edit };
         }
-        return defaultServiceStats;
+        if (stats.daily) {
+            for (let date in stats.daily) {
+                if (stats.daily[date][serviceKey]) {
+                    result.daily[date] = stats.daily[date][serviceKey];
+                } else {
+                    result.daily[date] = { play: { duration: 0, taps: 0 }, edit: { duration: 0, taps: 0 } };
+                }
+            }
+        }
+        return result;
     }
 
     // 2. Formatting Helpers
@@ -50,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 3. Render Dashboard Metrics
     let timeChartInstance = null;
     let tapsChartInstance = null;
+    let dailyChartInstance = null;
 
     function renderDashboard(serviceKey = 'global') {
         const stats = getStatsForService(serviceKey);
@@ -111,6 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Destroy existing instances to support re-renders (like resets)
         if (timeChartInstance) timeChartInstance.destroy();
         if (tapsChartInstance) tapsChartInstance.destroy();
+        if (dailyChartInstance) dailyChartInstance.destroy();
 
         // Chart styling variables
         const fontConfig = {
@@ -227,6 +237,100 @@ document.addEventListener('DOMContentLoaded', () => {
                         grid: gridConfig,
                         ticks: { color: '#64748b', font: fontConfig },
                         title: { display: true, text: 'タップ回数', color: '#64748b', font: fontConfig }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#94a3b8', font: fontConfig }
+                    }
+                }
+            }
+        });
+
+        // 4.3. Daily Chart (Duration over 7 days)
+        const ctxDaily = document.getElementById('dailyChart').getContext('2d');
+        
+        const last7Days = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            const dateKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            last7Days.push(dateKey);
+        }
+
+        const dailyPlayData = [];
+        const dailyEditData = [];
+        
+        last7Days.forEach(date => {
+            const dayStats = stats.daily && stats.daily[date] ? stats.daily[date] : { play: { duration: 0, taps: 0 }, edit: { duration: 0, taps: 0 } };
+            dailyPlayData.push(Math.round((dayStats.play.duration / 60) * 10) / 10);
+            dailyEditData.push(Math.round((dayStats.edit.duration / 60) * 10) / 10);
+        });
+
+        const shortDates = last7Days.map(d => d.slice(5).replace('-', '/'));
+
+        dailyChartInstance = new Chart(ctxDaily, {
+            type: 'line',
+            data: {
+                labels: shortDates,
+                datasets: [
+                    {
+                        label: '学習モード (分)',
+                        data: dailyPlayData,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true,
+                        pointBackgroundColor: '#1e293b',
+                        pointBorderColor: '#6366f1',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    },
+                    {
+                        label: '編集/作成モード (分)',
+                        data: dailyEditData,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true,
+                        pointBackgroundColor: '#1e293b',
+                        pointBorderColor: '#10b981',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        labels: { color: '#94a3b8', font: fontConfig, usePointStyle: true, boxWidth: 8 }
+                    },
+                    tooltip: {
+                        backgroundColor: '#131a2c',
+                        titleColor: '#f8fafc',
+                        bodyColor: '#94a3b8',
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 1,
+                        padding: 10,
+                        callbacks: {
+                            label: function(context) {
+                                return ` ${context.dataset.label.replace(' (分)', '')}: ${context.parsed.y} 分`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        grid: gridConfig,
+                        ticks: { color: '#64748b', font: fontConfig },
+                        title: { display: true, text: '分', color: '#64748b', font: fontConfig },
+                        beginAtZero: true
                     },
                     x: {
                         grid: { display: false },
