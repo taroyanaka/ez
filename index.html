@@ -122,6 +122,36 @@
         </div>
     </div>
 
+    <hr>
+    <h2>📦 コースパッケージング (Course Packaging)</h2>
+    <div id='package-ui-container' style='border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #fafafa; margin-bottom: 20px;'>
+        <div id='pkg-login-msg' style='color: red;'>パッケージング機能を利用するにはログインしてください。</div>
+        <div id='pkg-app' style='display: none;'>
+            <div style='display: flex; gap: 20px; flex-wrap: wrap;'>
+                <div style='flex: 1; min-width: 250px;'>
+                    <h3>1. 利用可能な問題集 (Chunks)</h3>
+                    <div style='margin-bottom: 10px;'>
+                        <label><input type='checkbox' id='pkg-my-data' checked> マイデータのみ表示</label>
+                    </div>
+                    <ul id='chunk-list' style='max-height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: white; list-style-type: none; margin: 0;'></ul>
+                </div>
+                <div style='flex: 1; min-width: 250px;'>
+                    <h3>2. パッケージ作成/編集</h3>
+                    <select id='package-select' style='width: 100%; margin-bottom: 10px; padding: 8px;'>
+                        <option value=''>-- 新規パッケージ --</option>
+                    </select>
+                    <input type='text' id='package-name' placeholder='パッケージ名を入力' style='width: 100%; margin-bottom: 10px; padding: 8px; box-sizing: border-box;' />
+                    <button id='save-package-btn' style='background: #2ea44f; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 4px; font-weight: bold;'>保存</button>
+                    <button id='delete-package-btn' style='background: #d73a49; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 4px; font-weight: bold; display: none;'>削除</button>
+                    
+                    <h4>パッケージに含まれる問題集 (クリックで削除)</h4>
+                    <ul id='package-chunks-list' style='min-height: 100px; border: 1px solid #0366d6; padding: 10px; background: #f1f8ff; list-style-type: none; margin: 0;'></ul>
+                    <p style='font-size: 0.8rem; color: #666;'>※左のリストからクリックで追加できます。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src='packaging.js'></script>
     <h1></h1>
 
     <ul>

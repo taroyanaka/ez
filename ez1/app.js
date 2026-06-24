@@ -126,7 +126,7 @@ async function handleCreateChunk() {
     const name = prompt('新しい問題集の名前を入力してください:');
     if (!name) return;
     try {
-        const result = await createItem('chunks', { name });
+        const result = await createItem('chunks', { name, service_type: resource });
         await initChunks();
         // Switch to the new chunk
         currentChunkId = result.id;
@@ -192,7 +192,7 @@ async function handleMultiTxtImport(event) {
 
             // Success: Create chunk and save items
             const chunkName = file.name.replace(/\.[^/.]+$/, ""); // Remove .txt
-            const chunkResult = await createItem('chunks', { name: chunkName });
+            const chunkResult = await createItem('chunks', { name: chunkName, service_type: resource });
             const chunkId = chunkResult.id;
 
             // Use bulk update (PUT with chunk_id) to save items
