@@ -29,10 +29,19 @@ const resource = 'dictation';
 
 
 
-const apiGetAll = () => fetch(`${API_BASE_URL}/${resource}`).then(res => res.json()).then(json => json.data || json);
-const apiCreate = (data) => fetch(`${API_BASE_URL}/${resource}`, {
+const apiGetAll = () => {
+    let url = `${API_BASE_URL}/${resource}`;
+    if (window.currentChunkId) {
+        url += `?chunk_id=${window.currentChunkId}`;
+    }
+    return fetch(url).then(res => res.json()).then(json => json.data || json);
+};
+const apiCreate = (data) => {
+    if (window.currentChunkId) data.chunk_id = window.currentChunkId;
+    return fetch(`${API_BASE_URL}/${resource}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD }, body: JSON.stringify(data)
-}).then(res => res.json());
+    }).then(res => res.json());
+};
 const apiUpdate = (id, data) => fetch(`${API_BASE_URL}/${resource}/${id}`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD }, body: JSON.stringify(data)
 }).then(res => res.json());
@@ -55,6 +64,14 @@ window.loadDataAndRender = async function() {
     }
     if (mgmtInstance) {
         mgmtInstance.render();
+    }
+    
+    window.onChunkChange = async () => {
+        await window.loadDataAndRender();
+    };
+    const container = document.getElementById('ez-chunk-container');
+    if (container && typeof renderChunkWidget === 'function') {
+        await renderChunkWidget(resource);
     }
 };
 

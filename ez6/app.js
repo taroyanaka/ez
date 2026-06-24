@@ -65,11 +65,21 @@ const els = {
 };
 
 // Initialize
-function init() {
-    loadData();
+async function init() {
+    await loadData();
     renderSentencesList();
     renderStack();
     updatePlayUIState();
+    
+    window.onChunkChange = async () => {
+        await loadData();
+        renderSentencesList();
+        updatePlayUIState();
+    };
+    const container = document.getElementById('ez-chunk-container');
+    if (container && typeof renderChunkWidget === 'function') {
+        await renderChunkWidget('tts_quiz');
+    }
     
     // Setup Kuromoji
     els.playBtn.disabled = true; // Disable until ready
@@ -107,16 +117,39 @@ function init() {
     };
 }
 
+const resource = 'tts_quiz';
+
+const apiGetAll = () => {
+    let url = `${API_BASE_URL}/${resource}`;
+    if (window.currentChunkId) {
+        url += `?chunk_id=${window.currentChunkId}`;
+    }
+    return fetch(url).then(res => res.json()).then(json => json.data || json);
+};
+const apiCreate = (data) => {
+    if (window.currentChunkId) data.chunk_id = window.currentChunkId;
+    return fetch(`${API_BASE_URL}/${resource}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD }, body: JSON.stringify(data)
+    }).then(res => res.json());
+};
+const apiDelete = (id) => fetch(`${API_BASE_URL}/${resource}/${id}`, {
+    method: 'DELETE', headers: { 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD }
+}).then(res => res.json());
+
 // Data Management
 function saveData() {
-    localStorage.setItem('ez6_sentences', JSON.stringify(sentences));
     localStorage.setItem('ez6_stack', JSON.stringify(stack));
 }
 
-function loadData() {
-    const s = localStorage.getItem('ez6_sentences');
+async function loadData() {
+    try {
+        const raw = await apiGetAll();
+        sentences = raw.map(r => r.sentence);
+    } catch (e) {
+        console.error(e);
+        sentences = [];
+    }
     const st = localStorage.getItem('ez6_stack');
-    if (s) sentences = JSON.parse(s);
     if (st) stack = JSON.parse(st);
 }
 
@@ -232,7 +265,8 @@ function parseSentenceToWords(sentence) {
 }
 
 // Create Mode
-function addSentence() {
+async function addSentence() {
+    if (!AUTH_USER_ID) return alert('ログインが必要です');
     const text = els.sentenceInput.value.trim();
     if (!text) return;
     
@@ -247,29 +281,45 @@ function addSentence() {
         return;
     }
     
-    sentences.push(text);
-    els.sentenceInput.value = '';
-    els.createFeedback.textContent = '';
-    
-    saveData();
-    renderSentencesList();
-    updatePlayUIState();
+    try {
+        await apiCreate({ sentence: text });
+        sentences.push(text);
+        els.sentenceInput.value = '';
+        els.createFeedback.textContent = '';
+        renderSentencesList();
+        updatePlayUIState();
+    } catch(e) {
+        console.error(e);
+        alert('保存に失敗しました');
+    }
 }
 
-function clearAllSentences() {
-    if(confirm('すべての問題を削除しますか？')) {
+async function clearAllSentences() {
+    if(confirm('すべての問題を削除しますか？\n(注意: API側の全件削除は未実装のため、チャンクから外すなど手動対応が必要です)')) {
         sentences = [];
-        saveData();
         renderSentencesList();
         updatePlayUIState();
     }
 }
 
-function removeSentence(index) {
-    sentences.splice(index, 1);
-    saveData();
-    renderSentencesList();
-    updatePlayUIState();
+async function removeSentence(index) {
+    if (!AUTH_USER_ID) return alert('ログインが必要です');
+    const text = sentences[index];
+    try {
+        // We need to fetch again to get the ID to delete, or delete by text?
+        // Actually dynamic API delete needs ID.
+        const raw = await apiGetAll();
+        const item = raw.find(r => r.sentence === text);
+        if (item) {
+            await apiDelete(item.id_key || item.id);
+        }
+        sentences.splice(index, 1);
+        renderSentencesList();
+        updatePlayUIState();
+    } catch(e) {
+        console.error(e);
+        alert('削除に失敗しました');
+    }
 }
 
 function renderSentencesList() {
