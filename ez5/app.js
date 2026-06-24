@@ -1,6 +1,5 @@
 // Global State
 let createOriginalImg = null;
-let createOriginalFile = null;
 let createCanvas = null;
 let createCtx = null;
 let isDrawing = false;
@@ -9,7 +8,6 @@ let brushSize = 20;
 let savedRecords = []; // サーバー(DB)上に保存されたリスト
 let tempRecords = []; // ブラウザのメモリ上に一時保存されているリスト
 let currentEditingId = null;
-let createOrigImgQueue = []; // 連続編集の待機キュー
 
 // Undo/Redo State
 let drawHistory = [];
@@ -36,8 +34,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderDbList();
     }
 
-    document.getElementById('create-orig-img').addEventListener('change', e => loadImage(e));
-    document.getElementById('bulk-import-imgs').addEventListener('change', e => handleBulkImport(e));
     document.getElementById('bulk-import-originals').addEventListener('change', e => handleBulkImportOriginals(e));
     document.getElementById('brush-size').addEventListener('input', e => {
         brushSize = parseInt(e.target.value);
@@ -232,68 +228,6 @@ function checkAuth() {
         return false;
     }
     return true;
-}
-
-async function loadImage(event) {
-    const files = Array.from(event.target.files);
-    if (!files.length) return;
-
-    // ログインチェック (createモードのみ必要)
-    if (!AUTH_USER_ID || !AUTH_PASSWORD) {
-        event.target.value = ''; // ファイル選択をリセット
-        checkAuth(); // 「ログイン必要」メッセージを点滅表示
-        showToast('ファイルを選択するにはログインが必要です。', 'error');
-        return;
-    }
-
-    if (currentEditingId !== null) {
-        const wantsToSave = await showConfirmToast(`現在「ID: ${currentEditingId}」を編集中です。現在の編集内容を上書き保存しますか？\n\n[OK] 保存してから新規画像を読み込む\n[キャンセル] 保存せずに破棄して新規画像を読み込む`);
-        if (wantsToSave) {
-            const btn = document.getElementById(`btn-update-${currentEditingId}`);
-            if (btn) {
-                await updateRecord(currentEditingId, btn);
-            }
-        } else {
-            // 破棄する場合は編集状態をクリアするだけ
-            currentEditingId = null;
-            document.querySelectorAll('[id^="btn-update-"]').forEach(btn => btn.disabled = true);
-            const editContainer = document.getElementById('edit-target-container');
-            const editTextArea = document.getElementById('edit-target-textarea');
-            const editContentArea = document.getElementById('edit-content-textarea');
-            const bulkImportTargets = document.getElementById('bulk-import-targets');
-            const bulkImportContents = document.getElementById('bulk-import-contents');
-            if (editContainer) editContainer.style.display = 'none';
-            if (editTextArea) editTextArea.value = '';
-            if (editContentArea) editContentArea.value = '';
-            if (bulkImportTargets) bulkImportTargets.style.display = 'block';
-            if (bulkImportContents) bulkImportContents.style.display = 'block';
-        }
-    } else {
-        // 新規作成から別の新規作成へ移る場合も念のためクリア
-        currentEditingId = null;
-    }
-
-    createOrigImgQueue = files.slice(1);
-    loadSingleImage(files[0]);
-    event.target.value = ''; // 連続で同じファイルを選択できるようにリセット
-}
-
-function loadSingleImage(file) {
-    createOriginalFile = file;
-    
-    const reader = new FileReader();
-    reader.onload = e => {
-        const img = new Image();
-        img.onload = () => {
-            createOriginalImg = img;
-            const bgImg = document.getElementById('create-bg-img');
-            bgImg.src = img.src;
-            bgImg.style.display = 'block';
-            setupCreateCanvas();
-        };
-        img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
 }
 
 function setupCreateCanvas() {
@@ -1081,171 +1015,7 @@ async function saveRecord() {
         return;
     }
 
-    if (!createOriginalImg || !createOriginalFile) {
-        showToast('元画像がありません。', 'error');
-        return;
-    }
-    
-    // 現在のCanvasの描画状態（マスク）をDataURL化しBlobに変換
-    const maskDataUrl = createCanvas.toDataURL('image/png');
-    const maskBlob = dataURLtoBlob(maskDataUrl);
-    
-    const record = {
-        id: `temp-${Date.now()}`,
-        isTemp: true,
-        originalFile: createOriginalFile,
-        maskBlob: maskBlob,
-        originalSrc: createOriginalImg.src,
-        maskSrc: maskDataUrl,
-        timestamp: new Date().toLocaleTimeString(),
-        name: createOriginalFile.name || '手書き作成'
-    };
-    
-    tempRecords.push(record);
-    renderSavedList();
-    
-    if (createOrigImgQueue.length > 0) {
-        const nextFile = createOrigImgQueue.shift();
-        showToast(`リスト（一時保存）に追加しました。\n続いてキューの次の画像（${nextFile.name}）を読み込みます。`, 'success');
-        loadSingleImage(nextFile);
-    } else {
-        showToast('リスト（一時保存）に追加しました！', 'success');
-    }
-}
-
-async function handleBulkImport(event) {
-    const files = Array.from(event.target.files);
-    if (!files.length) return;
-    
-    if (!AUTH_USER_ID || !AUTH_PASSWORD) {
-        showToast('インポートにはログインが必要です。', 'error');
-        event.target.value = '';
-        return;
-    }
-
-    if (currentEditingId !== null) {
-        const wantsToSave = await showConfirmToast(`現在「ID: ${currentEditingId}」を編集中です。現在の編集内容を上書き保存しますか？\n\n[OK] 保存してから一括インポートへ進む\n[キャンセル] 保存せずに破棄して一括インポートへ進む`);
-        if (wantsToSave) {
-            const btn = document.getElementById(`btn-update-${currentEditingId}`);
-            if (btn) {
-                await updateRecord(currentEditingId, btn);
-            }
-        } else {
-            // 破棄する場合は編集状態をクリアするだけ
-            currentEditingId = null;
-            document.querySelectorAll('[id^="btn-update-"]').forEach(btn => btn.disabled = true);
-            const editContainer = document.getElementById('edit-target-container');
-            const editTextArea = document.getElementById('edit-target-textarea');
-            const editContentArea = document.getElementById('edit-content-textarea');
-            const bulkImportTargets = document.getElementById('bulk-import-targets');
-            const bulkImportContents = document.getElementById('bulk-import-contents');
-            if (editContainer) editContainer.style.display = 'none';
-            if (editTextArea) editTextArea.value = '';
-            if (editContentArea) editContentArea.value = '';
-            if (bulkImportTargets) bulkImportTargets.style.display = 'block';
-            if (bulkImportContents) bulkImportContents.style.display = 'block';
-        }
-    }
-
-    const originalMap = new Map(); // key: baseName
-    const maskMap = new Map();     // key: baseName
-    
-    for (const file of files) {
-        const name = file.name;
-        // filename-original.ext
-        const origMatch = name.match(/^(.*)-original\.[a-zA-Z0-9]+$/);
-        // filename-mask.png
-        const maskMatch = name.match(/^(.*)-mask\.png$/);
-        
-        if (origMatch) {
-            originalMap.set(origMatch[1], file);
-        } else if (maskMatch) {
-            if (file.type !== 'image/png') {
-                showToast(`エラー: マスク画像(${name})はPNG形式である必要があります。`, 'error');
-                event.target.value = '';
-                return;
-            }
-            maskMap.set(maskMatch[1], file);
-        }
-    }
-    
-    const validPairs = [];
-    
-    for (const [baseName, origFile] of originalMap.entries()) {
-        const maskFile = maskMap.get(baseName);
-        if (maskFile) {
-            validPairs.push({ baseName, origFile, maskFile });
-        }
-    }
-    
-    if (validPairs.length === 0) {
-        showToast('有効なペア（「○○-original.拡張子」と「○○-mask.png」）が見つかりませんでした。', 'error');
-        event.target.value = '';
-        return;
-    }
-    
-    const getImageDims = (file) => {
-        return new Promise((resolve, reject) => {
-            const url = URL.createObjectURL(file);
-            const img = new Image();
-            img.onload = () => {
-                URL.revokeObjectURL(url);
-                resolve({ width: img.width, height: img.height });
-            };
-            img.onerror = () => {
-                URL.revokeObjectURL(url);
-                reject(new Error(`画像の読み込みに失敗しました: ${file.name}`));
-            };
-            img.src = url;
-        });
-    };
-    
-    const passedPairs = [];
-    
-    for (const pair of validPairs) {
-        try {
-            const origDims = await getImageDims(pair.origFile);
-            const maskDims = await getImageDims(pair.maskFile);
-            
-            if (origDims.width !== maskDims.width || origDims.height !== maskDims.height) {
-                showToast(`エラー: ペア「${pair.baseName}」の画像サイズが一致しません。\nOriginal: ${origDims.width}x${origDims.height}\nMask: ${maskDims.width}x${maskDims.height}`, 'error');
-                event.target.value = '';
-                return; 
-            }
-            passedPairs.push(pair);
-        } catch (err) {
-            showToast(err.message, 'error');
-            event.target.value = '';
-            return;
-        }
-    }
-    
-    if (!await showConfirmToast(`${passedPairs.length}ペア（計${passedPairs.length * 2}ファイル）の画像をインポートしますか？\n※アップロードには少し時間がかかる場合があります。`)) {
-        event.target.value = '';
-        return;
-    }
-    
-    let successCount = 0;
-    
-    for (const pair of passedPairs) {
-        const origUrl = URL.createObjectURL(pair.origFile);
-        const maskUrl = URL.createObjectURL(pair.maskFile);
-        
-        tempRecords.push({
-            id: `temp-${Date.now()}-${Math.random()}`,
-            isTemp: true,
-            originalFile: pair.origFile,
-            maskBlob: pair.maskFile,
-            originalSrc: origUrl,
-            maskSrc: maskUrl,
-            timestamp: new Date().toLocaleTimeString(),
-            name: pair.baseName
-        });
-    }
-    
-    renderSavedList();
-    showToast(`${passedPairs.length}ペアを一時保存リストに追加しました。\n「全てアップロード」または「個別アップロード」でサーバーへ保存してください。`, 'success');
-    event.target.value = '';
+    showToast('編集する画像を選択してください。', 'error');
 }
 
 async function handleBulkImportOriginals(event) {
