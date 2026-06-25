@@ -4,15 +4,22 @@
 window.currentChunkId = null;
 window.onChunkChange = null; // Apps can assign a callback here
 
-async function fetchChunks() {
+async function fetchChunks(resourceType) {
     let url = `${API_BASE_URL}/api/chunks?limit=100`;
+    if (resourceType) {
+        url += `&service_type=${encodeURIComponent(resourceType)}`;
+    }
     const myDataOnlyToggle = document.getElementById('my-data-only-toggle');
     if (myDataOnlyToggle && myDataOnlyToggle.checked && AUTH_USER_ID) {
         url += `&my_data_only=true&user_id=${AUTH_USER_ID}`;
     }
     const res = await fetch(url);
     const json = await res.json();
-    return json.data || [];
+    let chunks = json.data || [];
+    if (resourceType) {
+        chunks = chunks.filter(c => c.service_type === resourceType || !c.service_type);
+    }
+    return chunks;
 }
 
 async function createChunk(resourceType) {
@@ -49,7 +56,7 @@ async function renderChunkWidget(resourceType) {
     }
 
     try {
-        const chunks = await fetchChunks();
+        const chunks = await fetchChunks(resourceType);
         let options = chunks.map(c => `<option value="${c.id}" ${c.id == window.currentChunkId ? 'selected' : ''}>${c.name}</option>`).join('');
         
         container.innerHTML = `

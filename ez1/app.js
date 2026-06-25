@@ -91,7 +91,7 @@ function checkAuth() {
 async function initChunks() {
     try {
         const data = await getAllItems('chunks');
-        chunks = data;
+        chunks = data.filter(c => c.service_type === resource || !c.service_type);
         populateChunkSelector();
         if (chunks.length > 0) {
             currentChunkId = chunks[0].id;
@@ -783,7 +783,8 @@ async function handleGetAll() {
     selectedMergeChunks = []; // Reset selection when fetching new list
     try {
         console.log('handleGetAll: Fetching items...');
-        const allChunks = await getAllItems('chunks', true);
+        const allChunksRaw = await getAllItems('chunks', true);
+        const allChunks = allChunksRaw.filter(c => c.service_type === resource || !c.service_type);
         const data = await getAllItems(resource, true);
         console.log('handleGetAll: Success', data);
         displayApiResult({ action: 'getAll', status: 'success', data: data, allChunks: allChunks });
