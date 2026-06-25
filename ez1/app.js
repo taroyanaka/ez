@@ -92,9 +92,17 @@ async function initChunks() {
     try {
         const data = await getAllItems('chunks');
         chunks = data.filter(c => c.service_type === resource || !c.service_type);
-        populateChunkSelector();
-        if (chunks.length > 0) {
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlChunkId = urlParams.get('chunk_id');
+        if (urlChunkId && chunks.find(c => String(c.id) === String(urlChunkId))) {
+            currentChunkId = urlChunkId;
+        } else if (chunks.length > 0) {
             currentChunkId = chunks[0].id;
+        }
+        
+        populateChunkSelector();
+        if (currentChunkId) {
             document.getElementById('chunk-select').value = currentChunkId;
             await loadData();
         }

@@ -57,6 +57,14 @@ async function renderChunkWidget(resourceType) {
 
     try {
         const chunks = await fetchChunks(resourceType);
+        
+        // パラメータからchunk_idを取得してセットする
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlChunkId = urlParams.get('chunk_id');
+        if (urlChunkId && chunks.find(c => String(c.id) === String(urlChunkId))) {
+            window.currentChunkId = urlChunkId;
+        }
+
         let options = chunks.map(c => `<option value="${c.id}" ${c.id == window.currentChunkId ? 'selected' : ''}>${c.name}</option>`).join('');
         
         container.innerHTML = `

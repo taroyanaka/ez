@@ -102,12 +102,29 @@ document.addEventListener('DOMContentLoaded', () => {
             const li = document.createElement('li');
             li.style.padding = '8px';
             li.style.borderBottom = '1px solid #ccc';
-            li.style.cursor = 'pointer';
             li.style.background = '#fff';
             li.style.display = 'flex';
             li.style.justifyContent = 'space-between';
-            li.innerHTML = `<span>${idx + 1}. ${pc.name}</span> <span style='color:red'>✖</span>`;
-            li.onclick = () => {
+            li.style.alignItems = 'center';
+            
+            const chunkInfo = allChunks.find(c => String(c.id) === String(pc.chunk_id));
+            const serviceType = chunkInfo ? chunkInfo.service_type : null;
+            
+            let playLinkHTML = '';
+            if (serviceType) {
+                playLinkHTML = `<a href="./${serviceType}/index.html?chunk_id=${pc.chunk_id}" target="_blank" style="margin-left: 10px; padding: 4px 8px; background: #0366d6; color: white; text-decoration: none; border-radius: 4px; font-size: 0.85em; font-weight: bold;">再生</a>`;
+            }
+
+            li.innerHTML = `
+                <div style="display: flex; align-items: center;">
+                    <span>${idx + 1}. ${pc.name}</span>
+                    ${playLinkHTML}
+                </div>
+                <span class="remove-btn" style='color:red; cursor:pointer; font-weight:bold; padding: 4px;'>✖</span>
+            `;
+            
+            li.querySelector('.remove-btn').onclick = (e) => {
+                e.stopPropagation();
                 currentPackageChunks.splice(idx, 1);
                 renderPackageChunks();
             };
