@@ -112,7 +112,16 @@ document.addEventListener('DOMContentLoaded', () => {
             
             let playLinkHTML = '';
             if (serviceType) {
-                playLinkHTML = `<a href="./${serviceType}/index.html?chunk_id=${pc.chunk_id}" target="_blank" style="margin-left: 10px; padding: 4px 8px; background: #0366d6; color: white; text-decoration: none; border-radius: 4px; font-size: 0.85em; font-weight: bold;">再生</a>`;
+                const serviceToDir = {
+                    'flashcards': 'ez1',
+                    'fill_in_the_blank': 'ez2',
+                    'reading_quizzes': 'ez3',
+                    'dictation': 'ez4',
+                    'fill_image': 'ez5',
+                    'tts_quiz': 'ez6'
+                };
+                const dirName = serviceToDir[serviceType] || serviceType;
+                playLinkHTML = `<a href="./${dirName}/index.html?chunk_id=${pc.chunk_id}" target="_blank" style="margin-left: 10px; padding: 4px 8px; background: #0366d6; color: white; text-decoration: none; border-radius: 4px; font-size: 0.85em; font-weight: bold;">再生</a>`;
             }
 
             li.innerHTML = `
