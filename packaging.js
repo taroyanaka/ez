@@ -36,14 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // Load chunks
-            let chunksUrl = `${API_BASE_URL}/api/chunks?limit=1000`;
-            if (pkgMyData.checked) {
-                if (auth) {
-                    chunksUrl += `&my_data_only=true&user_id=${auth.uid}`;
-                } else {
-                    chunksUrl += `&my_data_only=true&user_id=NOT_LOGGED_IN`;
-                }
-            }
+            const chunksUrl = `${API_BASE_URL}/api/chunks?limit=1000`;
             const cRes = await fetch(chunksUrl);
             const cData = await cRes.json();
             allChunks = cData.data || [];
@@ -61,7 +54,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderChunks() {
         chunkListEl.innerHTML = '';
-        allChunks.forEach(c => {
+        const auth = checkAuth();
+        const showMyOnly = pkgMyData.checked;
+        const filteredChunks = allChunks.filter(c => {
+            if (showMyOnly) {
+                return auth && String(c.user_id) === String(auth.uid);
+            }
+            return true;
+        });
+
+        filteredChunks.forEach(c => {
             const li = document.createElement('li');
             li.style.padding = '8px';
             li.style.borderBottom = '1px solid #eee';
@@ -139,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
             li.style.alignItems = 'center';
             
             const chunkInfo = allChunks.find(c => String(c.id) === String(pc.chunk_id));
-            const serviceType = chunkInfo ? chunkInfo.service_type : null;
+            const serviceType = pc.service_type || (chunkInfo ? chunkInfo.service_type : null);
             
             let playLinkHTML = '';
             if (serviceType) {
@@ -209,7 +211,8 @@ document.addEventListener('DOMContentLoaded', () => {
             currentPackageChunks = (pkg.chunks || []).map(c => ({
                 chunk_id: c.id,
                 name: c.name,
-                order_index: c.order_index
+                order_index: c.order_index,
+                service_type: c.service_type
             }));
             const auth = checkAuth();
             if (auth && String(pkg.user_id) === String(auth.uid)) {
