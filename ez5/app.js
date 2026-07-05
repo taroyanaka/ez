@@ -986,7 +986,7 @@ async function loadData() {
             url = `${API_BASE_URL}/fill_image/user/${AUTH_USER_ID}`;
         }
         
-        const res = await fetch(url);
+        const res = await fetch(url, { cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to load data');
         const data = await res.json();
         
