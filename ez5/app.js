@@ -22,9 +22,7 @@ const playPrefetchCache = new Map(); // id -> { origUrl, maskUrl }
 
 
 window.onChunkChange = () => {
-    if (AUTH_USER_ID) {
-        loadData();
-    }
+    loadData();
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -36,12 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await renderChunkWidget('fill_image');
     }
 
-    if (AUTH_USER_ID) {
-        loadData();
-    } else {
-        renderSavedList();
-        renderDbList();
-    }
+    loadData();
 
     document.getElementById('bulk-import-originals').addEventListener('change', e => handleBulkImportOriginals(e));
     document.getElementById('brush-size').addEventListener('input', e => {
@@ -984,14 +977,11 @@ async function loadData() {
         let url = `${API_BASE_URL}/fill_image`;
         if (isMyDataOnly) {
             if (!AUTH_USER_ID) {
-                // 未ログイン時にマイデータのみを表示しようとした場合はリストを空にして終了
-                savedRecords = [];
-                renderSavedList();
-                renderPlayList();
-                renderDbList();
-                return;
+                const myDataOnlyToggle = document.getElementById('my-data-only-toggle');
+                if (myDataOnlyToggle) myDataOnlyToggle.checked = false;
+            } else {
+                url = `${API_BASE_URL}/fill_image/user/${AUTH_USER_ID}`;
             }
-            url = `${API_BASE_URL}/fill_image/user/${AUTH_USER_ID}`;
         }
         
         const res = await fetch(url, { cache: 'no-store' });

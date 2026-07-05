@@ -50,7 +50,7 @@ async function renderChunkWidget(resourceType) {
     const container = document.getElementById('ez-chunk-container');
     if (!container) return;
 
-    if (!AUTH_USER_ID) {
+    if (!AUTH_USER_ID && resourceType !== 'fill_image') {
         container.innerHTML = `<div style="padding:10px; background:#fee2e2; color:#ef4444; border-radius:8px;">チャンク機能を使用するにはログインしてください。</div>`;
         return;
     }
@@ -75,9 +75,9 @@ async function renderChunkWidget(resourceType) {
                     <option value="">-- 未選択 (新規作成してください) --</option>
                     ${options}
                 </select>
-                <button id="ez-chunk-create-btn" class="primary-btn" style="padding: 0.5rem 1rem;">
+                ${AUTH_USER_ID ? `<button id="ez-chunk-create-btn" class="primary-btn" style="padding: 0.5rem 1rem;">
                     新規作成
-                </button>
+                </button>` : ''}
             </div>
         `;
 
@@ -87,10 +87,13 @@ async function renderChunkWidget(resourceType) {
             if (window.onChunkChange) window.onChunkChange();
         });
 
-        document.getElementById('ez-chunk-create-btn').addEventListener('click', (e) => {
-            e.preventDefault();
-            createChunk(resourceType);
-        });
+        const createBtn = document.getElementById('ez-chunk-create-btn');
+        if (createBtn) {
+            createBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                createChunk(resourceType);
+            });
+        }
 
         if (!window.currentChunkId && chunks.length > 0) {
             window.currentChunkId = chunks[0].id;
