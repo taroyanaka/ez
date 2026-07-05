@@ -92,6 +92,32 @@
             background-color: #005cc5;
             color: white;
         }
+
+        /* トースト通知のスタイル */
+        #toast-container {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 4px;
+            padding: 12px;
+            position: fixed;
+            z-index: 1000;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 14px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            opacity: 0;
+            transition: opacity 0.3s, bottom 0.3s;
+        }
+
+        #toast-container.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 50px;
+        }
     </style>
 </head>
 
@@ -147,6 +173,7 @@
                     <input type='text' id='package-name' placeholder='パッケージ名を入力' style='width: 100%; margin-bottom: 10px; padding: 8px; box-sizing: border-box;' />
                     <button id='save-package-btn' style='background: #2ea44f; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 4px; font-weight: bold;'>保存</button>
                     <button id='delete-package-btn' style='background: #d73a49; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 4px; font-weight: bold; display: none;'>削除</button>
+                    <button id='share-package-btn' style='background: #0366d6; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 4px; font-weight: bold; display: none; margin-left: 10px;'>共有URLをコピー</button>
                     
                     <h4>パッケージに含まれる問題集 (クリックで削除)</h4>
                     <ul id='package-chunks-list' style='min-height: 100px; border: 1px solid #0366d6; padding: 10px; background: #f1f8ff; list-style-type: none; margin: 0;'></ul>
@@ -323,7 +350,20 @@
                 });
             });
         });
+
+        // トースト通知関数
+        function showToast(message) {
+            const toast = document.getElementById('toast-container');
+            toast.textContent = message;
+            toast.className = 'show';
+            setTimeout(() => {
+                toast.className = toast.className.replace('show', '');
+            }, 3000);
+        }
     </script>
+
+    <!-- トースト表示用要素 -->
+    <div id="toast-container"></div>
 </body>
 
 </html>

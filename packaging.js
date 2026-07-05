@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const pkgNameEl = document.getElementById('package-name');
     const savePkgBtn = document.getElementById('save-package-btn');
     const delPkgBtn = document.getElementById('delete-package-btn');
+    const sharePkgBtn = document.getElementById('share-package-btn');
     const pkgMyData = document.getElementById('pkg-my-data');
     const pkgFilterAll = document.getElementById('pkg-filter-all');
     const pkgFilterMy = document.getElementById('pkg-filter-my');
@@ -47,6 +48,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
             renderChunks();
             renderPackages();
+
+            // Handle pack_id from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const packId = urlParams.get('pack_id');
+            if (packId && !currentPackageId) {
+                // Ensure the pack_id exists in our list (even if it's not "my data", we might need to select it,
+                // but if pkgFilterMy is checked and it's not ours, it won't be in the options.
+                // We'll temporarily check "All" to show it if needed)
+                const targetPkg = allPackages.find(p => String(p.id) === packId);
+                if (targetPkg) {
+                    if (pkgFilterMy && pkgFilterMy.checked && String(targetPkg.user_id) !== String(auth?.uid)) {
+                        document.getElementById('pkg-filter-all').checked = true;
+                        renderPackages();
+                    }
+                    pkgSelectEl.value = packId;
+                    pkgSelectEl.dispatchEvent(new Event('change'));
+                }
+            }
         } catch (e) {
             console.error(e);
         }
@@ -188,6 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentPackageOwnerId = null;
             currentPackageChunks = [];
             delPkgBtn.style.display = 'none';
+            sharePkgBtn.style.display = 'none';
             const auth = checkAuth();
             if (auth) {
                 savePkgBtn.style.display = 'inline-block';
@@ -221,6 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 savePkgBtn.style.display = 'none';
                 pkgNameEl.disabled = true;
             }
+            sharePkgBtn.style.display = 'inline-block';
             renderPackageChunks();
         } catch (e) {
             console.error(e);
@@ -292,6 +313,23 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error(e);
             alert('削除に失敗しました。');
         }
+    });
+
+    sharePkgBtn.addEventListener('click', () => {
+        if (!currentPackageId) return;
+        const url = new URL(window.location.href);
+        url.searchParams.set('pack_id', currentPackageId);
+        
+        navigator.clipboard.writeText(url.toString()).then(() => {
+            if (typeof showToast === 'function') {
+                showToast('共有URLをクリップボードにコピーしました！');
+            } else {
+                alert('共有URLをクリップボードにコピーしました！');
+            }
+        }).catch(err => {
+            console.error('Copy failed:', err);
+            alert('URLのコピーに失敗しました。');
+        });
     });
 
     pkgMyData.addEventListener('change', loadData);
