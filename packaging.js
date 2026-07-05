@@ -141,21 +141,18 @@ document.addEventListener('DOMContentLoaded', () => {
             li.style.alignItems = 'center';
             
             const chunkInfo = allChunks.find(c => String(c.id) === String(pc.chunk_id));
-            const serviceType = pc.service_type || (chunkInfo ? chunkInfo.service_type : null);
+            const serviceType = pc.service_type || (chunkInfo ? chunkInfo.service_type : null) || 'flashcards';
             
-            let playLinkHTML = '';
-            if (serviceType) {
-                const serviceToDir = {
-                    'flashcards': 'ez1',
-                    'fill_in_the_blank': 'ez2',
-                    'reading_quizzes': 'ez3',
-                    'dictation': 'ez4',
-                    'fill_image': 'ez5',
-                    'tts_quiz': 'ez6'
-                };
-                const dirName = serviceToDir[serviceType] || serviceType;
-                playLinkHTML = `<a href="./${dirName}/index.html?chunk_id=${pc.chunk_id}" target="_blank" style="margin-left: 10px; padding: 4px 8px; background: #0366d6; color: white; text-decoration: none; border-radius: 4px; font-size: 0.85em; font-weight: bold;">再生</a>`;
-            }
+            const serviceToDir = {
+                'flashcards': 'ez1',
+                'fill_in_the_blank': 'ez2',
+                'reading_quizzes': 'ez3',
+                'dictation': 'ez4',
+                'fill_image': 'ez5',
+                'tts_quiz': 'ez6'
+            };
+            const dirName = serviceToDir[serviceType] || serviceType;
+            const playLinkHTML = `<a href="./${dirName}/index.html?chunk_id=${pc.chunk_id}" target="_blank" style="padding: 4px 8px; background: #0366d6; color: white; text-decoration: none; border-radius: 4px; font-size: 0.85em; font-weight: bold; margin-right: 5px;">再生</a>`;
 
             const auth = checkAuth();
             const isOwner = !currentPackageId || (auth && String(currentPackageOwnerId) === String(auth.uid));
@@ -165,11 +162,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             li.innerHTML = `
+                <span>${idx + 1}. ${pc.name} <small style='color:#999'>(${serviceType})</small></span>
                 <div style="display: flex; align-items: center;">
-                    <span>${idx + 1}. ${pc.name}</span>
                     ${playLinkHTML}
+                    ${removeBtnHTML}
                 </div>
-                ${removeBtnHTML}
             `;
             
             if (isOwner) {
