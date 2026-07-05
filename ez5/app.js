@@ -76,6 +76,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const createOpenPlayBtn = document.getElementById('create-open-play-btn');
     if (createOpenPlayBtn) createOpenPlayBtn.addEventListener('click', () => createOpenInPlay());
 
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('chunk_id')) {
+        switchTab('play');
+    }
+
     // Keyboard navigation
     window.addEventListener('keydown', (e) => {
         if (e.key === 'ArrowLeft') {
