@@ -27,11 +27,15 @@ window.onChunkChange = () => {
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Canvas Setup
     createCanvas = document.getElementById('create-canvas');
     createCtx = createCanvas.getContext('2d', { willReadFrequently: true });
     
+    if (typeof renderChunkWidget === 'function') {
+        await renderChunkWidget('fill_image');
+    }
+
     if (AUTH_USER_ID) {
         loadData();
     } else {
