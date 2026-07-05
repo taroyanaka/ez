@@ -46,7 +46,6 @@
     const screenContainer = document.createElement('section');
     screenContainer.className = 'screen';
     screenContainer.setAttribute('aria-label', 'animation screen');
-    screenContainer.style.margin = '20px auto';
     screenContainer.style.display = 'block';
     screenContainer.innerHTML = screenHtml;
 
@@ -142,12 +141,6 @@
             updateLayers();
             triggerVibration(state.tapCount);
         };
-
-        // Listen for taps inside the screen element itself
-        screenContainer.addEventListener("click", (e) => {
-            e.stopPropagation();
-            doTap();
-        });
 
         // Global Tap Listener: Tap on any button, card, or interactive element inside the page to increment slot animations!
         document.addEventListener("click", (e) => {
