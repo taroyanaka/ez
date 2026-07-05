@@ -21,6 +21,11 @@ const playPrefetchCache = new Map(); // id -> { origUrl, maskUrl }
 
 
 
+window.onChunkChange = () => {
+    if (AUTH_USER_ID) {
+        loadData();
+    }
+};
 
 document.addEventListener('DOMContentLoaded', () => {
     // Canvas Setup
@@ -981,7 +986,13 @@ async function loadData() {
         if (!res.ok) throw new Error('Failed to load data');
         const data = await res.json();
         
-        savedRecords = data.map(item => ({
+        const selectedChunk = window.currentChunkId === 'null' ? null : window.currentChunkId;
+        const filteredData = data.filter(item => {
+            if (selectedChunk === null) return item.chunk_id === null;
+            return String(item.chunk_id) === String(selectedChunk);
+        });
+        
+        savedRecords = filteredData.map(item => ({
             id: item.id,
             original: item.original,
             mask: item.mask,
@@ -1165,6 +1176,10 @@ async function uploadTempRecord(tempId, buttonEl, skipRender = false) {
             if (contentTextarea && contentTextarea.value.trim() !== '') {
                 formData.append('content', contentTextarea.value.trim());
             }
+        }
+        
+        if (window.currentChunkId && window.currentChunkId !== 'null') {
+            formData.append('chunk_id', window.currentChunkId);
         }
         
         const response = await fetch(endpoint, {
@@ -1578,6 +1593,10 @@ async function updateRecord(id, btn) {
         const editContentArea = document.getElementById('edit-content-textarea');
         if (editContentArea && editContentArea.value !== undefined) {
             formData.append('content', editContentArea.value.trim());
+        }
+        
+        if (window.currentChunkId && window.currentChunkId !== 'null') {
+            formData.append('chunk_id', window.currentChunkId);
         }
         
         const response = await fetch(`${API_BASE_URL}/fill_image/${id}`, {
