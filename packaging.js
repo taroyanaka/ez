@@ -18,16 +18,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentPackageId = null;
     let currentPackageOwnerId = null;
 
-    // Check auth periodically or once
     function checkAuth() {
         const uid = localStorage.getItem('user_id');
         const pwd = localStorage.getItem('password');
+        pkgApp.style.display = 'block';
         if (uid && pwd) {
-            pkgApp.style.display = 'block';
             pkgLoginMsg.style.display = 'none';
             return { uid, pwd };
         } else {
-            pkgApp.style.display = 'none';
             pkgLoginMsg.style.display = 'block';
             return null;
         }
@@ -35,13 +33,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadData() {
         const auth = checkAuth();
-        if (!auth) return;
 
         try {
             // Load chunks
             let chunksUrl = `${API_BASE_URL}/api/chunks?limit=1000`;
             if (pkgMyData.checked) {
-                chunksUrl += `&my_data_only=true&user_id=${auth.uid}`;
+                if (auth) {
+                    chunksUrl += `&my_data_only=true&user_id=${auth.uid}`;
+                } else {
+                    chunksUrl += `&my_data_only=true&user_id=NOT_LOGGED_IN`;
+                }
             }
             const cRes = await fetch(chunksUrl);
             const cData = await cRes.json();
@@ -64,11 +65,29 @@ document.addEventListener('DOMContentLoaded', () => {
             const li = document.createElement('li');
             li.style.padding = '8px';
             li.style.borderBottom = '1px solid #eee';
-            li.style.cursor = 'pointer';
             li.style.display = 'flex';
             li.style.justifyContent = 'space-between';
-            li.innerHTML = `<span>${c.name} <small style='color:#999'>(${c.service_type || 'unknown'})</small></span> <button style='background:#f0f0f0; border:1px solid #ccc; cursor:pointer;'>追加</button>`;
-            li.onclick = () => {
+            li.style.alignItems = 'center';
+
+            const serviceToDir = {
+                'flashcards': 'ez1',
+                'fill_in_the_blank': 'ez2',
+                'reading_quizzes': 'ez3',
+                'dictation': 'ez4',
+                'fill_image': 'ez5',
+                'tts_quiz': 'ez6'
+            };
+            const dirName = serviceToDir[c.service_type] || c.service_type;
+            const playLinkHTML = dirName ? `<a href="./${dirName}/index.html?chunk_id=${c.id}" target="_blank" style="padding: 4px 8px; background: #0366d6; color: white; text-decoration: none; border-radius: 4px; font-size: 0.85em; font-weight: bold; margin-right: 5px;">再生</a>` : '';
+
+            li.innerHTML = `
+                <span>${c.name} <small style='color:#999'>(${c.service_type || 'unknown'})</small></span>
+                <div>
+                    ${playLinkHTML}
+                    <button class="add-chunk-btn" style='background:#f0f0f0; border:1px solid #ccc; cursor:pointer; padding:4px 8px; border-radius:4px;'>追加</button>
+                </div>
+            `;
+            li.querySelector('.add-chunk-btn').onclick = () => {
                 currentPackageChunks.push({
                     chunk_id: c.id,
                     name: c.name,
@@ -85,8 +104,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const auth = checkAuth();
         const showMyOnly = pkgFilterMy.checked;
         const filteredPackages = allPackages.filter(p => {
-            if (showMyOnly && auth) {
-                return String(p.user_id) === String(auth.uid);
+            if (showMyOnly) {
+                return auth && String(p.user_id) === String(auth.uid);
             }
             return true;
         });
@@ -170,8 +189,14 @@ document.addEventListener('DOMContentLoaded', () => {
             currentPackageOwnerId = null;
             currentPackageChunks = [];
             delPkgBtn.style.display = 'none';
-            savePkgBtn.style.display = 'inline-block';
-            pkgNameEl.disabled = false;
+            const auth = checkAuth();
+            if (auth) {
+                savePkgBtn.style.display = 'inline-block';
+                pkgNameEl.disabled = false;
+            } else {
+                savePkgBtn.style.display = 'none';
+                pkgNameEl.disabled = true;
+            }
             renderPackageChunks();
             return;
         }
