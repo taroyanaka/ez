@@ -9,11 +9,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const savePkgBtn = document.getElementById('save-package-btn');
     const delPkgBtn = document.getElementById('delete-package-btn');
     const pkgMyData = document.getElementById('pkg-my-data');
+    const pkgFilterAll = document.getElementById('pkg-filter-all');
+    const pkgFilterMy = document.getElementById('pkg-filter-my');
 
     let allChunks = [];
     let allPackages = [];
     let currentPackageChunks = []; // array of { chunk_id: 1, name: "...", order_index: 0 }
     let currentPackageId = null;
+    let currentPackageOwnerId = null;
 
     // Check auth periodically or once
     function checkAuth() {
@@ -79,7 +82,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderPackages() {
         pkgSelectEl.innerHTML = '<option value="">-- 新規パッケージ --</option>';
-        allPackages.forEach(p => {
+        const auth = checkAuth();
+        const showMyOnly = pkgFilterMy.checked;
+        const filteredPackages = allPackages.filter(p => {
+            if (showMyOnly && auth) {
+                return String(p.user_id) === String(auth.uid);
+            }
+            return true;
+        });
+
+        filteredPackages.forEach(p => {
             const opt = document.createElement('option');
             opt.value = p.id;
             opt.textContent = p.name;
@@ -124,19 +136,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 playLinkHTML = `<a href="./${dirName}/index.html?chunk_id=${pc.chunk_id}" target="_blank" style="margin-left: 10px; padding: 4px 8px; background: #0366d6; color: white; text-decoration: none; border-radius: 4px; font-size: 0.85em; font-weight: bold;">再生</a>`;
             }
 
+            const auth = checkAuth();
+            const isOwner = !currentPackageId || (auth && String(currentPackageOwnerId) === String(auth.uid));
+            let removeBtnHTML = '';
+            if (isOwner) {
+                removeBtnHTML = `<span class="remove-btn" style='color:red; cursor:pointer; font-weight:bold; padding: 4px;'>✖</span>`;
+            }
+
             li.innerHTML = `
                 <div style="display: flex; align-items: center;">
                     <span>${idx + 1}. ${pc.name}</span>
                     ${playLinkHTML}
                 </div>
-                <span class="remove-btn" style='color:red; cursor:pointer; font-weight:bold; padding: 4px;'>✖</span>
+                ${removeBtnHTML}
             `;
             
-            li.querySelector('.remove-btn').onclick = (e) => {
-                e.stopPropagation();
-                currentPackageChunks.splice(idx, 1);
-                renderPackageChunks();
-            };
+            if (isOwner) {
+                li.querySelector('.remove-btn').onclick = (e) => {
+                    e.stopPropagation();
+                    currentPackageChunks.splice(idx, 1);
+                    renderPackageChunks();
+                };
+            }
             pkgChunksListEl.appendChild(li);
         });
     }
@@ -146,8 +167,11 @@ document.addEventListener('DOMContentLoaded', () => {
         currentPackageId = id || null;
         if (!currentPackageId) {
             pkgNameEl.value = '';
+            currentPackageOwnerId = null;
             currentPackageChunks = [];
             delPkgBtn.style.display = 'none';
+            savePkgBtn.style.display = 'inline-block';
+            pkgNameEl.disabled = false;
             renderPackageChunks();
             return;
         }
@@ -156,6 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch(`${API_BASE_URL}/api/packages/${id}`);
             const pkg = await res.json();
             pkgNameEl.value = pkg.name;
+            currentPackageOwnerId = pkg.user_id;
             currentPackageChunks = (pkg.chunks || []).map(c => ({
                 chunk_id: c.id,
                 name: c.name,
@@ -164,8 +189,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const auth = checkAuth();
             if (auth && String(pkg.user_id) === String(auth.uid)) {
                 delPkgBtn.style.display = 'inline-block';
+                savePkgBtn.style.display = 'inline-block';
+                pkgNameEl.disabled = false;
             } else {
                 delPkgBtn.style.display = 'none';
+                savePkgBtn.style.display = 'none';
+                pkgNameEl.disabled = true;
             }
             renderPackageChunks();
         } catch (e) {
@@ -241,6 +270,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     pkgMyData.addEventListener('change', loadData);
+    if (pkgFilterAll) pkgFilterAll.addEventListener('change', renderPackages);
+    if (pkgFilterMy) pkgFilterMy.addEventListener('change', renderPackages);
 
     // Initial load
     setTimeout(loadData, 500); // Wait a bit for env.js and localstorage
