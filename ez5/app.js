@@ -379,10 +379,17 @@ function renderPlayList() {
     const playListEl = document.getElementById('play-list-container');
     if (!playListEl) return;
     
-    const validRecords = savedRecords.filter(r => r.mask);
+    const filterRadio = document.querySelector('input[name="play-mask-filter"]:checked');
+    const filterValue = filterRadio ? filterRadio.value : 'both';
+    
+    const validRecords = savedRecords.filter(r => {
+        if (filterValue === 'with_mask') return r.mask;
+        if (filterValue === 'no_mask') return !r.mask;
+        return true;
+    });
     
     if (validRecords.length === 0) {
-        playListEl.innerHTML = '<p style="color: var(--text-secondary);">プレイ可能なデータ（マスク画像あり）がありません。</p>';
+        playListEl.innerHTML = '<p style="color: var(--text-secondary);">該当するデータがありません。</p>';
         return;
     }
     
@@ -401,6 +408,7 @@ function renderPlayList() {
                 <div>
                     <div style="font-weight: bold; color: var(--accent-color);">Question #${index + 1}</div>
                     <div style="font-size: 0.75rem; color: var(--text-secondary); word-break: break-all;">${getFileName(record.original)}</div>
+                    ${!record.mask ? `<div style="font-size: 0.75rem; color: #ef4444; font-weight: bold; margin-top: 0.2rem;">黒塗り未編集</div>` : ''}
                 </div>
                 <button class="btn btn-primary" id="btn-load-${record.id}" onclick="loadPlayImage(${record.id}, this)" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; background: #3b82f6; border-color: #3b82f6;">
                     <i class="fas fa-download"></i> 画像を読み込む

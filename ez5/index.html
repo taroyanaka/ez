@@ -34,6 +34,12 @@
             <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">
                 保存されたリストが表示されます。画像をタップすると黒塗り（マスク）の表示・非表示が切り替わります。
             </p>
+            <div style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center; background: var(--card-bg); padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--glass-border);">
+                <label style="font-size: 0.85rem; font-weight: bold;">表示フィルタ:</label>
+                <label style="font-size: 0.85rem; cursor: pointer;"><input type="radio" name="play-mask-filter" value="with_mask" onchange="renderPlayList()"> 黒塗り有りのみ</label>
+                <label style="font-size: 0.85rem; cursor: pointer;"><input type="radio" name="play-mask-filter" value="no_mask" onchange="renderPlayList()"> 黒塗り無しのみ</label>
+                <label style="font-size: 0.85rem; cursor: pointer;"><input type="radio" name="play-mask-filter" value="both" checked onchange="renderPlayList()"> 両方</label>
+            </div>
             <div id="play-list-container" style="display: flex; flex-direction: column; gap: 2rem;">
                 <!-- Play cards will be rendered here -->
             </div>
