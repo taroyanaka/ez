@@ -6,6 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Project Index</title>
+    <script src="game/config.js"></script>
     <style>
         body {
             font-family: sans-serif;
@@ -118,6 +119,46 @@
             opacity: 1;
             bottom: 50px;
         }
+
+        /* Tabs styling */
+        .tab-container {
+            margin-top: 20px;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #ddd;
+            gap: 10px;
+            overflow-x: auto;
+        }
+        .tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        .tab:hover {
+            color: #0366d6;
+        }
+        .tab.active {
+            color: #0366d6;
+            border-bottom: 2px solid #0366d6;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px 0;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .service-list a {
+            display: inline-block;
+            padding: 5px 0;
+            font-size: 1.1em;
+        }
     </style>
 </head>
 
@@ -140,61 +181,119 @@
         <div id="auth-msg" style="color: green; margin-top: 10px; font-size: 0.9em;"></div>
     </div>
 
-    <div class="auth-container" style="margin-top: 20px;">
-        <h2></h2>
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <input type="checkbox" id="game-mode-toggle" style="width: 20px; height: 20px; cursor: pointer;">
-            <label for="game-mode-toggle" style="font-weight: bold; cursor: pointer;">ゲームモードを有効にする (演出画面・バイブレーション)</label>
+    <div class="tab-container">
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('packages')">パッケージ</div>
+            <div class="tab" onclick="switchTab('services')">サービス一覧</div>
+            <div class="tab" onclick="switchTab('analytics')">アナリティクス</div>
+            <div class="tab" onclick="switchTab('settings')">設定</div>
         </div>
-    </div>
 
-    <hr>
-    <h2>📦 コースパッケージング (Course Packaging)</h2>
-    <div id='package-ui-container' style='border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #fafafa; margin-bottom: 20px;'>
-        <div id='pkg-login-msg' style='color: #d73a49; font-weight: bold; margin-bottom: 10px;'>※ パッケージの作成や保存機能を利用するにはログインしてください。（問題集の再生は未ログインでも可能です）</div>
-        <div id='pkg-app' style='display: none;'>
-            <div style='display: flex; gap: 20px; flex-wrap: wrap;'>
-                <div style='flex: 1; min-width: 250px;'>
-                    <h3>1. 利用可能な問題集 (Chunks)</h3>
-                    <div style='margin-bottom: 10px;'>
-                        <label><input type='checkbox' id='pkg-my-data' checked> マイデータのみ表示</label>
+        <div id="tab-packages" class="tab-content active">
+            <h2>📦 コースパッケージング (Course Packaging)</h2>
+            <div id='package-ui-container' style='border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #fafafa; margin-bottom: 20px;'>
+                <div id='pkg-login-msg' style='color: #d73a49; font-weight: bold; margin-bottom: 10px;'>※ パッケージの作成や保存機能を利用するにはログインしてください。（問題集の再生は未ログインでも可能です）</div>
+                <div id='pkg-app' style='display: none;'>
+                    <div style='display: flex; gap: 20px; flex-wrap: wrap;'>
+                        <div style='flex: 1; min-width: 250px;'>
+                            <h3>1. 利用可能な問題集 (Chunks)</h3>
+                            <div style='margin-bottom: 10px;'>
+                                <label><input type='checkbox' id='pkg-my-data' checked> マイデータのみ表示</label>
+                            </div>
+                            <ul id='chunk-list' style='max-height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: white; list-style-type: none; margin: 0;'></ul>
+                        </div>
+                        <div style='flex: 1; min-width: 250px;'>
+                            <h3>2. パッケージ作成/編集</h3>
+                            <div style='margin-bottom: 10px;'>
+                                <label><input type='radio' name='pkg-filter' id='pkg-filter-all' value='all'> 全てのユーザー</label>
+                                <label style='margin-left: 10px;'><input type='radio' name='pkg-filter' id='pkg-filter-my' value='my' checked> マイデータ</label>
+                            </div>
+                            <select id='package-select' style='width: 100%; margin-bottom: 10px; padding: 8px;'>
+                                <option value=''>-- 新規パッケージ --</option>
+                            </select>
+                            <input type='text' id='package-name' placeholder='パッケージ名を入力' style='width: 100%; margin-bottom: 10px; padding: 8px; box-sizing: border-box;' />
+                            <button id='save-package-btn' style='background: #2ea44f; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 4px; font-weight: bold;'>保存</button>
+                            <button id='delete-package-btn' style='background: #d73a49; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 4px; font-weight: bold; display: none;'>削除</button>
+                            <button id='share-package-btn' style='background: #0366d6; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 4px; font-weight: bold; display: none; margin-left: 10px;'>共有URLをコピー</button>
+                            
+                            <h4>パッケージに含まれる問題集 (クリックで削除)</h4>
+                            <ul id='package-chunks-list' style='min-height: 100px; border: 1px solid #0366d6; padding: 10px; background: #f1f8ff; list-style-type: none; margin: 0;'></ul>
+                            <p style='font-size: 0.8rem; color: #666;'>※左のリストからクリックで追加できます。</p>
+                        </div>
                     </div>
-                    <ul id='chunk-list' style='max-height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: white; list-style-type: none; margin: 0;'></ul>
                 </div>
-                <div style='flex: 1; min-width: 250px;'>
-                    <h3>2. パッケージ作成/編集</h3>
-                    <div style='margin-bottom: 10px;'>
-                        <label><input type='radio' name='pkg-filter' id='pkg-filter-all' value='all'> 全てのユーザー</label>
-                        <label style='margin-left: 10px;'><input type='radio' name='pkg-filter' id='pkg-filter-my' value='my' checked> マイデータ</label>
+            </div>
+            <script src='packaging.js'></script>
+        </div>
+
+        <div id="tab-services" class="tab-content">
+            <ul class="service-list">
+                <li><a href="./ez1/index.html">EZ1(Flashcards)</a></li>
+                <li><a href="./ez2/index.html">EZ2(Fill-in-the-Blank)</a></li>
+                <li><a href="./ez3/index.html">EZ3(Reading Quiz)</a></li>
+                <li><a href="./ez4/index.html">EZ4(Dictation)</a></li>
+                <li><a href="./ez5/index.html">EZ5(Image Fill-in-Blank)</a></li>
+                <li><a href="./ez6/index.html">EZ6(TTS Word Quiz)</a></li>
+                <li><a href="./game/index.html">EZ Game</a> (for game ui research)</li>
+            </ul>
+        </div>
+
+        <div id="tab-analytics" class="tab-content">
+            <ul>
+                <li><a href="./log/index.html" style="font-weight: bold; color: #6366f1; font-size: 1.2em;">📊 Activity Logs & Analytics</a> <br><span style="color: #555;">(学習/編集データ分析)</span></li>
+            </ul>
+        </div>
+
+        <div id="tab-settings" class="tab-content">
+            <div class="auth-container">
+                <h2>ゲーム設定</h2>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <input type="checkbox" id="game-mode-toggle" style="width: 20px; height: 20px; cursor: pointer;">
+                    <label for="game-mode-toggle" style="font-weight: bold; cursor: pointer;">ゲームモードを有効にする (演出画面・バイブレーション)</label>
+                </div>
+                <details id="game-mode-settings" style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; display: none;">
+                    <summary style="cursor: pointer; font-weight: bold;">エフェクト設定</summary>
+                    <div style="margin-top: 10px;">
+                        <strong>有効なエフェクト:</strong>
+                        <div id="effect-checkboxes" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin-top: 5px;">
+                            <!-- Checkboxes will be populated by JS -->
+                        </div>
                     </div>
-                    <select id='package-select' style='width: 100%; margin-bottom: 10px; padding: 8px;'>
-                        <option value=''>-- 新規パッケージ --</option>
-                    </select>
-                    <input type='text' id='package-name' placeholder='パッケージ名を入力' style='width: 100%; margin-bottom: 10px; padding: 8px; box-sizing: border-box;' />
-                    <button id='save-package-btn' style='background: #2ea44f; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 4px; font-weight: bold;'>保存</button>
-                    <button id='delete-package-btn' style='background: #d73a49; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 4px; font-weight: bold; display: none;'>削除</button>
-                    <button id='share-package-btn' style='background: #0366d6; color: white; border: none; padding: 8px 15px; cursor: pointer; border-radius: 4px; font-weight: bold; display: none; margin-left: 10px;'>共有URLをコピー</button>
-                    
-                    <h4>パッケージに含まれる問題集 (クリックで削除)</h4>
-                    <ul id='package-chunks-list' style='min-height: 100px; border: 1px solid #0366d6; padding: 10px; background: #f1f8ff; list-style-type: none; margin: 0;'></ul>
-                    <p style='font-size: 0.8rem; color: #666;'>※左のリストからクリックで追加できます。</p>
-                </div>
+                    <div style="margin-top: 10px;">
+                        <label><strong>演出が進む閾値 (タップ回数):</strong> <input type="number" id="game-mode-tap-step" value="10" min="1" style="width: 60px;"></label>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <strong>最大レベル到達時の挙動:</strong><br>
+                        <label><input type="radio" name="game-mode-max-behavior" value="reset" checked> 1段目にリセット</label><br>
+                        <label><input type="radio" name="game-mode-max-behavior" value="continue"> 最大演出を継続</label>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <button id="save-game-mode-config" style="padding: 5px 15px; cursor: pointer;">設定を保存</button>
+                        <span id="save-config-msg" style="color: green; margin-left: 10px;"></span>
+                    </div>
+                </details>
             </div>
         </div>
     </div>
-    <script src='packaging.js'></script>
-    <h1></h1>
 
-    <ul>
-        <li><a href="./ez1/index.html">EZ Project 1</a></li>
-        <li><a href="./ez2/index.html">EZ Project 2</a></li>
-        <li><a href="./ez3/index.html">EZ Project 3</a></li>
-        <li><a href="./ez4/index.html">EZ Project 4</a></li>
-        <li><a href="./ez5/index.html">EZ Project 5 (Image Fill-in-Blank)</a></li>
-        <li><a href="./ez6/index.html">EZ Project 6 (TTS Word Quiz)</a></li>
-        <li><a href="./game/index.html">EZ Game</a> (for game ui research)</li>
-        <li><a href="./log/index.html" style="font-weight: bold; color: #6366f1;">📊 Activity Logs & Analytics</a> (学習/編集データ分析)</li>
-    </ul>
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            
+            const selectedTabContent = document.getElementById('tab-' + tabId);
+            if (selectedTabContent) {
+                selectedTabContent.classList.add('active');
+            }
+            
+            const tabs = document.querySelectorAll('.tab');
+            const tabIds = ['packages', 'services', 'analytics', 'settings'];
+            const index = tabIds.indexOf(tabId);
+            if (index !== -1 && tabs[index]) {
+                tabs[index].classList.add('active');
+            }
+        }
+    </script>
 
     <script src="env.js"></script>
     <script>
@@ -207,6 +306,57 @@
             const btnCopy = document.getElementById('btn-copy');
             const authMsg = document.getElementById('auth-msg');
             const gameModeToggle = document.getElementById('game-mode-toggle');
+            const gameModeSettings = document.getElementById('game-mode-settings');
+            const effectCheckboxesContainer = document.getElementById('effect-checkboxes');
+            const tapStepInput = document.getElementById('game-mode-tap-step');
+            const saveConfigBtn = document.getElementById('save-game-mode-config');
+            const saveConfigMsg = document.getElementById('save-config-msg');
+
+            // Populate checkboxes
+            if (window.EZ_GAME_EFFECTS) {
+                window.EZ_GAME_EFFECTS.forEach(effect => {
+                    const label = document.createElement('label');
+                    label.style.fontSize = '0.9em';
+                    label.innerHTML = `<input type="checkbox" value="${effect.key}" class="effect-chk" checked> ${effect.label}`;
+                    effectCheckboxesContainer.appendChild(label);
+                });
+            }
+
+            function loadGameModeConfig() {
+                let config = null;
+                try {
+                    config = JSON.parse(localStorage.getItem('game_mode_config'));
+                } catch (e) {}
+                
+                if (config) {
+                    tapStepInput.value = config.tapStep || 10;
+                    if (config.maxBehavior) {
+                        const rb = document.querySelector(`input[name="game-mode-max-behavior"][value="${config.maxBehavior}"]`);
+                        if (rb) rb.checked = true;
+                    }
+                    if (config.enabled) {
+                        document.querySelectorAll('.effect-chk').forEach(chk => {
+                            chk.checked = !!config.enabled[chk.value];
+                        });
+                    }
+                }
+            }
+
+            function saveGameModeConfig() {
+                const config = {
+                    tapStep: parseInt(tapStepInput.value, 10) || 10,
+                    maxBehavior: document.querySelector('input[name="game-mode-max-behavior"]:checked').value,
+                    enabled: {}
+                };
+                document.querySelectorAll('.effect-chk').forEach(chk => {
+                    config.enabled[chk.value] = chk.checked;
+                });
+                localStorage.setItem('game_mode_config', JSON.stringify(config));
+                saveConfigMsg.textContent = '保存しました';
+                setTimeout(() => saveConfigMsg.textContent = '', 2000);
+            }
+
+            saveConfigBtn.addEventListener('click', saveGameModeConfig);
 
             // Game Mode Initialization (Default Off)
             if (localStorage.getItem('game_mode') !== 'on') {
@@ -215,17 +365,28 @@
 
             if (localStorage.getItem('game_mode') === 'on') {
                 gameModeToggle.checked = true;
+                gameModeSettings.style.display = 'block';
+                loadGameModeConfig();
                 const script = document.createElement('script');
                 script.src = 'game/loader.js';
                 script.id = 'game-loader-script';
                 document.head.appendChild(script);
             } else {
                 gameModeToggle.checked = false;
+                gameModeSettings.style.display = 'none';
             }
 
             gameModeToggle.addEventListener('change', (e) => {
                 if (e.target.checked) {
                     localStorage.setItem('game_mode', 'on');
+                    gameModeSettings.style.display = 'block';
+                    loadGameModeConfig();
+                    
+                    // If no config exists, save defaults right away
+                    if (!localStorage.getItem('game_mode_config')) {
+                        saveGameModeConfig();
+                    }
+
                     if (!document.getElementById('game-loader-script')) {
                         const script = document.createElement('script');
                         script.src = 'game/loader.js';
@@ -236,6 +397,7 @@
                     location.reload();
                 } else {
                     localStorage.setItem('game_mode', 'off');
+                    gameModeSettings.style.display = 'none';
                     // reload to clear
                     location.reload();
                 }

@@ -14,13 +14,23 @@
     }
     const gameBaseUrl = loaderUrl.substring(0, loaderUrl.lastIndexOf('/') + 1);
 
-    // Inject Stylesheet
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = gameBaseUrl + 'style.css';
-    document.head.appendChild(link);
+    if (typeof window.EZ_GAME_EFFECTS === 'undefined') {
+        const configScript = document.createElement('script');
+        configScript.src = gameBaseUrl + 'config.js';
+        configScript.onload = () => initialize(gameBaseUrl);
+        document.head.appendChild(configScript);
+    } else {
+        initialize(gameBaseUrl);
+    }
 
-    // 2. Inject Animation Screen DOM
+    function initialize(gameBaseUrl) {
+        // Inject Stylesheet
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = gameBaseUrl + 'style.css';
+        document.head.appendChild(link);
+
+        // 2. Inject Animation Screen DOM
     const screenHtml = `
       <div class="base-reels">
         <div class="reel">7</div>
@@ -63,7 +73,7 @@
 
     // 3. Game Logic
     function initGameLogic() {
-        const animationDefs = [
+        const animationDefs = window.EZ_GAME_EFFECTS || [
             { key: "fruit", label: "FRUIT柄" },
             { key: "zawa", label: "ざわ前兆" },
             { key: "gekiatsu", label: "激アツ炎" },
@@ -72,10 +82,18 @@
             { key: "flash", label: "白フラッシュ" }
         ];
 
+        let config = null;
+        try {
+            config = JSON.parse(localStorage.getItem('game_mode_config'));
+        } catch (e) {}
+        
+        config = config || {};
+
         const state = {
             tapCount: 0,
-            tapStep: 10, // Default 10 steps
-            enabled: Object.fromEntries(animationDefs.map((d) => [d.key, true]))
+            tapStep: config.tapStep || 10,
+            maxBehavior: config.maxBehavior || 'reset',
+            enabled: config.enabled || Object.fromEntries(animationDefs.map((d) => [d.key, true]))
         };
 
         const layers = Object.fromEntries(animationDefs.map((d) => [
@@ -138,6 +156,15 @@
 
         const doTap = () => {
             state.tapCount += 1;
+            const currentLevel = Math.floor(state.tapCount / state.tapStep);
+            const maxLevel = 18;
+
+            if (currentLevel > maxLevel) {
+                if (state.maxBehavior === 'reset') {
+                    state.tapCount = 1;
+                }
+            }
+
             updateLayers();
             triggerVibration(state.tapCount);
         };
@@ -151,4 +178,5 @@
             }
         });
     }
+    } // End of initialize
 })();
