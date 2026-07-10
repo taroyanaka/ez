@@ -471,6 +471,7 @@ window.checkAnswer = function (selectEl, correctAnswer, isAutoFill = false) {
 
   if (selectedValue === correctAnswer) {
     // Correct! Replace the select with text
+    document.dispatchEvent(new CustomEvent('ez-correct-answer'));
     selectEl.classList.remove('error');
 
     const span = document.createElement('span');
@@ -799,6 +800,7 @@ function setupAudioChoices(step) {
             
             if (val === step.targetWord) {
                 btn.classList.add('correct');
+                document.dispatchEvent(new CustomEvent('ez-correct-answer'));
                 window.speechSynthesis.cancel();
                 proceedToAnswerReveal(step.targetWord);
             } else {
@@ -840,7 +842,10 @@ function setupAudioChoices(step) {
         btns.forEach(b => b.disabled = true);
         
         const correctBtn = Array.from(btns).find(b => b.getAttribute('data-val') === step.targetWord);
-        if (correctBtn) correctBtn.classList.add('correct');
+        if (correctBtn) {
+            correctBtn.classList.add('correct');
+            document.dispatchEvent(new CustomEvent('ez-correct-answer'));
+        }
         
         if (!stack.some(item => item.question === step.targetWord)) {
             stack.push({ question: step.targetWord, answer: "" });

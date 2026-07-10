@@ -571,6 +571,7 @@ function selectChoice(index) {
     if (index === playState.correctChoiceIndex) {
         // Correct
         els.choiceBtns[index].classList.add('correct');
+        document.dispatchEvent(new CustomEvent('ez-correct-answer'));
         setTimeout(() => {
             playState.wordIndex++;
             processCurrentWord();

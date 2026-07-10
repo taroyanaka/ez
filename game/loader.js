@@ -169,11 +169,10 @@
             triggerVibration(state.tapCount);
         };
 
-        // Global Tap Listener: Tap on any button, card, or interactive element inside the page to increment slot animations!
-        document.addEventListener("click", (e) => {
-            // Check if it's an interactive element (button, card, input, checkbox, or anchor link)
-            const interactive = e.target.closest('button, .card, a, input, select, textarea, [role="button"]');
-            if (interactive) {
+        // Listen for standard custom event from ezN apps for correct answers
+        document.addEventListener("ez-correct-answer", (e) => {
+            const count = (e && e.detail && e.detail.count) ? e.detail.count : 1;
+            for (let i = 0; i < count; i++) {
                 doTap();
             }
         });

@@ -453,6 +453,10 @@ function checkAllAnswers() {
   const feedback = getElem('execution-feedback');
   if (answeredCount === total) {
     feedback.classList.remove('hidden');
+    if (correctCount > 0) {
+      document.dispatchEvent(new CustomEvent('ez-correct-answer', { detail: { count: correctCount } }));
+    }
+
     if (correctCount === total) {
       feedback.className = 'feedback-message success';
       feedback.textContent = `全問正解！素晴らしい！ (${correctCount}/${total})`;
