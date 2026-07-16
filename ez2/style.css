@@ -505,6 +505,26 @@ select.error {
 }
 
 @media (max-width: 600px) {
+    body {
+        padding: 1rem;
+    }
+    .card {
+        padding: 1.25rem;
+    }
+    h1 {
+        font-size: 2rem;
+    }
+    .tabs {
+        flex-wrap: wrap;
+        border-radius: 16px;
+    }
+    .data-actions {
+        flex-wrap: wrap;
+    }
+    .audio-settings {
+        flex-direction: column;
+        align-items: flex-start;
+    }
     #stack-panel {
         width: 100%;
         right: -100%;
