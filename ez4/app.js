@@ -34,17 +34,33 @@ const apiGetAll = () => {
     if (window.currentChunkId) {
         url += `?chunk_id=${window.currentChunkId}`;
     }
-    return fetch(url).then(res => res.json()).then(json => json.data || json);
+    return fetch(url).then(res => res.json()).then(json => {
+        let data = json.data || json;
+        if (Array.isArray(data)) {
+            data.forEach(d => {
+                if (typeof d.items === 'string') {
+                    try { d.items = JSON.parse(d.items); } catch(e) { d.items = []; }
+                }
+            });
+        }
+        return data;
+    });
 };
 const apiCreate = (data) => {
     if (window.currentChunkId) data.chunk_id = window.currentChunkId;
+    let payload = { ...data };
+    if (Array.isArray(payload.items)) payload.items = JSON.stringify(payload.items);
     return fetch(`${API_BASE_URL}/${resource}`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD }, body: JSON.stringify(data)
-    }).then(res => res.json());
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD }, body: JSON.stringify(payload)
+    }).then(res => res.json()).then(json => json.item || json.data || json);
 };
-const apiUpdate = (id, data) => fetch(`${API_BASE_URL}/${resource}/${id}`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD }, body: JSON.stringify(data)
-}).then(res => res.json());
+const apiUpdate = (id, data) => {
+    let payload = { ...data };
+    if (Array.isArray(payload.items)) payload.items = JSON.stringify(payload.items);
+    return fetch(`${API_BASE_URL}/${resource}/${id}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD }, body: JSON.stringify(payload)
+    }).then(res => res.json()).then(json => json.item || json.data || json);
+};
 const apiDelete = (id) => fetch(`${API_BASE_URL}/${resource}/${id}`, {
     method: 'DELETE', headers: { 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD }
 }).then(res => res.json());
