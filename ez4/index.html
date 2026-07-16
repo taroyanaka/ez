@@ -27,12 +27,13 @@
     </div>
 
     <nav class="tab-nav">
-        <button id="tab-training" class="tab-btn active" data-tab="training">Training</button>
+        <button id="tab-training" class="tab-btn active" data-tab="training">Play</button>
         <button id="tab-management" class="tab-btn" data-tab="management">Management</button>
     </nav>
 
 
     <main class="app-container">
+        <div id="ez-chunk-container" data-resource-type="dictation" style="margin-bottom: 1rem;"></div>
         <!-- Training Mode -->
         <div id="training-view" class="tab-content active">
             <header>
@@ -49,7 +50,7 @@
                     <select id="training-list-select">
                         <option value="" disabled selected>リストを選択してください...</option>
                     </select>
-                    <button id="btn-start-training" class="primary-btn" style="width: 100%;">Start Training</button>
+                    <button id="btn-start-training" class="primary-btn" style="width: 100%;">Start Play</button>
                 </div>
             </div>
 
@@ -98,7 +99,6 @@
 
         <!-- Management Mode -->
         <div id="management-view" class="tab-content">
-            <div id="ez-chunk-container" data-resource-type="dictation" style="margin-bottom: 1rem;"></div>
             <header>
                 <h2>Problem Management</h2>
                 <div class="io-controls">
@@ -148,14 +148,14 @@
         <!-- Result Modal -->
         <div id="result-overlay" class="overlay hidden">
             <div class="modal">
-                <h2>Training Complete!</h2>
+                <h2>Play Complete!</h2>
                 <div class="result-stats">
                     <div class="big-stat">
                         <span id="final-score">0</span>
                         <label>Points</label>
                     </div>
                 </div>
-                <button id="restart-button">Finish Training</button>
+                <button id="restart-button">Finish Play</button>
             </div>
         </div>
     </main>
