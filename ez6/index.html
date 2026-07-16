@@ -34,7 +34,7 @@
                     <select id="q-select" style="background: rgba(255, 255, 255, 0.1); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.5rem; border-radius: 4px; margin-left: 0.5rem; max-width: 300px; flex: 1;"></select>
 
                     <label for="lang-select" style="margin-left: 1rem;"><i class="fas fa-language"></i> 音声:</label>
-                    <select id="lang-select" style="background: rgba(255, 255, 255, 0.1); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.5rem; border-radius: 4px; margin-left: 0.5rem;">
+                    <select id="lang-select" style="background: rgba(255, 255, 255, 0.1); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.5rem; border-radius: 4px; margin-left: 0.5rem;" onchange="updateLangUI()">
                         <option value="ja-JP">日本語</option>
                         <option value="en-US">英語</option>
                     </select>
@@ -75,8 +75,11 @@
 
             <div id="game-container" style="display: none; flex-direction: column; align-items: center; gap: 2rem; width: 100%;">
                 
-                <div style="font-size: 0.875rem; color: var(--text-secondary);">
+                <div style="font-size: 0.875rem; color: var(--text-secondary); text-align: center;">
                     問題 <span id="current-q-index">1</span> / <span id="total-q-count">0</span>
+                    <div style="width: 200px; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-top: 0.5rem; overflow: hidden; margin-left: auto; margin-right: auto;">
+                        <div id="game-progress-bar" style="height: 100%; width: 0%; background: var(--primary-color); transition: width 0.3s ease;"></div>
+                    </div>
                 </div>
 
                 <div class="word-display" id="current-word-display">
@@ -123,6 +126,11 @@
 
             <div class="sentences-list-container">
                 <h3>現在の問題リスト (<span id="list-count">0</span>)</h3>
+                <div style="margin-bottom: 1rem;">
+                    <label style="color: var(--text-primary); font-size: 0.875rem; display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="my-data-only" checked onchange="handleDataFilterChange()"> マイデータのみ表示
+                    </label>
+                </div>
                 <button class="btn" onclick="clearAllSentences()" style="background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid var(--danger); margin-bottom: 1rem; font-size: 0.875rem; padding: 0.25rem 0.75rem;">
                     <i class="fas fa-trash"></i> すべて削除
                 </button>

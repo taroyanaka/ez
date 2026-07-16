@@ -29,10 +29,24 @@ const resource = 'dictation';
 
 
 
+window.handleToggleMyData = async function() {
+    await window.loadDataAndRender();
+};
+
 const apiGetAll = () => {
+    const myDataOnlyToggle = document.getElementById('my-data-only-toggle');
     let url = `${API_BASE_URL}/${resource}`;
-    if (window.currentChunkId) {
-        url += `?chunk_id=${window.currentChunkId}`;
+    if (myDataOnlyToggle && myDataOnlyToggle.checked && typeof AUTH_USER_ID !== 'undefined' && AUTH_USER_ID) {
+        url = `${API_BASE_URL}/${resource}/user/${AUTH_USER_ID}`;
+    }
+    
+    const params = new URLSearchParams();
+    if (window.currentChunkId && window.currentChunkId !== 'null') {
+        params.append('chunk_id', window.currentChunkId);
+    }
+    const queryString = params.toString();
+    if (queryString) {
+        url += `?${queryString}`;
     }
     return fetch(url).then(res => res.json()).then(json => {
         let data = json.data || json;

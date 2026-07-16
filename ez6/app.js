@@ -1,4 +1,5 @@
 // App State
+let allRawData = [];
 let sentences = [];
 let stack = [];
 let currentTab = 'play';
@@ -70,6 +71,7 @@ async function init() {
     renderSentencesList();
     renderStack();
     updatePlayUIState();
+    updateLangUI();
     
     window.onChunkChange = async () => {
         await loadData();
@@ -143,19 +145,35 @@ function saveData() {
 
 async function loadData() {
     try {
-        const raw = await apiGetAll();
-        sentences = raw.map(r => r.sentence);
+        allRawData = await apiGetAll();
+        applyDataFilter();
     } catch (e) {
         console.error(e);
-        sentences = [];
+        allRawData = [];
+        applyDataFilter();
     }
     const st = localStorage.getItem('ez6_stack');
     if (st) stack = JSON.parse(st);
 }
 
+function handleDataFilterChange() {
+    applyDataFilter();
+    renderSentencesList();
+    updatePlayUIState();
+}
+
+function applyDataFilter() {
+    const myDataOnly = document.getElementById('my-data-only')?.checked ?? true;
+    if (myDataOnly && typeof AUTH_USER_ID !== 'undefined' && AUTH_USER_ID) {
+        sentences = allRawData.filter(r => r.user_id === AUTH_USER_ID).map(r => r.sentence);
+    } else {
+        sentences = allRawData.map(r => r.sentence);
+    }
+}
+
 // Tab Switching
 function switchTab(tab) {
-    if (playState.isPlaying && tab !== 'play') {
+    if (playState.isPlaying && !playState.isPaused && tab !== 'play') {
         alert('プレイ中はタブを切り替えられません。一時停止するか停止してください。');
         return;
     }
@@ -283,9 +301,9 @@ async function addSentence() {
     
     try {
         await apiCreate({ sentence: text });
-        sentences.push(text);
         els.sentenceInput.value = '';
         els.createFeedback.textContent = '';
+        await loadData();
         renderSentencesList();
         updatePlayUIState();
     } catch(e) {
@@ -345,6 +363,18 @@ function renderSentencesList() {
 function updateSpeed() {
     playState.speed = parseFloat(els.speedSlider.value);
     els.speedVal.textContent = playState.speed.toFixed(1);
+}
+
+function updateLangUI() {
+    const langSelect = document.getElementById('lang-select');
+    const posContainer = document.getElementById('pos-filter-container');
+    if (langSelect && posContainer) {
+        if (langSelect.value === 'ja-JP') {
+            posContainer.style.display = 'flex';
+        } else {
+            posContainer.style.display = 'none';
+        }
+    }
 }
 
 function updatePlayUIState() {
@@ -468,6 +498,13 @@ function processCurrentWord() {
     playState.currentWords = parseSentenceToWords(currentSentenceStr);
     
     els.currentQIndex.textContent = playState.qIndex + 1;
+    
+    const gameProgressBar = document.getElementById('game-progress-bar');
+    if (gameProgressBar && sentences.length > 0) {
+        const progress = (playState.qIndex / sentences.length) * 100;
+        gameProgressBar.style.width = `${progress}%`;
+    }
+
     resetChoiceStyles();
     disableChoices();
     els.timerBar.style.width = '100%';

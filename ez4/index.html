@@ -21,8 +21,12 @@
         <div class="blob blob-3"></div>
     </div>
 
-    <div class="top-link-container">
+    <div class="top-link-container" style="display: flex; justify-content: space-between; align-items: center;">
         <a href="../index.html" id="top-link">← TOP PAGE</a>
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-left: auto; margin-right: 1rem;">
+            <input type="checkbox" id="my-data-only-toggle" checked onchange="window.handleToggleMyData()" style="cursor: pointer; accent-color: #667eea;">
+            <label for="my-data-only-toggle" style="font-size: 0.8rem; color: var(--text-secondary); font-weight: bold; cursor: pointer;">マイデータのみ表示</label>
+        </div>
         <div id="login-required-msg">ログイン必要</div>
     </div>
 
