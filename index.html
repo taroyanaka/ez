@@ -187,6 +187,7 @@
             <div class="tab" onclick="switchTab('services')">サービス一覧</div>
             <div class="tab" onclick="switchTab('analytics')">アナリティクス</div>
             <div class="tab" onclick="switchTab('settings')">設定</div>
+            <div class="tab" onclick="switchTab('development')">開発中</div>
         </div>
 
         <div id="tab-packages" class="tab-content active">
@@ -230,11 +231,16 @@
             <ul class="service-list">
                 <li><a href="./ez1/index.html">EZ1(Flashcards)</a></li>
                 <li><a href="./ez2/index.html">EZ2(Fill-in-the-Blank)</a></li>
+                <li><a href="./ez5/index.html">EZ5(Image Fill-in-Blank)</a></li>
+                <li><a href="./game/index.html">EZ Game</a> (for game ui research)</li>
+            </ul>
+        </div>
+
+        <div id="tab-development" class="tab-content">
+            <ul class="service-list">
                 <li><a href="./ez3/index.html">EZ3(Reading Quiz)</a></li>
                 <li><a href="./ez4/index.html">EZ4(Dictation)</a></li>
-                <li><a href="./ez5/index.html">EZ5(Image Fill-in-Blank)</a></li>
                 <li><a href="./ez6/index.html">EZ6(TTS Word Quiz)</a></li>
-                <li><a href="./game/index.html">EZ Game</a> (for game ui research)</li>
             </ul>
         </div>
 
@@ -287,7 +293,7 @@
             }
             
             const tabs = document.querySelectorAll('.tab');
-            const tabIds = ['packages', 'services', 'analytics', 'settings'];
+            const tabIds = ['packages', 'services', 'analytics', 'settings', 'development'];
             const index = tabIds.indexOf(tabId);
             if (index !== -1 && tabs[index]) {
                 tabs[index].classList.add('active');
