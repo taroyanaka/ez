@@ -41,13 +41,23 @@ const apiGetAll = () => {
 };
 const apiCreate = (data) => {
     if (window.currentChunkId) data.chunk_id = window.currentChunkId;
+    const validKeys = ['id', 'name', 'lang', 'items', 'user_id', 'chunk_id'];
+    const payload = {};
+    for (const key of validKeys) {
+        if (data[key] !== undefined) payload[key] = data[key];
+    }
     return fetch(`${API_BASE_URL}/${resource}`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD }, body: JSON.stringify(data)
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD }, body: JSON.stringify(payload)
     }).then(res => res.json()).then(json => json.item || json.data || json);
 };
 const apiUpdate = (id, data) => {
+    const validKeys = ['id', 'name', 'lang', 'items', 'user_id', 'chunk_id'];
+    const payload = {};
+    for (const key of validKeys) {
+        if (data[key] !== undefined) payload[key] = data[key];
+    }
     return fetch(`${API_BASE_URL}/${resource}/${id}`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD }, body: JSON.stringify(data)
+    method: 'PUT', headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD }, body: JSON.stringify(payload)
     }).then(res => res.json()).then(json => json.item || json.data || json);
 };
 const apiDelete = (id) => fetch(`${API_BASE_URL}/${resource}/${id}`, {
@@ -448,7 +458,6 @@ class ManagementManager {
                     id: crypto.randomUUID(),
                     name: listName || "無題のリスト",
                     lang: this.langSelect.value,
-                    user: "foo",
                     items: lines
                 };
                 const created = await apiCreate(newList);
