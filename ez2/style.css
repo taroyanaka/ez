@@ -504,6 +504,53 @@ select.error {
     color: var(--text-color);
 }
 
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background: #1e293b;
+    min-width: 180px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    border-radius: 12px;
+    border: 1px solid var(--card-border);
+    overflow: hidden;
+    backdrop-filter: blur(20px);
+}
+
+.dropdown-content.show {
+    display: block;
+}
+
+.dropdown-content button {
+    color: var(--text-color);
+    padding: 0.75rem 1rem;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dropdown-content button:last-child {
+    border-bottom: none;
+}
+
+.dropdown-content button:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
 @media (max-width: 600px) {
     body {
         padding: 1rem;

@@ -4,6 +4,7 @@ const resource = 'fill_in_the_blank';
 
 let editingId = null;
 let currentLearningListIndex = 0;
+const CROSS_PAGE_PAYLOAD_KEY = 'ez_cross_page_payload';
 
 // DOM Elements
 const tabCreate = document.getElementById('tab-create');
@@ -56,6 +57,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (dataFiltersContainer && (!AUTH_USER_ID || !AUTH_PASSWORD)) {
       dataFiltersContainer.style.display = 'none';
   }
+  applyIncomingSharedText();
   window.onChunkChange = async () => {
     await loadProblems();
     renderProblemsList();
@@ -884,6 +886,79 @@ function proceedToAnswerReveal(targetWord) {
 }
 
 // --- Stack Logic ---
+function toggleMenu() {
+    const dropdown = document.getElementById('menu-dropdown');
+    if (dropdown) {
+        dropdown.classList.toggle('show');
+    }
+}
+
+window.addEventListener('click', function(event) {
+    const menuToggle = document.getElementById('menu-toggle');
+    const menuDropdown = document.getElementById('menu-dropdown');
+    if (menuToggle && !menuToggle.contains(event.target)) {
+        if (menuDropdown && menuDropdown.classList.contains('show')) {
+            menuDropdown.classList.remove('show');
+        }
+    }
+});
+
+function persistCrossPageText(text, targetPage) {
+    localStorage.setItem(CROSS_PAGE_PAYLOAD_KEY, JSON.stringify({ target: targetPage, text }));
+}
+
+function applyIncomingSharedText() {
+    try {
+        const raw = localStorage.getItem(CROSS_PAGE_PAYLOAD_KEY);
+        if (!raw) return;
+        const payload = JSON.parse(raw);
+        if (!payload || payload.target !== 'ez2') return;
+
+        const firstAnswerInput = document.querySelector('.answer-input');
+        if (firstAnswerInput) {
+            firstAnswerInput.value = payload.text || '';
+        }
+        localStorage.removeItem(CROSS_PAGE_PAYLOAD_KEY);
+    } catch (error) {
+        console.error('Failed to apply shared text:', error);
+    }
+}
+
+async function copyWordsToEz1(silent = false, redirectUrl = null) {
+    const answerInputs = document.querySelectorAll('.answer-input');
+    const words = [];
+
+    answerInputs.forEach((input) => {
+        input.value.split('\n').forEach((line) => {
+            const trimmed = line.trim();
+            if (trimmed) {
+                words.push(trimmed);
+            }
+        });
+    });
+
+    if (words.length === 0) {
+        if (!silent) alert('コピーする単語がありません。');
+        return;
+    }
+
+    const text = words.map((word) => `${word}=`).join('\n');
+
+    try {
+        await navigator.clipboard.writeText(text);
+        if (!silent) alert('単語をコピーしました。');
+    } catch (error) {
+        console.error('Failed to copy words:', error);
+    }
+
+    const dropdown = document.getElementById('menu-dropdown');
+    if (dropdown) dropdown.classList.remove('show');
+
+    if (redirectUrl) {
+        persistCrossPageText(text, 'ez1');
+        window.location.href = redirectUrl;
+    }
+}
 
 function addWordsToStack() {
     const answerInputs = document.querySelectorAll('.answer-input');

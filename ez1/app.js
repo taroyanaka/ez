@@ -54,6 +54,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (myDataContainer && (!AUTH_USER_ID || !AUTH_PASSWORD)) {
         myDataContainer.style.display = 'none';
     }
+    applyIncomingSharedText();
     await initChunks();
     // 初期表示として学習モードを明示的にセット
     switchTab('play');
@@ -1095,10 +1096,34 @@ async function copyStackToClipboard() {
 }
 
 // --- Hamburger Menu Logic ---
+const CROSS_PAGE_PAYLOAD_KEY = 'ez_cross_page_payload';
+
 function toggleMenu() {
     const dropdown = document.getElementById('menu-dropdown');
     if (dropdown) {
         dropdown.classList.toggle('show');
+    }
+}
+
+function persistCrossPageText(text, targetPage) {
+    const payload = { target: targetPage, text };
+    localStorage.setItem(CROSS_PAGE_PAYLOAD_KEY, JSON.stringify(payload));
+}
+
+function applyIncomingSharedText() {
+    try {
+        const raw = localStorage.getItem(CROSS_PAGE_PAYLOAD_KEY);
+        if (!raw) return;
+        const payload = JSON.parse(raw);
+        if (!payload || payload.target !== 'ez1') return;
+
+        const bulkInput = document.getElementById('bulk-input');
+        if (bulkInput) {
+            bulkInput.value = payload.text || '';
+        }
+        localStorage.removeItem(CROSS_PAGE_PAYLOAD_KEY);
+    } catch (error) {
+        console.error('Failed to apply shared text:', error);
     }
 }
 
@@ -1129,8 +1154,10 @@ async function copyLeftSide(silent = false, redirectUrl = null) {
         return;
     }
 
+    const text = leftSides.join('\n');
+
     try {
-        await navigator.clipboard.writeText(leftSides.join('\n'));
+        await navigator.clipboard.writeText(text);
         if (!silent) alert('左側の内容をクリップボードにコピーしました！');
     } catch (err) {
         console.error('Failed to copy: ', err);
@@ -1139,6 +1166,7 @@ async function copyLeftSide(silent = false, redirectUrl = null) {
     if (dropdown) dropdown.classList.remove('show');
 
     if (redirectUrl) {
+        persistCrossPageText(text, 'ez2');
         window.location.href = redirectUrl;
     }
 }
@@ -1162,8 +1190,10 @@ async function copyRightSide(silent = false, redirectUrl = null) {
         return;
     }
 
+    const text = rightSides.join('\n');
+
     try {
-        await navigator.clipboard.writeText(rightSides.join('\n'));
+        await navigator.clipboard.writeText(text);
         if (!silent) alert('右側の内容をクリップボードにコピーしました！');
     } catch (err) {
         console.error('Failed to copy: ', err);
@@ -1172,6 +1202,7 @@ async function copyRightSide(silent = false, redirectUrl = null) {
     if (dropdown) dropdown.classList.remove('show');
 
     if (redirectUrl) {
+        persistCrossPageText(text, 'ez2');
         window.location.href = redirectUrl;
     }
 }
