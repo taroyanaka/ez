@@ -238,7 +238,7 @@ function renderProblemsList() {
     return;
   }
 
-  problemsList.innerHTML = problems.map(p => {
+  problemsList.innerHTML = problems.map((p, index) => {
     const lists = p.answer.split('|||');
     const hiddenText = `Hidden: ${lists.map((l, i) => lists.length > 1 ? `[List ${i+1}] ` + l.replace(/\n/g, ', ') : l.replace(/\n/g, ', ')).join(' | ')}`;
     const id = p.id_key || p.id;
@@ -249,7 +249,9 @@ function renderProblemsList() {
           <div class="problem-a expandable-text truncated" onclick="toggleExpand(this)">${hiddenText}</div>
           <small style="color: var(--text-secondary); opacity: 0.7;">ID: ${id}</small>
         </div>
-        <div class="problem-actions">
+        <div class="problem-actions" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <button type="button" class="primary-btn" onclick="event.preventDefault(); event.stopPropagation(); window.playEz2LearningMode(${index})" style="padding: 4px 8px; font-size: 0.8rem;">Learning</button>
+          <button type="button" class="primary-btn" onclick="event.preventDefault(); event.stopPropagation(); window.playEz2AudioLearningMode(${index})" style="padding: 4px 8px; font-size: 0.8rem;">Audio</button>
           <button type="button" class="edit-btn" onclick="event.preventDefault(); event.stopPropagation(); editProblem(${p.id_key || `'${p.id}'` || `'${id}'`})">Edit</button>
           <button type="button" class="delete-btn" onclick="event.preventDefault(); event.stopPropagation(); deleteProblem(${p.id_key || `'${p.id}'` || `'${id}'`})">Delete</button>
         </div>
@@ -257,6 +259,28 @@ function renderProblemsList() {
     `;
   }).join('');
 }
+
+window.playEz2LearningMode = function(index) {
+  switchTab('learn');
+  const selector = document.getElementById('learning-problem-select');
+  if (selector) {
+    selector.value = index;
+    renderLearningMode();
+  }
+};
+
+window.playEz2AudioLearningMode = function(index) {
+  switchTab('audio-learn');
+  const selector = document.getElementById('audio-problem-select');
+  if (selector) {
+    selector.value = index;
+    initAudioLearning();
+    // Auto start the audio learning
+    setTimeout(() => {
+      startAudioSequence();
+    }, 300);
+  }
+};
 
 window.toggleExpand = function(el) {
   el.classList.toggle('truncated');
