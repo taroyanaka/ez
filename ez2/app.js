@@ -263,49 +263,7 @@ window.toggleExpand = function(el) {
   el.classList.toggle('expanded');
 };
 
-// Export JSON
-function exportData() {
-  if (problems.length === 0) {
-    alert('No data to export!');
-    return;
-  }
 
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(problems, null, 2));
-  const downloadAnchorNode = document.createElement('a');
-  downloadAnchorNode.setAttribute("href", dataStr);
-  downloadAnchorNode.setAttribute("download", "fill_in_the_blank.json");
-  document.body.appendChild(downloadAnchorNode);
-  downloadAnchorNode.click();
-  downloadAnchorNode.remove();
-}
-
-// Import JSON
-function importData(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = function (e) {
-    try {
-      const importedData = JSON.parse(e.target.result);
-      if (Array.isArray(importedData)) {
-        // Simple verification
-        if (importedData.length > 0 && importedData[0].question === undefined) {
-          throw new Error("Invalid format");
-        }
-        problems = importedData;
-        renderProblemsList();
-        alert('Data imported successfully! (Note: Local only, not synced to API)');
-      } else {
-        alert('Invalid data format. Expected a JSON array.');
-      }
-    } catch (error) {
-      alert('Error parsing JSON file. Please ensure it is correctly formatted.');
-    }
-  };
-  reader.readAsText(file);
-  event.target.value = ''; // Reset file input
-}
 
 // (Unused) Utility to get all words across all answers to serve as distractors
 // function getAllAnswerWords() { ... }
@@ -518,56 +476,7 @@ window.checkAnswer = function (selectEl, correctAnswer, isAutoFill = false) {
 
 
 // API UI Handlers for Tests
-window.apiGetAll = async function () {
-  try {
-    const data = await getAllItems(resource);
-    alert(JSON.stringify(data, null, 2));
-  } catch (err) { alert(err); }
-};
-window.apiGetById = async function () {
-  const id = prompt('Enter ID (id_key):');
-  if (id) {
-    try {
-      const data = await getItemById(resource, id);
-      alert(JSON.stringify(data, null, 2));
-    } catch (err) { alert(err); }
-  }
-};
-window.apiCreate = async function () {
-  if (!checkAuth()) return;
-  const newProblem = { id: Date.now().toString(), question: "API Test Question", answer: "Choice A\nChoice B\nChoice C" };
-  try {
-    const data = await createItem(resource, newProblem);
-    alert("Created:\n" + JSON.stringify(data, null, 2));
-    await loadProblems();
-    renderProblemsList();
-  } catch (err) { alert(err); }
-};
-window.apiUpdate = async function () {
-  if (!checkAuth()) return;
-  const id = prompt('Enter ID (id_key) to update:');
-  if (id) {
-    const updated = { question: "Updated via API Test", answer: "A\nB\nC" };
-    try {
-      const data = await updateItem(resource, id, updated);
-      alert("Updated:\n" + JSON.stringify(data, null, 2));
-      await loadProblems();
-      renderProblemsList();
-    } catch (err) { alert(err); }
-  }
-};
-window.apiDelete = async function () {
-  if (!checkAuth()) return;
-  const id = prompt('Enter ID (id_key) to delete:');
-  if (id) {
-    try {
-      const data = await deleteItem(resource, id);
-      alert("Deleted:\n" + JSON.stringify(data, null, 2));
-      await loadProblems();
-      renderProblemsList();
-    } catch (err) { alert(err); }
-  }
-};
+
 
 // --- Audio Learning Mode Logic ---
 let audioSequence = [];

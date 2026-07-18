@@ -51,23 +51,7 @@
           <button id="add-problem-btn" type="button" class="primary-btn" onclick="event.preventDefault(); addProblem()">Add Problem</button>
         </div>
 
-        <div class="card data-actions">
-          <button type="button" class="secondary-btn" onclick="event.preventDefault(); exportData()">Export JSON</button>
-          <label class="secondary-btn file-upload">
-            Import JSON <input type="file" id="import-json" accept=".json" onchange="importData(event)">
-          </label>
-        </div>
 
-        <div class="card api-actions" style="margin-top: 1rem;">
-          <h2>API Tests</h2>
-          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            <button type="button" class="secondary-btn" onclick="event.preventDefault(); apiGetAll()">GET All</button>
-            <button type="button" class="secondary-btn" onclick="event.preventDefault(); apiGetById()">GET by ID</button>
-            <button type="button" class="secondary-btn" onclick="event.preventDefault(); apiCreate()">POST</button>
-            <button type="button" class="secondary-btn" onclick="event.preventDefault(); apiUpdate()">PUT</button>
-            <button type="button" class="secondary-btn" onclick="event.preventDefault(); apiDelete()">DELETE</button>
-          </div>
-        </div>
 
         <div class="card list-card">
           <h2>Problem List</h2>
