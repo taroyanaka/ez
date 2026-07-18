@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const playLinkHTML = dirName ? `<a href="./${dirName}/index.html?chunk_id=${c.id}" target="_blank" style="padding: 4px 8px; background: #0366d6; color: white; text-decoration: none; border-radius: 4px; font-size: 0.85em; font-weight: bold; margin-right: 5px;">再生</a>` : '';
 
             li.innerHTML = `
-                <span>${c.name} <small style='color:#999'>(${c.service_type || 'unknown'})</small></span>
+                <span style="flex: 1; margin-right: 10px; word-break: break-word;">${c.name} <small style='color:#999'>(${c.service_type || 'unknown'})</small></span>
                 <div>
                     ${playLinkHTML}
                     <button class="add-chunk-btn" style='background:#f0f0f0; border:1px solid #ccc; cursor:pointer; padding:4px 8px; border-radius:4px;'>追加</button>
@@ -181,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             li.innerHTML = `
-                <span>${idx + 1}. ${pc.name} <small style='color:#999'>(${serviceType})</small></span>
+                <span style="flex: 1; margin-right: 10px; word-break: break-word;">${idx + 1}. ${pc.name} <small style='color:#999'>(${serviceType})</small></span>
                 <div style="display: flex; align-items: center;">
                     ${playLinkHTML}
                     ${removeBtnHTML}

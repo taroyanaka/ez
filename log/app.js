@@ -55,41 +55,136 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
 
-    // 3. Render Dashboard Metrics
-    let timeChartInstance = null;
-    let tapsChartInstance = null;
-    let dailyChartInstance = null;
+    const chartInstances = [];
 
-    function renderDashboard(serviceKey = 'global') {
-        const stats = getStatsForService(serviceKey);
+    const fontConfig = {
+        family: "'Outfit', 'Noto Sans JP', sans-serif",
+        size: 12
+    };
+    const gridConfig = {
+        color: 'rgba(255, 255, 255, 0.05)',
+        drawBorder: false
+    };
 
-        // 3.1. Compute Cards
+    function renderCombinedCharts(projects) {
+        // projects is an array of objects: { key, label, stats }
+        const ctxTime = document.getElementById('combinedTimeChart').getContext('2d');
+        const ctxTaps = document.getElementById('combinedTapsChart').getContext('2d');
+
+        const labels = projects.map(p => p.label);
+        const playTimeData = projects.map(p => Math.round((p.stats.play.duration / 60) * 10) / 10);
+        const editTimeData = projects.map(p => Math.round((p.stats.edit.duration / 60) * 10) / 10);
+        const playTapsData = projects.map(p => p.stats.play.taps);
+        const editTapsData = projects.map(p => p.stats.edit.taps);
+
+        const timeChart = new Chart(ctxTime, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '学習モード (分)',
+                        data: playTimeData,
+                        backgroundColor: 'rgba(99, 102, 241, 0.65)',
+                        borderColor: '#6366f1',
+                        borderWidth: 1.5,
+                        borderRadius: 4
+                    },
+                    {
+                        label: '編集/作成モード (分)',
+                        data: editTimeData,
+                        backgroundColor: 'rgba(16, 185, 129, 0.65)',
+                        borderColor: '#10b981',
+                        borderWidth: 1.5,
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#94a3b8', font: fontConfig } },
+                    tooltip: { backgroundColor: '#131a2c', titleColor: '#f8fafc', bodyColor: '#94a3b8' }
+                },
+                scales: {
+                    y: { grid: gridConfig, ticks: { color: '#64748b', font: fontConfig } },
+                    x: { grid: { display: false }, ticks: { color: '#94a3b8', font: fontConfig } }
+                }
+            }
+        });
+
+        const tapsChart = new Chart(ctxTaps, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '学習モード (回)',
+                        data: playTapsData,
+                        backgroundColor: 'rgba(99, 102, 241, 0.65)',
+                        borderColor: '#6366f1',
+                        borderWidth: 1.5,
+                        borderRadius: 4
+                    },
+                    {
+                        label: '編集/作成モード (回)',
+                        data: editTapsData,
+                        backgroundColor: 'rgba(16, 185, 129, 0.65)',
+                        borderColor: '#10b981',
+                        borderWidth: 1.5,
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#94a3b8', font: fontConfig } },
+                    tooltip: { backgroundColor: '#131a2c', titleColor: '#f8fafc', bodyColor: '#94a3b8' }
+                },
+                scales: {
+                    y: { grid: gridConfig, ticks: { color: '#64748b', font: fontConfig } },
+                    x: { grid: { display: false }, ticks: { color: '#94a3b8', font: fontConfig } }
+                }
+            }
+        });
+        chartInstances.push(timeChart, tapsChart);
+    }
+
+    function renderProjectSection(project) {
+        const template = document.getElementById('project-template');
+        const container = document.getElementById('projects-container');
+        const clone = template.content.cloneNode(true);
+        const section = clone.querySelector('.project-section');
+        
+        section.querySelector('.project-title').textContent = project.label;
+        
+        const stats = project.stats;
         const totalDuration = stats.play.duration + stats.edit.duration;
         const totalTaps = stats.play.taps + stats.edit.taps;
 
-        document.getElementById('total-time').textContent = formatTime(totalDuration);
-        document.getElementById('total-taps').textContent = `${totalTaps.toLocaleString()}回`;
+        section.querySelector('.total-time').textContent = formatTime(totalDuration);
+        section.querySelector('.total-taps').textContent = `${totalTaps.toLocaleString()}回`;
 
-        const activeModeEl = document.getElementById('active-mode');
-        const activeModeDescEl = document.getElementById('active-mode-desc');
+        const activeModeEl = section.querySelector('.active-mode');
+        const activeModeDescEl = section.querySelector('.active-mode-desc');
         if (totalTaps === 0) {
             activeModeEl.textContent = '-';
             activeModeDescEl.textContent = 'アクティビティが記録されていません';
-            activeModeEl.parentElement.classList.remove('highlight');
+            activeModeEl.closest('.card').classList.remove('highlight');
         } else if (stats.play.taps >= stats.edit.taps) {
             activeModeEl.textContent = '学習モード';
             activeModeDescEl.textContent = 'プレイ操作が最も多く記録されています';
-            activeModeEl.parentElement.classList.add('highlight');
+            activeModeEl.closest('.card').classList.add('highlight');
         } else {
             activeModeEl.textContent = '編集/作成モード';
             activeModeDescEl.textContent = 'データ作成操作が最も多く記録されています';
-            activeModeEl.parentElement.classList.add('highlight');
+            activeModeEl.closest('.card').classList.add('highlight');
         }
 
-        // 3.2. Populate Table
-        const rawBody = document.getElementById('raw-data-body');
-        rawBody.innerHTML = '';
-
+        const rawBody = section.querySelector('.raw-data-body');
         const modes = [
             { key: 'play', name: '学習モード (Play)', badge: 'badge-play' },
             { key: 'edit', name: '編集/作成モード (Edit)', badge: 'badge-edit' }
@@ -99,7 +194,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = stats[mode.key];
             const durationMin = data.duration / 60;
             const density = durationMin > 0 ? Math.round(data.taps / durationMin) : 0;
-
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td><span class="${mode.badge}">${mode.name}</span></td>
@@ -111,48 +205,17 @@ document.addEventListener('DOMContentLoaded', () => {
             rawBody.appendChild(tr);
         });
 
-        // 3.3. Initialize or Update Chart.js Charts
-        renderCharts(stats);
-    }
-
-    // 4. Chart Rendering
-    function renderCharts(stats) {
-        // Destroy existing instances to support re-renders (like resets)
-        if (timeChartInstance) timeChartInstance.destroy();
-        if (tapsChartInstance) tapsChartInstance.destroy();
-        if (dailyChartInstance) dailyChartInstance.destroy();
-
-        // Chart styling variables
-        const fontConfig = {
-            family: "'Outfit', 'Noto Sans JP', sans-serif",
-            size: 12
-        };
-
-        const gridConfig = {
-            color: 'rgba(255, 255, 255, 0.05)',
-            drawBorder: false
-        };
-
-        // 4.1. Time Chart (Duration in Minutes)
-        const ctxTime = document.getElementById('timeChart').getContext('2d');
-        const playTimeMin = Math.round((stats.play.duration / 60) * 10) / 10;
-        const editTimeMin = Math.round((stats.edit.duration / 60) * 10) / 10;
-
-        timeChartInstance = new Chart(ctxTime, {
+        // Charts
+        const ctxTime = section.querySelector('.timeChart').getContext('2d');
+        const timeChart = new Chart(ctxTime, {
             type: 'bar',
             data: {
                 labels: ['学習モード (Play)', '編集/作成モード (Edit)'],
                 datasets: [{
                     label: '利用時間 (分)',
-                    data: [playTimeMin, editTimeMin],
-                    backgroundColor: [
-                        'rgba(99, 102, 241, 0.65)',  // Indigo
-                        'rgba(16, 185, 129, 0.65)'  // Emerald
-                    ],
-                    borderColor: [
-                        '#6366f1',
-                        '#10b981'
-                    ],
+                    data: [Math.round((stats.play.duration / 60) * 10) / 10, Math.round((stats.edit.duration / 60) * 10) / 10],
+                    backgroundColor: ['rgba(99, 102, 241, 0.65)', 'rgba(16, 185, 129, 0.65)'],
+                    borderColor: ['#6366f1', '#10b981'],
                     borderWidth: 1.5,
                     borderRadius: 8,
                     barThickness: 60
@@ -161,53 +224,24 @@ document.addEventListener('DOMContentLoaded', () => {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: '#131a2c',
-                        titleColor: '#f8fafc',
-                        bodyColor: '#94a3b8',
-                        borderColor: 'rgba(255, 255, 255, 0.1)',
-                        borderWidth: 1,
-                        padding: 10,
-                        callbacks: {
-                            label: function(context) {
-                                return ` ${context.parsed.y} 分`;
-                            }
-                        }
-                    }
-                },
+                plugins: { legend: { display: false } },
                 scales: {
-                    y: {
-                        grid: gridConfig,
-                        ticks: { color: '#64748b', font: fontConfig },
-                        title: { display: true, text: '分', color: '#64748b', font: fontConfig }
-                    },
-                    x: {
-                        grid: { display: false },
-                        ticks: { color: '#94a3b8', font: fontConfig }
-                    }
+                    y: { grid: gridConfig, ticks: { color: '#64748b', font: fontConfig } },
+                    x: { grid: { display: false }, ticks: { color: '#94a3b8', font: fontConfig } }
                 }
             }
         });
 
-        // 4.2. Taps Chart
-        const ctxTaps = document.getElementById('tapsChart').getContext('2d');
-        tapsChartInstance = new Chart(ctxTaps, {
+        const ctxTaps = section.querySelector('.tapsChart').getContext('2d');
+        const tapsChart = new Chart(ctxTaps, {
             type: 'bar',
             data: {
                 labels: ['学習モード (Play)', '編集/作成モード (Edit)'],
                 datasets: [{
                     label: 'タップ回数',
                     data: [stats.play.taps, stats.edit.taps],
-                    backgroundColor: [
-                        'rgba(99, 102, 241, 0.65)',
-                        'rgba(16, 185, 129, 0.65)'
-                    ],
-                    borderColor: [
-                        '#6366f1',
-                        '#10b981'
-                    ],
+                    backgroundColor: ['rgba(99, 102, 241, 0.65)', 'rgba(16, 185, 129, 0.65)'],
+                    borderColor: ['#6366f1', '#10b981'],
                     borderWidth: 1.5,
                     borderRadius: 8,
                     barThickness: 60
@@ -216,62 +250,33 @@ document.addEventListener('DOMContentLoaded', () => {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: '#131a2c',
-                        titleColor: '#f8fafc',
-                        bodyColor: '#94a3b8',
-                        borderColor: 'rgba(255, 255, 255, 0.1)',
-                        borderWidth: 1,
-                        padding: 10,
-                        callbacks: {
-                            label: function(context) {
-                                return ` ${context.parsed.y.toLocaleString()} 回`;
-                            }
-                        }
-                    }
-                },
+                plugins: { legend: { display: false } },
                 scales: {
-                    y: {
-                        grid: gridConfig,
-                        ticks: { color: '#64748b', font: fontConfig },
-                        title: { display: true, text: 'タップ回数', color: '#64748b', font: fontConfig }
-                    },
-                    x: {
-                        grid: { display: false },
-                        ticks: { color: '#94a3b8', font: fontConfig }
-                    }
+                    y: { grid: gridConfig, ticks: { color: '#64748b', font: fontConfig } },
+                    x: { grid: { display: false }, ticks: { color: '#94a3b8', font: fontConfig } }
                 }
             }
         });
 
-        // 4.3. Daily Chart (Duration over 7 days)
-        const ctxDaily = document.getElementById('dailyChart').getContext('2d');
-        
+        const ctxDaily = section.querySelector('.dailyChart').getContext('2d');
         const last7Days = [];
         for (let i = 6; i >= 0; i--) {
             const d = new Date();
             d.setDate(d.getDate() - i);
-            const dateKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-            last7Days.push(dateKey);
+            last7Days.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
         }
-
         const dailyPlayData = [];
         const dailyEditData = [];
-        
         last7Days.forEach(date => {
             const dayStats = stats.daily && stats.daily[date] ? stats.daily[date] : { play: { duration: 0, taps: 0 }, edit: { duration: 0, taps: 0 } };
             dailyPlayData.push(Math.round((dayStats.play.duration / 60) * 10) / 10);
             dailyEditData.push(Math.round((dayStats.edit.duration / 60) * 10) / 10);
         });
 
-        const shortDates = last7Days.map(d => d.slice(5).replace('-', '/'));
-
-        dailyChartInstance = new Chart(ctxDaily, {
+        const dailyChart = new Chart(ctxDaily, {
             type: 'line',
             data: {
-                labels: shortDates,
+                labels: last7Days.map(d => d.slice(5).replace('-', '/')),
                 datasets: [
                     {
                         label: '学習モード (分)',
@@ -279,13 +284,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         borderColor: '#6366f1',
                         backgroundColor: 'rgba(99, 102, 241, 0.2)',
                         borderWidth: 2,
-                        tension: 0.3,
-                        fill: true,
-                        pointBackgroundColor: '#1e293b',
-                        pointBorderColor: '#6366f1',
-                        pointBorderWidth: 2,
-                        pointRadius: 4,
-                        pointHoverRadius: 6
+                        tension: 0.3, fill: true,
+                        pointBackgroundColor: '#1e293b', pointBorderColor: '#6366f1'
                     },
                     {
                         label: '編集/作成モード (分)',
@@ -293,77 +293,69 @@ document.addEventListener('DOMContentLoaded', () => {
                         borderColor: '#10b981',
                         backgroundColor: 'rgba(16, 185, 129, 0.2)',
                         borderWidth: 2,
-                        tension: 0.3,
-                        fill: true,
-                        pointBackgroundColor: '#1e293b',
-                        pointBorderColor: '#10b981',
-                        pointBorderWidth: 2,
-                        pointRadius: 4,
-                        pointHoverRadius: 6
+                        tension: 0.3, fill: true,
+                        pointBackgroundColor: '#1e293b', pointBorderColor: '#10b981'
                     }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        labels: { color: '#94a3b8', font: fontConfig, usePointStyle: true, boxWidth: 8 }
-                    },
-                    tooltip: {
-                        backgroundColor: '#131a2c',
-                        titleColor: '#f8fafc',
-                        bodyColor: '#94a3b8',
-                        borderColor: 'rgba(255, 255, 255, 0.1)',
-                        borderWidth: 1,
-                        padding: 10,
-                        callbacks: {
-                            label: function(context) {
-                                return ` ${context.dataset.label.replace(' (分)', '')}: ${context.parsed.y} 分`;
-                            }
-                        }
-                    }
-                },
+                plugins: { legend: { labels: { color: '#94a3b8', font: fontConfig } } },
                 scales: {
-                    y: {
-                        grid: gridConfig,
-                        ticks: { color: '#64748b', font: fontConfig },
-                        title: { display: true, text: '分', color: '#64748b', font: fontConfig },
-                        beginAtZero: true
-                    },
-                    x: {
-                        grid: { display: false },
-                        ticks: { color: '#94a3b8', font: fontConfig }
-                    }
+                    y: { grid: gridConfig, ticks: { color: '#64748b', font: fontConfig }, beginAtZero: true },
+                    x: { grid: { display: false }, ticks: { color: '#94a3b8', font: fontConfig } }
                 }
             }
         });
+
+        chartInstances.push(timeChart, tapsChart, dailyChart);
+
+        section.querySelector('.btn-reset').addEventListener('click', () => {
+            if (confirm(`${project.label}のログデータを完全に削除しますか？\n（この操作は元に戻せません）`)) {
+                let currentStats = getStats();
+                if (currentStats[project.key]) {
+                    delete currentStats[project.key];
+                }
+                if (currentStats.daily) {
+                    for(let date in currentStats.daily) {
+                        if (currentStats.daily[date][project.key]) {
+                            delete currentStats.daily[date][project.key];
+                        }
+                    }
+                }
+                localStorage.setItem('ez_activity_logs', JSON.stringify(currentStats));
+                renderAll();
+            }
+        });
+
+        container.appendChild(clone);
     }
 
-    // 5. Reset Controller
-    document.getElementById('btn-reset').addEventListener('click', () => {
-        if (confirm('すべてのログデータを完全に削除しますか？\n（この操作は元に戻せません）')) {
-            const clearedStats = {
-                global: { play: { duration: 0, taps: 0 }, edit: { duration: 0, taps: 0 } }
-            };
-            localStorage.setItem('ez_activity_logs', JSON.stringify(clearedStats));
-            const activeService = document.getElementById('service-selector') ? document.getElementById('service-selector').value : 'global';
-            renderDashboard(activeService);
-        }
-    });
+    function renderAll() {
+        // Destroy existing charts
+        chartInstances.forEach(c => c.destroy());
+        chartInstances.length = 0;
+        
+        document.getElementById('projects-container').innerHTML = '';
 
-    const serviceSelector = document.getElementById('service-selector');
-    if (serviceSelector) {
-        serviceSelector.addEventListener('change', (e) => {
-            renderDashboard(e.target.value);
+        const projectKeys = [
+            { key: 'ez1', label: 'EZ Project 1' },
+            { key: 'ez2', label: 'EZ Project 2' },
+            { key: 'ez5', label: 'EZ Project 5' }
+        ];
+
+        const projects = projectKeys.map(p => ({
+            ...p,
+            stats: getStatsForService(p.key)
+        }));
+
+        renderCombinedCharts(projects);
+
+        projects.forEach(p => {
+            renderProjectSection(p);
         });
     }
 
-    // 6. Initial Render
-    if (serviceSelector) {
-        renderDashboard(serviceSelector.value);
-    } else {
-        renderDashboard('global');
-    }
+    renderAll();
 });
