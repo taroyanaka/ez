@@ -18,16 +18,29 @@ const learningContainer = document.getElementById('learning-container');
 // API Client Functions
 
 
-const getAllItems = (resource) => {
+const getAllItems = async (resource) => {
     let url = `${API_BASE_URL}/${resource}`;
-    const myDataOnlyToggle = document.getElementById('my-data-only-toggle');
-    if (myDataOnlyToggle && myDataOnlyToggle.checked && AUTH_USER_ID) {
+    
+    const userFilter = document.querySelector('input[name="user-filter"]:checked')?.value || 'mine';
+    const chunkFilter = document.querySelector('input[name="chunk-filter"]:checked')?.value || 'current';
+
+    if (userFilter === 'mine' && AUTH_USER_ID) {
         url = `${API_BASE_URL}/${resource}/user/${AUTH_USER_ID}`;
     }
-    if (window.currentChunkId) {
+
+    if (chunkFilter === 'current' && window.currentChunkId) {
         url += (url.includes('?') ? '&' : '?') + `chunk_id=${window.currentChunkId}`;
     }
-    return fetch(url).then(res => res.json()).then(json => json.data || json);
+
+    const res = await fetch(url);
+    const json = await res.json();
+    let data = json.data || json;
+
+    if (userFilter === 'others' && AUTH_USER_ID) {
+        data = data.filter(item => String(item.user_id) !== String(AUTH_USER_ID));
+    }
+    
+    return data;
 };
 const getItemById = (resource, id) => fetch(`${API_BASE_URL}/${resource}/${id}`).then(res => res.json()).then(json => json.item || json.data || json);
 const createItem = (resource, data) => {
@@ -39,9 +52,9 @@ const deleteItem = (resource, id) => fetch(`${API_BASE_URL}/${resource}/${id}`, 
 
 // Initialization
 document.addEventListener('DOMContentLoaded', async () => {
-  const myDataContainer = document.getElementById('my-data-only-container');
-  if (myDataContainer && (!AUTH_USER_ID || !AUTH_PASSWORD)) {
-      myDataContainer.style.display = 'none';
+  const dataFiltersContainer = document.getElementById('data-filters-container');
+  if (dataFiltersContainer && (!AUTH_USER_ID || !AUTH_PASSWORD)) {
+      dataFiltersContainer.style.display = 'none';
   }
   window.onChunkChange = async () => {
     await loadProblems();
@@ -253,6 +266,7 @@ function renderProblemsList() {
           <button type="button" class="primary-btn" onclick="event.preventDefault(); event.stopPropagation(); window.playEz2LearningMode(${index})" style="padding: 4px 8px; font-size: 0.8rem;">Learning</button>
           <button type="button" class="primary-btn" onclick="event.preventDefault(); event.stopPropagation(); window.playEz2AudioLearningMode(${index})" style="padding: 4px 8px; font-size: 0.8rem;">Audio</button>
           <button type="button" class="edit-btn" onclick="event.preventDefault(); event.stopPropagation(); editProblem(${p.id_key || `'${p.id}'` || `'${id}'`})">Edit</button>
+          <button type="button" class="btn" onclick="event.preventDefault(); event.stopPropagation(); cloneProblem(${p.id_key || `'${p.id}'` || `'${id}'`})" style="padding: 4px 8px; font-size: 0.8rem; background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success); color: var(--success);"><i class="fas fa-clone"></i> クローン</button>
           <button type="button" class="delete-btn" onclick="event.preventDefault(); event.stopPropagation(); deleteProblem(${p.id_key || `'${p.id}'` || `'${id}'`})">Delete</button>
         </div>
       </div>
@@ -280,6 +294,34 @@ window.playEz2AudioLearningMode = function(index) {
       startAudioSequence();
     }, 300);
   }
+};
+
+window.cloneProblem = async function(id) {
+    if (!checkAuth()) return;
+    try {
+        const p = problems.find(prob => prob.id_key === id || prob.id === id);
+        if (!p) {
+            alert('Problem not found');
+            return;
+        }
+        
+        const newProblem = {
+            id: Date.now().toString(),
+            question: p.question,
+            answer: p.answer,
+        };
+        
+        // Clone into the currently selected chunk if one is active
+        if (window.currentChunkId) {
+            newProblem.chunk_id = window.currentChunkId;
+        }
+
+        await createItem(resource, newProblem);
+        await loadProblems();
+        renderProblemsList();
+    } catch(err) {
+        alert("Failed to clone: " + err);
+    }
 };
 
 window.toggleExpand = function(el) {

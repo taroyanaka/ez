@@ -14,9 +14,18 @@
     <header>
       <a href="../index.html" id="top-link" style="text-decoration: none; color: #94a3b8; font-size: 0.8rem; margin-bottom: 0.5rem; display: inline-block;">← TOP PAGE</a>
       <div id="login-required-msg" style="color: #ef4444; font-size: 0.8rem; font-weight: bold; display: none; margin-bottom: 0.5rem;">ログイン必要</div>
-      <div id="my-data-only-container" style="display: flex; align-items: center; gap: 0.3rem; margin-bottom: 1rem;">
-          <input type="checkbox" id="my-data-only-toggle" checked onchange="handleToggleMyData()" style="cursor: pointer; accent-color: var(--primary);">
-          <label for="my-data-only-toggle" style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; cursor: pointer;">マイデータのみ表示</label>
+      <div id="data-filters-container" style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+        <div style="background: rgba(255,255,255,0.05); padding: 0.5rem; border-radius: 8px; border: 1px solid var(--glass-border);">
+          <label style="font-size: 0.8rem; color: var(--text-secondary); margin-right: 0.5rem;">チャンク:</label>
+          <label style="font-size: 0.8rem; cursor: pointer; color: var(--text-secondary);"><input type="radio" name="chunk-filter" value="current" checked onchange="handleToggleMyData()" style="accent-color: var(--primary);"> 現在のチャンク</label>
+          <label style="font-size: 0.8rem; cursor: pointer; color: var(--text-secondary); margin-left: 0.5rem;"><input type="radio" name="chunk-filter" value="all" onchange="handleToggleMyData()" style="accent-color: var(--primary);"> 全てのチャンク</label>
+        </div>
+        <div style="background: rgba(255,255,255,0.05); padding: 0.5rem; border-radius: 8px; border: 1px solid var(--glass-border);">
+          <label style="font-size: 0.8rem; color: var(--text-secondary); margin-right: 0.5rem;">ユーザー:</label>
+          <label style="font-size: 0.8rem; cursor: pointer; color: var(--text-secondary);"><input type="radio" name="user-filter" value="all" onchange="handleToggleMyData()" style="accent-color: var(--primary);"> 全員</label>
+          <label style="font-size: 0.8rem; cursor: pointer; color: var(--text-secondary); margin-left: 0.5rem;"><input type="radio" name="user-filter" value="mine" checked onchange="handleToggleMyData()" style="accent-color: var(--primary);"> 自分のデータ</label>
+          <label style="font-size: 0.8rem; cursor: pointer; color: var(--text-secondary); margin-left: 0.5rem;"><input type="radio" name="user-filter" value="others" onchange="handleToggleMyData()" style="accent-color: var(--primary);"> 自分以外</label>
+        </div>
       </div>
       <h1>Knowledge Builder</h1>
       <nav class="tabs">
