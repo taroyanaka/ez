@@ -23,14 +23,9 @@ const getAllItems = async (resource) => {
     let url = `${API_BASE_URL}/${resource}`;
     
     const userFilter = document.querySelector('input[name="user-filter"]:checked')?.value || 'mine';
-    const selectedChunkId = window.currentChunkId && window.currentChunkId !== 'all' && window.currentChunkId !== 'null' ? window.currentChunkId : null;
 
     if (userFilter === 'mine' && AUTH_USER_ID) {
         url = `${API_BASE_URL}/${resource}/user/${AUTH_USER_ID}`;
-    }
-
-    if (selectedChunkId) {
-        url += (url.includes('?') ? '&' : '?') + `chunk_id=${selectedChunkId}`;
     }
 
     const res = await fetch(url);
