@@ -66,6 +66,7 @@ async function renderChunkWidget(resourceType) {
         }
 
         let options = chunks.map(c => `<option value="${c.id}" ${c.id == window.currentChunkId ? 'selected' : ''}>${c.name}</option>`).join('');
+        options += `<option value="all" ${window.currentChunkId === 'all' ? 'selected' : ''}>全てのチャンク</option>`;
         options += `<option value="null" ${window.currentChunkId === 'null' ? 'selected' : ''}>未分類 (既存データ)</option>`;
         
         container.innerHTML = `

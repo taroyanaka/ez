@@ -23,14 +23,14 @@ const getAllItems = async (resource) => {
     let url = `${API_BASE_URL}/${resource}`;
     
     const userFilter = document.querySelector('input[name="user-filter"]:checked')?.value || 'mine';
-    const chunkFilter = document.querySelector('input[name="chunk-filter"]:checked')?.value || 'current';
+    const selectedChunkId = window.currentChunkId && window.currentChunkId !== 'all' && window.currentChunkId !== 'null' ? window.currentChunkId : null;
 
     if (userFilter === 'mine' && AUTH_USER_ID) {
         url = `${API_BASE_URL}/${resource}/user/${AUTH_USER_ID}`;
     }
 
-    if (chunkFilter === 'current' && window.currentChunkId) {
-        url += (url.includes('?') ? '&' : '?') + `chunk_id=${window.currentChunkId}`;
+    if (selectedChunkId) {
+        url += (url.includes('?') ? '&' : '?') + `chunk_id=${selectedChunkId}`;
     }
 
     const res = await fetch(url);
@@ -45,7 +45,8 @@ const getAllItems = async (resource) => {
 };
 const getItemById = (resource, id) => fetch(`${API_BASE_URL}/${resource}/${id}`).then(res => res.json()).then(json => json.item || json.data || json);
 const createItem = (resource, data) => {
-    if (window.currentChunkId) data.chunk_id = window.currentChunkId;
+    const selectedChunkId = window.currentChunkId && window.currentChunkId !== 'all' && window.currentChunkId !== 'null' ? window.currentChunkId : null;
+    if (selectedChunkId) data.chunk_id = selectedChunkId;
     return fetch(`${API_BASE_URL}/${resource}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD }, body: JSON.stringify(data) }).then(res => res.json()).then(json => json.item || json.data || json);
 };
 const updateItem = (resource, id, data) => fetch(`${API_BASE_URL}/${resource}/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD }, body: JSON.stringify(data) }).then(res => res.json()).then(json => json.item || json.data || json);
