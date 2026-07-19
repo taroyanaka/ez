@@ -66,6 +66,16 @@ document.addEventListener('DOMContentLoaded', () => {
         drawBorder: false
     };
 
+    function getLast7Days() {
+        const days = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            days.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+        }
+        return days;
+    }
+
     function renderCombinedCharts(projects) {
         // projects is an array of objects: { key, label, stats }
         const ctxTime = document.getElementById('combinedTimeChart').getContext('2d');
@@ -151,6 +161,75 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         chartInstances.push(timeChart, tapsChart);
+    }
+
+    function renderDailyOverviewChart(projects) {
+        const ctxDaily = document.getElementById('dailyOverviewChart').getContext('2d');
+        const last7Days = getLast7Days();
+        const playData = [];
+        const editData = [];
+
+        last7Days.forEach(date => {
+            let dailyPlayDuration = 0;
+            let dailyEditDuration = 0;
+
+            projects.forEach(project => {
+                const dayStats = project.stats.daily && project.stats.daily[date]
+                    ? project.stats.daily[date]
+                    : { play: { duration: 0, taps: 0 }, edit: { duration: 0, taps: 0 } };
+
+                dailyPlayDuration += dayStats.play.duration;
+                dailyEditDuration += dayStats.edit.duration;
+            });
+
+            playData.push(Math.round((dailyPlayDuration / 60) * 10) / 10);
+            editData.push(Math.round((dailyEditDuration / 60) * 10) / 10);
+        });
+
+        const dailyChart = new Chart(ctxDaily, {
+            type: 'line',
+            data: {
+                labels: last7Days.map(d => d.slice(5).replace('-', '/')),
+                datasets: [
+                    {
+                        label: '学習モード (分)',
+                        data: playData,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true,
+                        pointBackgroundColor: '#1e293b',
+                        pointBorderColor: '#6366f1'
+                    },
+                    {
+                        label: '編集/作成モード (分)',
+                        data: editData,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true,
+                        pointBackgroundColor: '#1e293b',
+                        pointBorderColor: '#10b981'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#94a3b8', font: fontConfig } },
+                    tooltip: { backgroundColor: '#131a2c', titleColor: '#f8fafc', bodyColor: '#94a3b8' }
+                },
+                scales: {
+                    y: { grid: gridConfig, ticks: { color: '#64748b', font: fontConfig }, beginAtZero: true },
+                    x: { grid: { display: false }, ticks: { color: '#94a3b8', font: fontConfig } }
+                }
+            }
+        });
+
+        chartInstances.push(dailyChart);
     }
 
     function renderProjectSection(project) {
@@ -259,12 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const ctxDaily = section.querySelector('.dailyChart').getContext('2d');
-        const last7Days = [];
-        for (let i = 6; i >= 0; i--) {
-            const d = new Date();
-            d.setDate(d.getDate() - i);
-            last7Days.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
-        }
+        const last7Days = getLast7Days();
         const dailyPlayData = [];
         const dailyEditData = [];
         last7Days.forEach(date => {
@@ -351,6 +425,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
 
         renderCombinedCharts(projects);
+        renderDailyOverviewChart(projects);
 
         projects.forEach(p => {
             renderProjectSection(p);
