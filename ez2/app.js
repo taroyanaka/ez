@@ -904,8 +904,8 @@ window.addEventListener('click', function(event) {
     }
 });
 
-function persistCrossPageText(text, targetPage) {
-    localStorage.setItem(CROSS_PAGE_PAYLOAD_KEY, JSON.stringify({ target: targetPage, text }));
+function persistCrossPageText(text, targetPage, tabName = null) {
+    localStorage.setItem(CROSS_PAGE_PAYLOAD_KEY, JSON.stringify({ target: targetPage, text, tab: tabName }));
 }
 
 function applyIncomingSharedText() {
@@ -956,7 +956,7 @@ async function copyWordsToEz1(silent = false, redirectUrl = null) {
     if (dropdown) dropdown.classList.remove('show');
 
     if (redirectUrl) {
-        persistCrossPageText(text, 'ez1');
+        persistCrossPageText(text, 'ez1', 'edit');
         window.location.href = redirectUrl;
     }
 }

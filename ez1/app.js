@@ -56,8 +56,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     applyIncomingSharedText();
     await initChunks();
-    // 初期表示として学習モードを明示的にセット
-    switchTab('play');
+    const targetTab = window.__ez1TargetTab || 'play';
+    switchTab(targetTab);
 });
 
 async function handleToggleMyData() {
@@ -1105,8 +1105,8 @@ function toggleMenu() {
     }
 }
 
-function persistCrossPageText(text, targetPage) {
-    const payload = { target: targetPage, text };
+function persistCrossPageText(text, targetPage, tabName = null) {
+    const payload = { target: targetPage, text, tab: tabName };
     localStorage.setItem(CROSS_PAGE_PAYLOAD_KEY, JSON.stringify(payload));
 }
 
@@ -1120,6 +1120,9 @@ function applyIncomingSharedText() {
         const bulkInput = document.getElementById('bulk-input');
         if (bulkInput) {
             bulkInput.value = payload.text || '';
+        }
+        if (payload.tab) {
+            window.__ez1TargetTab = payload.tab;
         }
         localStorage.removeItem(CROSS_PAGE_PAYLOAD_KEY);
     } catch (error) {
