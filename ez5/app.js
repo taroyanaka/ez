@@ -5,7 +5,7 @@ let createCtx = null;
 let isDrawing = false;
 let drawMode = 'brush'; 
 let brushSize = 20;
-let savedRecords = []; // サーバー(DB)上に保存されたリスト
+let items = []; // サーバー(DB)上に保存されたリスト
 let tempRecords = []; // ブラウザのメモリ上に一時保存されているリスト
 let currentEditingId = null;
 
@@ -134,17 +134,17 @@ async function autoSaveWithData(id, maskDataUrl, targetText, contentText) {
         clearTimeout(timeout);
         if (!resp.ok) throw new Error('auto save failed');
         const result = await resp.json();
-        // 更新が返ってきたらlocal savedRecords を更新
+        // 更新が返ってきたらlocal items を更新
         if (result.item && result.item.mask) {
-            const idx = savedRecords.findIndex(r => r.id === id);
+            const idx = items.findIndex(r => r.id === id);
             if (idx !== -1) {
-                savedRecords[idx].mask = result.item.mask;
-                savedRecords[idx].target = result.item.target !== undefined ? result.item.target : targetText || savedRecords[idx].target;
-                savedRecords[idx].content = result.item.content !== undefined ? result.item.content : contentText || savedRecords[idx].content;
-                savedRecords[idx].timestamp = new Date().toLocaleTimeString();
+                items[idx].mask = result.item.mask;
+                items[idx].target = result.item.target !== undefined ? result.item.target : targetText || items[idx].target;
+                items[idx].content = result.item.content !== undefined ? result.item.content : contentText || items[idx].content;
+                items[idx].timestamp = new Date().toLocaleTimeString();
                 
                 // サーバーで更新された最新の画像を再取得するため、メモリ上のキャッシュを破棄する
-                delete savedRecords[idx]._loadedMaskImg;
+                delete items[idx]._loadedMaskImg;
                 
                 if (typeof playPrefetchCache !== 'undefined' && playPrefetchCache.has(id)) {
                     const cached = playPrefetchCache.get(id);
@@ -208,7 +208,7 @@ async function switchTab(tab) {
             }, 300);
         }
 
-        renderDbList();
+        renderItemsList();
         if (document.getElementById('create-canvas-container').style.display === 'block') {
             toggleFixedUI(true);
         }
@@ -380,7 +380,7 @@ function renderPlayList() {
     const filterRadio = document.querySelector('input[name="play-mask-filter"]:checked');
     const filterValue = filterRadio ? filterRadio.value : 'both';
     
-    const validRecords = savedRecords.filter(r => {
+    const validRecords = items.filter(r => {
         if (filterValue === 'with_mask') return r.mask;
         if (filterValue === 'no_mask') return !r.mask;
         return true;
@@ -462,7 +462,7 @@ function renderPlayList() {
 }
 
 function loadPlayImage(id, btn) {
-    const record = savedRecords.find(r => r.id === id);
+    const record = items.find(r => r.id === id);
     if (!record) return;
     if (btn) {
         btn.disabled = true;
@@ -531,15 +531,15 @@ function loadPlayImage(id, btn) {
     };
 
     // 起動後に次をプリフェッチ
-    const idx = savedRecords.findIndex(r => r.id === id);
+    const idx = items.findIndex(r => r.id === id);
     if (idx !== -1) {
         prefetchPlayAtIndex(idx + 1);
     }
 }
 
 function prefetchPlayAtIndex(index) {
-    if (index < 0 || index >= savedRecords.length) return;
-    const rec = savedRecords[index];
+    if (index < 0 || index >= items.length) return;
+    const rec = items[index];
     const id = rec.id;
 
     // 既存のコントローラがあればキャンセル
@@ -576,7 +576,7 @@ function prefetchPlayAtIndex(index) {
 }
 
 function getSavedIndexById(id) {
-    return savedRecords.findIndex(r => r.id === id);
+    return items.findIndex(r => r.id === id);
 }
 
 async function createNavigateNext() {
@@ -584,7 +584,7 @@ async function createNavigateNext() {
     const idx = getSavedIndexById(currentEditingId);
     if (idx === -1) return;
     const nextIdx = idx + 1;
-    if (nextIdx >= savedRecords.length) return;
+    if (nextIdx >= items.length) return;
 
     const prevId = currentEditingId;
     const prevTarget = document.getElementById('edit-target-textarea') ? document.getElementById('edit-target-textarea').value.trim() : '';
@@ -598,7 +598,7 @@ async function createNavigateNext() {
     if (nextBtn) nextBtn.disabled = true;
 
     // 先に次の編集画面を即座に表示
-    const nextId = savedRecords[nextIdx].id;
+    const nextId = items[nextIdx].id;
     editRecord(nextId, {suppressPopup:true});
 
     // バックグラウンドで保存
@@ -626,7 +626,7 @@ async function createNavigatePrev() {
     if (prevBtn) prevBtn.disabled = true;
     if (nextBtn) nextBtn.disabled = true;
 
-    const targetId = savedRecords[prevIdx].id;
+    const targetId = items[prevIdx].id;
     editRecord(targetId, {suppressPopup:true});
 
     const ok = await autoSaveWithData(prevId, prevMaskData, prevTarget, prevContent);
@@ -640,8 +640,8 @@ function playNavigateNext(id) {
     const idx = getSavedIndexById(id);
     if (idx === -1) return;
     const nextIdx = idx + 1;
-    if (nextIdx >= savedRecords.length) return;
-    const nextId = savedRecords[nextIdx].id;
+    if (nextIdx >= items.length) return;
+    const nextId = items[nextIdx].id;
     // Cancel prefetch for this id if any
     if (prefetchControllers.has(id)) {
         try { prefetchControllers.get(id).abort(); } catch(e){}
@@ -658,7 +658,7 @@ function playNavigatePrev(id) {
     if (idx === -1) return;
     const prevIdx = idx - 1;
     if (prevIdx < 0) return;
-    const prevId = savedRecords[prevIdx].id;
+    const prevId = items[prevIdx].id;
     const targetContent = document.getElementById(`play-card-${prevId}`);
     if (targetContent && targetContent.scrollIntoView) targetContent.scrollIntoView({ behavior: 'smooth', block: 'center' });
     loadPlayImage(prevId, document.getElementById(`btn-load-${prevId}`));
@@ -900,10 +900,10 @@ async function savePlayTargetContent(id, btn) {
         if (!response.ok) throw new Error('Update failed');
         const result = await response.json();
         
-        const idx = savedRecords.findIndex(r => r.id === id);
+        const idx = items.findIndex(r => r.id === id);
         if (idx !== -1) {
-            savedRecords[idx].target = result.item && result.item.target !== undefined ? result.item.target : targetVal;
-            savedRecords[idx].content = result.item && result.item.content !== undefined ? result.item.content : contentVal;
+            items[idx].target = result.item && result.item.target !== undefined ? result.item.target : targetVal;
+            items[idx].content = result.item && result.item.content !== undefined ? result.item.content : contentVal;
         }
         
         showToast('テキストを保存しました！', 'success');
@@ -976,17 +976,11 @@ function dataURLtoBlob(dataurl) {
 
 async function loadData() {
     try {
-        const myDataOnlyToggle = document.getElementById('my-data-only-toggle');
-        const isMyDataOnly = myDataOnlyToggle ? myDataOnlyToggle.checked : true;
+        const userFilter = document.querySelector('input[name="user-filter"]:checked')?.value || 'all';
         
         let url = `${API_BASE_URL}/fill_image`;
-        if (isMyDataOnly) {
-            if (!AUTH_USER_ID) {
-                const myDataOnlyToggle = document.getElementById('my-data-only-toggle');
-                if (myDataOnlyToggle) myDataOnlyToggle.checked = false;
-            } else {
-                url = `${API_BASE_URL}/fill_image/user/${AUTH_USER_ID}`;
-            }
+        if (AUTH_USER_ID && userFilter === 'mine') {
+            url = `${API_BASE_URL}/fill_image/user/${AUTH_USER_ID}`;
         }
         
         const res = await fetch(url, { cache: 'no-store' });
@@ -994,12 +988,16 @@ async function loadData() {
         const data = await res.json();
         
         const selectedChunk = window.currentChunkId === 'null' ? null : window.currentChunkId;
-        const filteredData = data.filter(item => {
+        let filteredData = data.filter(item => {
             if (selectedChunk === null) return item.chunk_id === null;
             return String(item.chunk_id) === String(selectedChunk);
         });
         
-        savedRecords = filteredData.map(item => ({
+        if (AUTH_USER_ID && userFilter === 'others') {
+            filteredData = filteredData.filter(item => String(item.user_id) !== String(AUTH_USER_ID));
+        }
+        
+        items = filteredData.map(item => ({
             id: item.id,
             original: item.original,
             mask: item.mask,
@@ -1010,7 +1008,7 @@ async function loadData() {
         
         renderSavedList();
         renderPlayList();
-        renderDbList();
+        renderItemsList();
     } catch (e) {
         console.error('Data load error:', e);
     }
@@ -1205,7 +1203,7 @@ async function uploadTempRecord(tempId, buttonEl, skipRender = false) {
             if (result.item && result.item.original && result.item.mask) {
                 tempRecords.splice(idx, 1);
                 
-                savedRecords.push({
+                items.push({
                     id: result.item.id,
                     original: result.item.original,
                     mask: result.item.mask,
@@ -1214,7 +1212,7 @@ async function uploadTempRecord(tempId, buttonEl, skipRender = false) {
                 
                 if (!skipRender) {
                     renderSavedList();
-                    renderDbList();
+                    renderItemsList();
                     renderPlayList();
                 }
                 return true;
@@ -1276,10 +1274,10 @@ async function deleteRecord(id) {
     if (!await showConfirmToast('本当に削除しますか？')) return;
 
     // UI上で即時反映
-    const originalRecords = [...savedRecords];
-    savedRecords = savedRecords.filter(r => r.id !== id);
+    const originalRecords = [...items];
+    items = items.filter(r => r.id !== id);
     renderSavedList();
-    renderDbList();
+    renderItemsList();
     renderPlayList();
     
     try {
@@ -1298,9 +1296,9 @@ async function deleteRecord(id) {
         console.error('Delete error:', e);
         showToast('削除に失敗しました。', 'error');
         // 失敗した場合はリストを元に戻す
-        savedRecords = originalRecords;
+        items = originalRecords;
         renderSavedList();
-        renderDbList();
+        renderItemsList();
         renderPlayList();
     }
 }
@@ -1326,10 +1324,10 @@ async function deleteSelectedDbRecords() {
 
     // UI上で即時反映
     const idsToDelete = Array.from(checkboxes).map(cb => parseInt(cb.value, 10));
-    const originalRecords = [...savedRecords];
-    savedRecords = savedRecords.filter(r => !idsToDelete.includes(r.id));
+    const originalRecords = [...items];
+    items = items.filter(r => !idsToDelete.includes(r.id));
     renderSavedList();
-    renderDbList();
+    renderItemsList();
     renderPlayList();
     
     let errorCount = 0;
@@ -1360,11 +1358,11 @@ async function deleteSelectedDbRecords() {
     }
 }
 
-function renderDbList() {
+function renderItemsList() {
     const listEl = document.getElementById('db-list');
     if (!listEl) return;
     
-    if (savedRecords.length === 0) {
+    if (items.length === 0) {
         listEl.innerHTML = '<p style="color: var(--text-secondary);">サーバーに保存されたデータはありません。</p>';
         return;
     }
@@ -1378,7 +1376,7 @@ function renderDbList() {
         }
     };
     
-    listEl.innerHTML = savedRecords.map((record, index) => `
+    listEl.innerHTML = items.map((record, index) => `
         <div id="db-record-${record.id}" style="display: flex; align-items: center; gap: 1rem; background: var(--card-bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--glass-border);">
             <input type="checkbox" class="db-record-checkbox" value="${record.id}" style="width: 20px; height: 20px; cursor: pointer; flex-shrink: 0;">
             <div style="font-weight: bold; font-size: 1.2rem; color: var(--accent-color); width: 30px;">#${index + 1}</div>
@@ -1443,7 +1441,7 @@ function loadSharedImage(record, type) {
 }
 
 function showPreview(id, btn) {
-    const record = savedRecords.find(r => r.id === id);
+    const record = items.find(r => r.id === id);
     if (!record) return;
 
     const container = document.getElementById(`preview-container-${id}`);
@@ -1478,7 +1476,7 @@ function showPreview(id, btn) {
 function editRecord(id, options) {
     if (!checkAuth()) return;
 
-    const record = savedRecords.find(r => r.id === id);
+    const record = items.find(r => r.id === id);
     if (!record) return;
 
     currentEditingId = id;
@@ -1619,15 +1617,15 @@ async function updateRecord(id, btn) {
         const result = await response.json();
         
         if (result.item && result.item.mask) {
-            const idx = savedRecords.findIndex(r => r.id === id);
+            const idx = items.findIndex(r => r.id === id);
             if (idx !== -1) {
-                savedRecords[idx].mask = result.item.mask;
-                savedRecords[idx].target = result.item.target !== undefined ? result.item.target : (document.getElementById('edit-target-textarea') ? document.getElementById('edit-target-textarea').value.trim() : '');
-                savedRecords[idx].content = result.item.content !== undefined ? result.item.content : (document.getElementById('edit-content-textarea') ? document.getElementById('edit-content-textarea').value.trim() : '');
-                savedRecords[idx].timestamp = new Date().toLocaleTimeString();
+                items[idx].mask = result.item.mask;
+                items[idx].target = result.item.target !== undefined ? result.item.target : (document.getElementById('edit-target-textarea') ? document.getElementById('edit-target-textarea').value.trim() : '');
+                items[idx].content = result.item.content !== undefined ? result.item.content : (document.getElementById('edit-content-textarea') ? document.getElementById('edit-content-textarea').value.trim() : '');
+                items[idx].timestamp = new Date().toLocaleTimeString();
                 
                 // キャッシュを破棄して次回のプレビュー・編集時に最新の画像を読み込むようにする
-                delete savedRecords[idx]._loadedMaskImg;
+                delete items[idx]._loadedMaskImg;
                 
                 if (typeof playPrefetchCache !== 'undefined' && playPrefetchCache.has(id)) {
                     const cached = playPrefetchCache.get(id);
@@ -1658,7 +1656,7 @@ async function updateRecord(id, btn) {
             if (bulkImportContents) bulkImportContents.style.display = 'block';
             */
             
-            renderDbList();
+            renderItemsList();
             renderPlayList();
         }
     } catch (e) {

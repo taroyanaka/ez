@@ -20,9 +20,11 @@
                 </a>
                 <div id="login-required-msg">ログイン必要</div>
             </div>
-            <div id="my-data-only-container">
-                <input type="checkbox" id="my-data-only-toggle" checked onchange="handleToggleMyData()">
-                <label for="my-data-only-toggle">マイデータのみ表示</label>
+            <div id="my-data-only-container" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              <label style="font-size: 0.8rem; color: var(--text-secondary); margin-right: 0.25rem;">ユーザー:</label>
+              <label style="font-size: 0.8rem; cursor: pointer; color: var(--text-secondary);"><input type="radio" name="user-filter" value="all" onchange="handleToggleMyData()" style="accent-color: var(--primary);"> 全員</label>
+              <label style="font-size: 0.8rem; cursor: pointer; color: var(--text-secondary); margin-left: 0.25rem;"><input type="radio" name="user-filter" value="mine" checked onchange="handleToggleMyData()" style="accent-color: var(--primary);"> 自分のデータ</label>
+              <label style="font-size: 0.8rem; cursor: pointer; color: var(--text-secondary); margin-left: 0.25rem;"><input type="radio" name="user-filter" value="others" onchange="handleToggleMyData()" style="accent-color: var(--primary);"> 自分以外</label>
             </div>
         </div>
         <div class="tab-container">

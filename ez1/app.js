@@ -1,4 +1,4 @@
-let deck = [];
+let items = [];
 let playDeck = [];
 let chunks = [];
 let currentChunkId = null;
@@ -26,14 +26,24 @@ const resource = 'flashcards';
 
 const getAllItems = (resource, ignoreToggle = false) => {
     let url = `${API_BASE_URL}/${resource}`;
-    const myDataOnlyToggle = document.getElementById('my-data-only-toggle');
-    if (!ignoreToggle && myDataOnlyToggle && myDataOnlyToggle.checked && AUTH_USER_ID) {
-        url = `${API_BASE_URL}/${resource}/user/${AUTH_USER_ID}`;
+    const userFilter = document.querySelector('input[name="user-filter"]:checked')?.value || 'all';
+
+    if (!ignoreToggle && AUTH_USER_ID) {
+        if (userFilter === 'mine') {
+            url = `${API_BASE_URL}/${resource}/user/${AUTH_USER_ID}`;
+        }
     }
+
     console.log(`Fetching all items for resource: ${resource} from ${url}`);
     return fetch(url)
         .then(res => res.json())
-        .then(json => json.data || json);
+        .then(json => {
+            let data = json.data || json;
+            if (!ignoreToggle && userFilter === 'others' && AUTH_USER_ID) {
+                data = data.filter(item => String(item.user_id) !== String(AUTH_USER_ID));
+            }
+            return data;
+        });
 };
 const getItemById = (resource, id) => fetch(`${API_BASE_URL}/${resource}/${id}`)
     .then(res => res.json())
@@ -237,25 +247,32 @@ async function loadData() {
     if (!currentChunkId) return;
     try {
         let url = `${API_BASE_URL}/${resource}?chunk_id=${currentChunkId}`;
-        const myDataOnlyToggle = document.getElementById('my-data-only-toggle');
-        if (myDataOnlyToggle && myDataOnlyToggle.checked && AUTH_USER_ID) {
-            url = `${API_BASE_URL}/${resource}/user/${AUTH_USER_ID}?chunk_id=${currentChunkId}`;
+        const userFilter = document.querySelector('input[name="user-filter"]:checked')?.value || 'all';
+        
+        if (AUTH_USER_ID) {
+            if (userFilter === 'mine') {
+                url = `${API_BASE_URL}/${resource}/user/${AUTH_USER_ID}?chunk_id=${currentChunkId}`;
+            }
         }
         // Fetch items filtered by chunk_id
         const response = await fetch(url);
         const json = await response.json();
-        const data = json.data || json;
+        let data = json.data || json;
+
+        if (userFilter === 'others' && AUTH_USER_ID) {
+            data = data.filter(item => String(item.user_id) !== String(AUTH_USER_ID));
+        }
 
         if (data && Array.isArray(data)) {
-            deck = data;
-            playDeck = [...deck];
+            items = data;
+            playDeck = [...items];
         } else {
-            deck = [];
+            items = [];
             playDeck = [];
         }
     } catch (error) {
         console.error('Failed to load data from API:', error);
-        deck = [];
+        items = [];
     }
 }
 
@@ -267,7 +284,7 @@ async function saveData() {
         await fetch(`${API_BASE_URL}/${resource}?chunk_id=${currentChunkId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'user_id': AUTH_USER_ID, 'password': AUTH_PASSWORD },
-            body: JSON.stringify(deck)
+            body: JSON.stringify(items)
         });
     } catch (error) {
         console.error('Failed to save data to API:', error);
@@ -442,7 +459,7 @@ async function toggleAutoMode() {
 }
 
 function startAutoMode() {
-    if (deck.length === 0) return;
+    if (items.length === 0) return;
     isAutoPlaying = true;
     autoPhase = 'question';
     
@@ -561,7 +578,7 @@ function checkInputAnswer() {
 
 function populateBulkInput() {
     const bulkInput = document.getElementById('bulk-input');
-    const text = deck.map(card => `${card.question}=${card.answer}`).join('\n');
+    const text = items.map(card => `${card.question}=${card.answer}`).join('\n');
     bulkInput.value = text;
 }
 
@@ -587,9 +604,9 @@ async function applyBulkUpdate() {
         if (!confirm('有効なカードが読み取れませんでした。データを空にしますか？')) return;
     }
 
-    deck = newDeck;
-    playDeck = [...deck];
-    if (currentIndex >= deck.length) currentIndex = Math.max(0, deck.length - 1);
+    items = newDeck;
+    playDeck = [...items];
+    if (currentIndex >= items.length) currentIndex = Math.max(0, items.length - 1);
     await saveData();
     alert('保存しました！');
 }
@@ -837,7 +854,7 @@ async function handleDelete() {
         await initChunks();
         if (chunks.length === 0) {
             currentChunkId = null;
-            deck = [];
+            items = [];
             playDeck = [];
             populateBulkInput();
         }

@@ -1,4 +1,4 @@
-let problems = [];
+let items = [];
 let stack = [];
 const resource = 'fill_in_the_blank';
 
@@ -10,10 +10,10 @@ const CROSS_PAGE_PAYLOAD_KEY = 'ez_cross_page_payload';
 const tabCreate = document.getElementById('tab-create');
 const tabLearn = document.getElementById('tab-learn');
 const tabAudioLearn = document.getElementById('tab-audio-learn');
-const sectionCreate = document.getElementById('section-create');
-const sectionLearn = document.getElementById('section-learn');
-const sectionAudioLearn = document.getElementById('section-audio-learn');
-const problemsList = document.getElementById('problems-list');
+const sectionCreate = document.getElementById('create-view');
+const sectionLearn = document.getElementById('learn-view');
+const sectionAudioLearn = document.getElementById('audio-learn-view');
+const problemsList = document.getElementById('items-list');
 const learningContainer = document.getElementById('learning-container');
 
 // API Client Functions
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   applyIncomingSharedText();
   window.onChunkChange = async () => {
-    await loadProblems();
+    await loadData();
     renderProblemsList();
     renderLearningMode();
   };
@@ -63,13 +63,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (container && typeof renderChunkWidget === 'function') {
       await renderChunkWidget(resource);
   }
-  await loadProblems();
+  await loadData();
   renderProblemsList();
   renderLearningMode();
 });
 
 async function handleToggleMyData() {
-    await loadProblems();
+    await loadData();
     renderProblemsList();
     renderLearningMode();
 }
@@ -97,12 +97,12 @@ function checkAuth() {
 }
 
 
-async function loadProblems() {
+async function loadData() {
   try {
-    problems = await getAllItems(resource);
+    items = await getAllItems(resource);
   } catch (error) {
-    console.error('Failed to load problems:', error);
-    problems = [];
+    console.error('Failed to load items:', error);
+    items = [];
   }
 }
 
@@ -170,7 +170,7 @@ async function addProblem() {
   try {
     if (editingId) {
       // Find the problem to get its database primary key (id_key)
-      const p = problems.find(prob => prob.id_key === editingId || prob.id === editingId);
+      const p = items.find(prob => prob.id_key === editingId || prob.id === editingId);
       const pk = p.id_key || editingId;
 
       await updateItem(resource, pk, {
@@ -188,7 +188,7 @@ async function addProblem() {
       await createItem(resource, newProblem);
     }
 
-    await loadProblems();
+    await loadData();
     renderProblemsList();
 
     // Clear inputs
@@ -202,7 +202,7 @@ async function addProblem() {
 
 // Edit Problem
 function editProblem(id_key) {
-  const p = problems.find(prob => prob.id_key === id_key || prob.id === id_key);
+  const p = items.find(prob => prob.id_key === id_key || prob.id === id_key);
   if (!p) return;
 
   editingId = id_key;
@@ -229,7 +229,7 @@ async function deleteProblem(id_key) {
   try {
     const result = await deleteItem(resource, id_key);
     console.log('Delete successful:', result);
-    await loadProblems();
+    await loadData();
     renderProblemsList();
     //render後にaddproblemの表示にしてtextareaも空欄にして
     editingId = null;
@@ -244,12 +244,12 @@ async function deleteProblem(id_key) {
 
 // Render Problem List (Create Tab)
 function renderProblemsList() {
-  if (problems.length === 0) {
-    problemsList.innerHTML = '<div class="empty-state">No problems created yet. Add one above!</div>';
+  if (items.length === 0) {
+    problemsList.innerHTML = '<div class="empty-state">No items created yet. Add one above!</div>';
     return;
   }
 
-  problemsList.innerHTML = problems.map((p, index) => {
+  problemsList.innerHTML = items.map((p, index) => {
     const lists = p.answer.split('|||');
     const hiddenText = `Hidden: ${lists.map((l, i) => lists.length > 1 ? `[List ${i+1}] ` + l.replace(/\n/g, ', ') : l.replace(/\n/g, ', ')).join(' | ')}`;
     const id = p.id_key || p.id;
@@ -297,7 +297,7 @@ window.playEz2AudioLearningMode = function(index) {
 window.cloneProblem = async function(id) {
     if (!checkAuth()) return;
     try {
-        const p = problems.find(prob => prob.id_key === id || prob.id === id);
+        const p = items.find(prob => prob.id_key === id || prob.id === id);
         if (!p) {
             alert('Problem not found');
             return;
@@ -315,7 +315,7 @@ window.cloneProblem = async function(id) {
         }
 
         await createItem(resource, newProblem);
-        await loadProblems();
+        await loadData();
         renderProblemsList();
     } catch(err) {
         alert("Failed to clone: " + err);
@@ -387,29 +387,29 @@ function renderLearningMode(preserveListIndex = false) {
   const selector = document.getElementById('learning-problem-select');
   if (!selector) return;
 
-  // Populate selector if it's empty or the number of problems changed
-  if (selector.options.length !== problems.length) {
+  // Populate selector if it's empty or the number of items changed
+  if (selector.options.length !== items.length) {
     const currentSelection = selector.value;
-    selector.innerHTML = problems.map((p, index) => {
+    selector.innerHTML = items.map((p, index) => {
       const title = p.question.trim().substring(0, 10).replace(/\n/g, ' ') + (p.question.length > 10 ? '...' : '');
       return `<option value="${index}">${index + 1}. ${title}</option>`;
     }).join('');
     
     // Try to restore selection or default to 0
-    if (currentSelection !== "" && parseInt(currentSelection) < problems.length) {
+    if (currentSelection !== "" && parseInt(currentSelection) < items.length) {
       selector.value = currentSelection;
-    } else if (problems.length > 0) {
+    } else if (items.length > 0) {
       selector.value = "0";
     }
   }
 
-  if (problems.length === 0) {
-    learningContainer.innerHTML = '<div class="empty-state">No problems available. Go to Problem Creation tab to add some.</div>';
+  if (items.length === 0) {
+    learningContainer.innerHTML = '<div class="empty-state">No items available. Go to Problem Creation tab to add some.</div>';
     return;
   }
 
   const selectedIndex = parseInt(selector.value) || 0;
-  const p = problems[selectedIndex];
+  const p = items[selectedIndex];
   if (!p) return;
 
   learningContainer.innerHTML = '';
@@ -553,15 +553,15 @@ window.initAudioLearning = function() {
     const selector = document.getElementById('audio-problem-select');
     if (!selector) return;
 
-    if (selector.options.length !== problems.length) {
+    if (selector.options.length !== items.length) {
         const currentSelection = selector.value;
-        selector.innerHTML = problems.map((p, index) => {
+        selector.innerHTML = items.map((p, index) => {
             const title = p.question.trim().substring(0, 10).replace(/\n/g, ' ') + (p.question.length > 10 ? '...' : '');
             return `<option value="${index}">${index + 1}. ${title}</option>`;
         }).join('');
-        if (currentSelection !== "" && parseInt(currentSelection) < problems.length) {
+        if (currentSelection !== "" && parseInt(currentSelection) < items.length) {
             selector.value = currentSelection;
-        } else if (problems.length > 0) {
+        } else if (items.length > 0) {
             selector.value = "0";
         }
     }
@@ -578,7 +578,7 @@ window.startAudioSequence = function() {
     const selectedIndex = parseInt(selector.value);
     if (isNaN(selectedIndex)) return;
     
-    const p = problems[selectedIndex];
+    const p = items[selectedIndex];
     if (!p) return;
     
     const lists = p.answer.split('|||');

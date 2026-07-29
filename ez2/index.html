@@ -12,20 +12,22 @@
 </head>
 <body>
   <div class="app-container">
-    <header>
-      <a href="../index.html" id="top-link" style="text-decoration: none; color: #94a3b8; font-size: 0.8rem; margin-bottom: 0.5rem; display: inline-block;">← TOP PAGE</a>
-      <div id="login-required-msg" style="color: #ef4444; font-size: 0.8rem; font-weight: bold; display: none; margin-bottom: 0.5rem;">ログイン必要</div>
-      <h1>Knowledge Builder</h1>
-      <nav class="tabs">
+    <nav>
+      <div id="top-link-container" class="top-link-container" style="display: flex; flex-direction: column; align-items: flex-start; margin-bottom: 1rem;">
+          <a href="../index.html" id="top-link" style="text-decoration: none; color: #94a3b8; font-size: 0.8rem; display: inline-block;">← TOP PAGE</a>
+          <div id="login-required-msg" style="color: #ef4444; font-size: 0.8rem; font-weight: bold; display: none;">ログイン必要</div>
+      </div>
+      <h1 style="margin-bottom: 1rem;">Knowledge Builder</h1>
+      <div class="tab-container tabs">
         <button id="tab-create" type="button" class="tab-btn active" onclick="event.preventDefault(); switchTab('create')">Problem Creation</button>
         <button id="tab-learn" type="button" class="tab-btn" onclick="event.preventDefault(); switchTab('learn')">Learning Mode</button>
         <button id="tab-audio-learn" type="button" class="tab-btn" onclick="event.preventDefault(); switchTab('audio-learn')">Audio Learning</button>
-      </nav>
-    </header>
+      </div>
+    </nav>
 
     <main>
       <!-- PROBLEM CREATION TAB -->
-      <section id="section-create" class="tab-content active">
+      <div id="create-view" class="view active">
         <div id="ez-chunk-container" data-resource-type="fill_in_the_blank"></div>
         <div class="card create-card">
           <h2>Add New Problem</h2>
@@ -76,10 +78,10 @@
             <!-- Problems will be injected here -->
           </div>
         </div>
-      </section>
+      </div>
 
       <!-- LEARNING MODE TAB -->
-      <section id="section-learn" class="tab-content">
+      <div id="learn-view" class="view">
         <div class="card learn-card">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
             <h2 style="margin: 0;">Learning Mode</h2>
@@ -107,10 +109,10 @@
             <!-- Learning interface injected here -->
           </div>
         </div>
-      </section>
+      </div>
 
       <!-- AUDIO LEARNING MODE TAB -->
-      <section id="section-audio-learn" class="tab-content">
+      <div id="audio-learn-view" class="view">
         <div class="card learn-card">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
             <h2 style="margin: 0;">Audio Learning Mode</h2>
@@ -158,7 +160,7 @@
              <div id="audio-choices-container" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;"></div>
           </div>
         </div>
-      </section>
+      </div>
     </main>
   </div>
 
